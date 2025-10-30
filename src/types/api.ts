@@ -58,6 +58,7 @@ export interface Workflow {
   created_by_id: string;
   created_at: string;
   updated_at: string;
+  last_deployed_at?: string | null;
 }
 
 export interface WorkflowCreate {
@@ -122,4 +123,33 @@ export interface ListResponse<T> {
 export interface ApiErrorResponse {
   detail: string;
   message?: string;
+}
+
+export enum WorkflowDeploymentStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+}
+
+export interface WorkflowDeployment {
+  id: string;
+  workflow_id: string;
+  runtime_id: string;
+  deployed_by_id?: string | null;
+  user_code: {
+    files: Record<string, string>;
+    entrypoint: string;
+  };
+  status: WorkflowDeploymentStatus;
+  deployed_at: string;
+  note?: string | null;
+  webhooks?: Array<{
+    id: string;
+    url: string;
+    path?: string | null;
+    method?: string | null;
+  }> | null;
+}
+
+export interface WorkflowDeploymentsResponse {
+  deployments: WorkflowDeployment[];
 }

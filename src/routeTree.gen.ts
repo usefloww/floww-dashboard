@@ -11,18 +11,14 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as WorkflowsImport } from './routes/workflows'
 import { Route as ProvidersImport } from './routes/providers'
 import { Route as IndexImport } from './routes/index'
+import { Route as WorkflowsIndexImport } from './routes/workflows/index'
 import { Route as SettingsIndexImport } from './routes/settings/index'
+import { Route as WorkflowsWorkflowIdDeploymentsImport } from './routes/workflows/$workflowId.deployments'
+import { Route as WorkflowsWorkflowIdDeploymentsDeploymentIdEditImport } from './routes/workflows/$workflowId.deployments.$deploymentId.edit'
 
 // Create/Update Routes
-
-const WorkflowsRoute = WorkflowsImport.update({
-  id: '/workflows',
-  path: '/workflows',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const ProvidersRoute = ProvidersImport.update({
   id: '/providers',
@@ -36,11 +32,31 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const WorkflowsIndexRoute = WorkflowsIndexImport.update({
+  id: '/workflows/',
+  path: '/workflows/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const SettingsIndexRoute = SettingsIndexImport.update({
   id: '/settings/',
   path: '/settings/',
   getParentRoute: () => rootRoute,
 } as any)
+
+const WorkflowsWorkflowIdDeploymentsRoute =
+  WorkflowsWorkflowIdDeploymentsImport.update({
+    id: '/workflows/$workflowId/deployments',
+    path: '/workflows/$workflowId/deployments',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute =
+  WorkflowsWorkflowIdDeploymentsDeploymentIdEditImport.update({
+    id: '/$deploymentId/edit',
+    path: '/$deploymentId/edit',
+    getParentRoute: () => WorkflowsWorkflowIdDeploymentsRoute,
+  } as any)
 
 // Populate the FileRoutesByPath interface
 
@@ -60,13 +76,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProvidersImport
       parentRoute: typeof rootRoute
     }
-    '/workflows': {
-      id: '/workflows'
-      path: '/workflows'
-      fullPath: '/workflows'
-      preLoaderRoute: typeof WorkflowsImport
-      parentRoute: typeof rootRoute
-    }
     '/settings/': {
       id: '/settings/'
       path: '/settings'
@@ -74,54 +83,118 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsIndexImport
       parentRoute: typeof rootRoute
     }
+    '/workflows/': {
+      id: '/workflows/'
+      path: '/workflows'
+      fullPath: '/workflows'
+      preLoaderRoute: typeof WorkflowsIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/workflows/$workflowId/deployments': {
+      id: '/workflows/$workflowId/deployments'
+      path: '/workflows/$workflowId/deployments'
+      fullPath: '/workflows/$workflowId/deployments'
+      preLoaderRoute: typeof WorkflowsWorkflowIdDeploymentsImport
+      parentRoute: typeof rootRoute
+    }
+    '/workflows/$workflowId/deployments/$deploymentId/edit': {
+      id: '/workflows/$workflowId/deployments/$deploymentId/edit'
+      path: '/$deploymentId/edit'
+      fullPath: '/workflows/$workflowId/deployments/$deploymentId/edit'
+      preLoaderRoute: typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditImport
+      parentRoute: typeof WorkflowsWorkflowIdDeploymentsImport
+    }
   }
 }
 
 // Create and export the route tree
 
+interface WorkflowsWorkflowIdDeploymentsRouteChildren {
+  WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute: typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute
+}
+
+const WorkflowsWorkflowIdDeploymentsRouteChildren: WorkflowsWorkflowIdDeploymentsRouteChildren =
+  {
+    WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute:
+      WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute,
+  }
+
+const WorkflowsWorkflowIdDeploymentsRouteWithChildren =
+  WorkflowsWorkflowIdDeploymentsRoute._addFileChildren(
+    WorkflowsWorkflowIdDeploymentsRouteChildren,
+  )
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
-  '/workflows': typeof WorkflowsRoute
   '/settings': typeof SettingsIndexRoute
+  '/workflows': typeof WorkflowsIndexRoute
+  '/workflows/$workflowId/deployments': typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
+  '/workflows/$workflowId/deployments/$deploymentId/edit': typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
-  '/workflows': typeof WorkflowsRoute
   '/settings': typeof SettingsIndexRoute
+  '/workflows': typeof WorkflowsIndexRoute
+  '/workflows/$workflowId/deployments': typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
+  '/workflows/$workflowId/deployments/$deploymentId/edit': typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
-  '/workflows': typeof WorkflowsRoute
   '/settings/': typeof SettingsIndexRoute
+  '/workflows/': typeof WorkflowsIndexRoute
+  '/workflows/$workflowId/deployments': typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
+  '/workflows/$workflowId/deployments/$deploymentId/edit': typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/providers' | '/workflows' | '/settings'
+  fullPaths:
+    | '/'
+    | '/providers'
+    | '/settings'
+    | '/workflows'
+    | '/workflows/$workflowId/deployments'
+    | '/workflows/$workflowId/deployments/$deploymentId/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/providers' | '/workflows' | '/settings'
-  id: '__root__' | '/' | '/providers' | '/workflows' | '/settings/'
+  to:
+    | '/'
+    | '/providers'
+    | '/settings'
+    | '/workflows'
+    | '/workflows/$workflowId/deployments'
+    | '/workflows/$workflowId/deployments/$deploymentId/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/providers'
+    | '/settings/'
+    | '/workflows/'
+    | '/workflows/$workflowId/deployments'
+    | '/workflows/$workflowId/deployments/$deploymentId/edit'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProvidersRoute: typeof ProvidersRoute
-  WorkflowsRoute: typeof WorkflowsRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  WorkflowsIndexRoute: typeof WorkflowsIndexRoute
+  WorkflowsWorkflowIdDeploymentsRoute: typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProvidersRoute: ProvidersRoute,
-  WorkflowsRoute: WorkflowsRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  WorkflowsIndexRoute: WorkflowsIndexRoute,
+  WorkflowsWorkflowIdDeploymentsRoute:
+    WorkflowsWorkflowIdDeploymentsRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -136,8 +209,9 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/providers",
-        "/workflows",
-        "/settings/"
+        "/settings/",
+        "/workflows/",
+        "/workflows/$workflowId/deployments"
       ]
     },
     "/": {
@@ -146,11 +220,21 @@ export const routeTree = rootRoute
     "/providers": {
       "filePath": "providers.tsx"
     },
-    "/workflows": {
-      "filePath": "workflows.tsx"
-    },
     "/settings/": {
       "filePath": "settings/index.tsx"
+    },
+    "/workflows/": {
+      "filePath": "workflows/index.tsx"
+    },
+    "/workflows/$workflowId/deployments": {
+      "filePath": "workflows/$workflowId.deployments.tsx",
+      "children": [
+        "/workflows/$workflowId/deployments/$deploymentId/edit"
+      ]
+    },
+    "/workflows/$workflowId/deployments/$deploymentId/edit": {
+      "filePath": "workflows/$workflowId.deployments.$deploymentId.edit.tsx",
+      "parent": "/workflows/$workflowId/deployments"
     }
   }
 }

@@ -4,7 +4,34 @@ import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Provider } from "@/types/api";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { Search, Building2, Globe, Zap, CheckCircle, XCircle, Clock, Info } from "lucide-react";
+import { Search, Building2, CheckCircle, XCircle, Clock, Info } from "lucide-react";
+
+// Provider logo mapping to Simple Icons CDN
+const getProviderLogoUrl = (type: string): string | null => {
+  const iconMap: Record<string, string> = {
+    "openai": "openai",
+    'aws': 'amazonaws',
+    'gcp': 'googlecloud',
+    'googlecloud': 'googlecloud',
+    'azure': 'microsoftazure',
+    'microsoftazure': 'microsoftazure',
+    'github': 'github',
+    'gitlab': 'gitlab',
+    'docker': 'docker',
+    'kubernetes': 'kubernetes',
+    'terraform': 'terraform',
+    'slack': 'slack',
+    'discord': 'discord',
+    'jenkins': 'jenkins',
+    'circleci': 'circleci',
+    'githubactions': 'githubactions',
+  };
+
+  const iconName = iconMap[type.toLowerCase()];
+  if (!iconName) return null;
+  
+  return `https://cdn.simpleicons.org/${iconName}`;
+};
 
 export const Route = createFileRoute("/providers")({
   component: ProvidersPage,
@@ -25,7 +52,8 @@ function ProvidersPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api.get<{ results: Provider[] }>("/providers");
+      const params = currentNamespace?.id ? { namespace_id: currentNamespace.id } : undefined;
+      const data = await api.get<{ results: Provider[] }>("/providers", { params });
       setProviders(Array.isArray(data?.results) ? data.results : []);
     } catch (error) {
       setError(handleApiError(error));
@@ -101,7 +129,7 @@ function ProvidersPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
           {filteredProviders.map((provider) => (
             <ProviderCard
               key={provider.id}
@@ -123,6 +151,13 @@ function ProviderCard({ provider }: ProviderCardProps) {
   const formattedDate = provider.created_at ? new Date(provider.created_at).toLocaleDateString() : 'N/A';
   const lastUsedDate = provider.last_used_at ? new Date(provider.last_used_at).toLocaleDateString() : 'Never';
   const status = provider.status || 'pending';
+  const logoUrl = getProviderLogoUrl(provider.type);
+  const [imageError, setImageError] = useState(false);
+
+  // Reset image error when provider or logo URL changes
+  useEffect(() => {
+    setImageError(false);
+  }, [provider.id, logoUrl]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -150,50 +185,46 @@ function ProviderCard({ provider }: ProviderCardProps) {
     }
   };
 
-  const getProviderIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'aws':
-      case 'gcp':
-      case 'azure':
-        return <Globe className="h-5 w-5 text-sky-600" />;
-      case 'github':
-      case 'gitlab':
-        return <Zap className="h-5 w-5 text-sky-600" />;
-      default:
-        return <Building2 className="h-5 w-5 text-sky-600" />;
-    }
-  };
-
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          {getProviderIcon(provider.type)}
-          <h3 className="font-semibold text-lg text-gray-900">{providerName}</h3>
+    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4 flex-1 min-w-0">
+          {/* Provider Logo */}
+          <div className="flex-shrink-0">
+            {logoUrl && !imageError ? (
+              <img
+                src={logoUrl}
+                alt={provider.type}
+                className="h-10 w-10 object-contain"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <Building2 className="h-10 w-10 text-gray-400" />
+            )}
+          </div>
+          
+          {/* Provider Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-3">
+              <h3 className="font-semibold text-lg text-gray-900 truncate">{providerName}</h3>
+              <span className="text-sm text-gray-500 uppercase">{provider.type}</span>
+            </div>
+            <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
+              <span>Created: {formattedDate}</span>
+              <span>Last used: {lastUsedDate}</span>
+            </div>
+          </div>
         </div>
+
+        {/* Status */}
         {status && (
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
             {getStatusIcon(status)}
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(status)}`}>
               {status}
             </span>
           </div>
         )}
-      </div>
-
-      <div className="space-y-2 text-sm text-gray-600">
-        <div className="flex justify-between">
-          <span>Type:</span>
-          <span className="font-medium">{provider.type}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Created:</span>
-          <span>{formattedDate}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Last used:</span>
-          <span>{lastUsedDate}</span>
-        </div>
       </div>
     </div>
   );

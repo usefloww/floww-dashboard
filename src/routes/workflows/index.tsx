@@ -1,12 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { Search, Workflow as WorkflowIcon, Calendar, User, Info } from "lucide-react";
+import { Search, Workflow as WorkflowIcon, Calendar, User, Info, Clock } from "lucide-react";
 
-export const Route = createFileRoute("/workflows")({
+export const Route = createFileRoute("/workflows/")({
   component: WorkflowsPage,
 });
 
@@ -25,7 +25,8 @@ function WorkflowsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api.get<{ results: Workflow[] }>("/workflows");
+      const params = currentNamespace?.id ? { namespace_id: currentNamespace.id } : undefined;
+      const data = await api.get<{ results: Workflow[] }>("/workflows", { params });
       setWorkflows(Array.isArray(data?.results) ? data.results : []);
     } catch (error) {
       setError(handleApiError(error));
@@ -102,7 +103,7 @@ function WorkflowsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
           {filteredWorkflows.map((workflow) => (
             <WorkflowCard
               key={workflow.id}
@@ -122,30 +123,50 @@ interface WorkflowCardProps {
 
 function WorkflowCard({ workflow }: WorkflowCardProps) {
   const formattedDate = new Date(workflow.created_at).toLocaleDateString();
+  const lastDeployedDate = workflow.last_deployed_at 
+    ? new Date(workflow.last_deployed_at).toLocaleDateString() 
+    : null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center space-x-2 mb-4">
-        <WorkflowIcon className="h-5 w-5 text-sky-600" />
-        <h3 className="font-semibold text-lg text-gray-900">{workflow.name}</h3>
-      </div>
-
-      {workflow.description && (
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-          {workflow.description}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <div className="flex items-center space-x-1">
-          <Calendar className="h-3 w-3" />
-          <span>{formattedDate}</span>
+    <Link
+      {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "block" } as any)}
+    >
+      <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 flex-1 min-w-0">
+            {/* Workflow Icon */}
+            <div className="flex-shrink-0">
+              <WorkflowIcon className="h-10 w-10 text-sky-600" />
+            </div>
+            
+            {/* Workflow Info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg text-gray-900 truncate">{workflow.name}</h3>
+              {workflow.description && (
+                <p className="text-gray-600 text-sm mt-1 line-clamp-1">
+                  {workflow.description}
+                </p>
+              )}
+              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                <div className="flex items-center space-x-1">
+                  <Calendar className="h-3 w-3" />
+                  <span>Created: {formattedDate}</span>
+                </div>
+                {lastDeployedDate && (
+                  <div className="flex items-center space-x-1">
+                    <Clock className="h-3 w-3" />
+                    <span>Last deployed: {lastDeployedDate}</span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-1">
+                  <User className="h-3 w-3" />
+                  <span>Creator: {workflow.created_by_id.slice(0, 8)}...</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-1">
-          <User className="h-3 w-3" />
-          <span>{workflow.created_by_id.slice(0, 8)}...</span>
-        </div>
       </div>
-    </div>
+    </Link>
   );
 }
