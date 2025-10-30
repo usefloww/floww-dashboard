@@ -67,7 +67,6 @@ export function DeploymentHistory({ workflowId, onEdit }: DeploymentHistoryProps
           key={deployment.id}
           deployment={deployment}
           versionNumber={deployments.length - index}
-          workflowId={workflowId}
           isDropdownOpen={openDropdown === deployment.id}
           onDropdownToggle={(isOpen) => setOpenDropdown(isOpen ? deployment.id : null)}
           onEdit={onEdit}
@@ -80,7 +79,6 @@ export function DeploymentHistory({ workflowId, onEdit }: DeploymentHistoryProps
 interface DeploymentCardProps {
   deployment: WorkflowDeployment;
   versionNumber: number;
-  workflowId: string;
   isDropdownOpen: boolean;
   onDropdownToggle: (isOpen: boolean) => void;
   onEdit?: (deploymentId: string) => void;
@@ -89,7 +87,6 @@ interface DeploymentCardProps {
 function DeploymentCard({ 
   deployment, 
   versionNumber, 
-  workflowId,
   isDropdownOpen,
   onDropdownToggle,
   onEdit 

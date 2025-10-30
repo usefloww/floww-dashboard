@@ -86,6 +86,7 @@ function EditDeploymentPage() {
       navigate({
         to: "/workflows/$workflowId/deployments",
         params: { workflowId },
+        search: { tab: "edit" },
       });
     } catch (error) {
       setError(handleApiError(error));
@@ -98,6 +99,7 @@ function EditDeploymentPage() {
     navigate({
       to: "/workflows/$workflowId/deployments",
       params: { workflowId },
+      search: { tab: "edit" },
     });
   };
 
