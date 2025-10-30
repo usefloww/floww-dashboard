@@ -25,8 +25,8 @@ function WorkflowsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api.get<Workflow[]>("/workflows");
-      setWorkflows(Array.isArray(data) ? data : []);
+      const data = await api.get<{ results: Workflow[] }>("/workflows");
+      setWorkflows(Array.isArray(data?.results) ? data.results : []);
     } catch (error) {
       setError(handleApiError(error));
       setWorkflows([]);

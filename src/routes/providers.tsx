@@ -25,8 +25,8 @@ function ProvidersPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api.get<Provider[]>("/providers");
-      setProviders(Array.isArray(data) ? data : []);
+      const data = await api.get<{ results: Provider[] }>("/providers");
+      setProviders(Array.isArray(data?.results) ? data.results : []);
     } catch (error) {
       setError(handleApiError(error));
       setProviders([]);
@@ -37,7 +37,7 @@ function ProvidersPage() {
 
   const filteredProviders = Array.isArray(providers)
     ? providers.filter(provider =>
-        provider?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (provider?.alias || provider?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         provider?.type?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
@@ -119,10 +119,12 @@ interface ProviderCardProps {
 }
 
 function ProviderCard({ provider }: ProviderCardProps) {
-  const formattedDate = new Date(provider.created_at).toLocaleDateString();
+  const providerName = provider.alias || provider.name || 'Unnamed Provider';
+  const formattedDate = provider.created_at ? new Date(provider.created_at).toLocaleDateString() : 'N/A';
   const lastUsedDate = provider.last_used_at ? new Date(provider.last_used_at).toLocaleDateString() : 'Never';
+  const status = provider.status || 'pending';
 
-  const getStatusIcon = (status: Provider['status']) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'connected':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -135,7 +137,7 @@ function ProviderCard({ provider }: ProviderCardProps) {
     }
   };
 
-  const getStatusColor = (status: Provider['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
         return 'text-green-700 bg-green-50';
@@ -167,14 +169,16 @@ function ProviderCard({ provider }: ProviderCardProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           {getProviderIcon(provider.type)}
-          <h3 className="font-semibold text-lg text-gray-900">{provider.name}</h3>
+          <h3 className="font-semibold text-lg text-gray-900">{providerName}</h3>
         </div>
-        <div className="flex items-center space-x-1">
-          {getStatusIcon(provider.status)}
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(provider.status)}`}>
-            {provider.status}
-          </span>
-        </div>
+        {status && (
+          <div className="flex items-center space-x-1">
+            {getStatusIcon(status)}
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(status)}`}>
+              {status}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2 text-sm text-gray-600">

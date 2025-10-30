@@ -74,13 +74,18 @@ export interface WorkflowUpdate {
 
 export interface Provider {
   id: string;
-  name: string;
+  alias: string;
   type: string;
-  status: 'connected' | 'disconnected' | 'pending';
-  created_at: string;
-  updated_at: string;
+  namespace_id: string;
+  config: Record<string, any>;
+  // Optional fields that may not be present in backend response
+  status?: 'connected' | 'disconnected' | 'pending';
+  created_at?: string;
+  updated_at?: string;
   last_used_at?: string;
-  configuration: Record<string, string | number | boolean>;
+  // Legacy field name for compatibility
+  name?: string;
+  configuration?: Record<string, string | number | boolean>;
 }
 
 export interface Namespace {
@@ -93,15 +98,6 @@ export interface Namespace {
     name: string;
     display_name: string;
   };
-}
-
-export interface NamespaceCreate {
-  name: string;
-  organization_id: string;
-}
-
-export interface NamespaceUpdate {
-  name?: string;
 }
 
 // User from whoami endpoint
