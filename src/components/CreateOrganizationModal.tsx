@@ -1,0 +1,105 @@
+import { useState } from "react";
+import { useOrganizationStore } from "@/stores/organizationStore";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+interface CreateOrganizationModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function CreateOrganizationModal({
+  open,
+  onOpenChange,
+}: CreateOrganizationModalProps) {
+  const { createOrganization, isLoading } = useOrganizationStore();
+  const [formData, setFormData] = useState({
+    name: "",
+    display_name: "",
+  });
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim() || !formData.display_name.trim()) {
+      setError("Both name and display name are required");
+      return;
+    }
+
+    try {
+      setError("");
+      await createOrganization(formData);
+      setFormData({ name: "", display_name: "" });
+      onOpenChange(false);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to create organization");
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({ name: "", display_name: "" });
+    setError("");
+    onOpenChange(false);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-semibold mb-4">Create Organization</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="display_name" className="block text-sm font-medium text-gray-700 mb-1">
+              Display Name
+            </label>
+            <Input
+              id="display_name"
+              type="text"
+              value={formData.display_name}
+              onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+              placeholder="My Organization"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              Name (URL-friendly)
+            </label>
+            <Input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="my-organization"
+              disabled={isLoading}
+            />
+          </div>
+
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Creating..." : "Create Organization"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
