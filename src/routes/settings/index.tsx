@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { OrganizationUserManagement } from "@/components/OrganizationUserManagement";
-import { Building2, Edit, Trash2 } from "lucide-react";
+import { Building2, Edit } from "lucide-react";
 
 export const Route = createFileRoute("/settings/")({
   component: OrganizationSettings,
