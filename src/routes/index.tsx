@@ -20,11 +20,6 @@ const navigationItems: NavigationItem[] = [
     to: "/providers",
   },
   {
-    name: "Organizations",
-    description: "Manage organizations and switch between different contexts",
-    to: "/organizations",
-  },
-  {
     name: "Organization Settings",
     description: "Configure your organization, users, and application preferences",
     to: "/settings",

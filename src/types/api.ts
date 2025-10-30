@@ -18,6 +18,38 @@ export interface OrganizationUpdate {
   display_name?: string;
 }
 
+export enum OrganizationRole {
+  OWNER = "owner",
+  ADMIN = "admin",
+  MEMBER = "member"
+}
+
+export interface OrganizationUser {
+  id: string;
+  workos_user_id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  created_at: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  user_id: string;
+  role: OrganizationRole;
+  created_at: string;
+  user: OrganizationUser;
+}
+
+export interface OrganizationMemberCreate {
+  user_id: string;
+  role: OrganizationRole;
+}
+
+export interface OrganizationMemberUpdate {
+  role: OrganizationRole;
+}
+
 export interface Workflow {
   id: string;
   name: string;
@@ -40,12 +72,27 @@ export interface WorkflowUpdate {
   namespace_id?: string;
 }
 
-export interface Namespace {
+export interface Provider {
   id: string;
   name: string;
-  organization_id: string;
+  type: string;
+  status: 'connected' | 'disconnected' | 'pending';
   created_at: string;
   updated_at: string;
+  last_used_at?: string;
+  configuration: Record<string, string | number | boolean>;
+}
+
+export interface Namespace {
+  id: string;
+  user?: {
+    id: string;
+  };
+  organization?: {
+    id: string;
+    name: string;
+    display_name: string;
+  };
 }
 
 export interface NamespaceCreate {
@@ -61,6 +108,9 @@ export interface NamespaceUpdate {
 export interface User {
   id: string;
   workos_user_id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
   created_at: string | null;
 }
 

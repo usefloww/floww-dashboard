@@ -1,0 +1,221 @@
+import { useEffect, useState, useCallback } from "react";
+import { api, handleApiError } from "@/lib/api";
+import { OrganizationRole, OrganizationMember, OrganizationUser } from "@/types/api";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { Users, Crown, Shield, User, Calendar } from "lucide-react";
+
+interface OrganizationUserManagementProps {
+  organizationId: string;
+}
+
+export function OrganizationUserManagement({ organizationId }: OrganizationUserManagementProps) {
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMembers = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.get<OrganizationMember[]>(`/organizations/${organizationId}/members`);
+      setMembers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setError(handleApiError(error));
+      setMembers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [organizationId]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  const getRoleIcon = (role: OrganizationRole) => {
+    switch (role) {
+      case OrganizationRole.OWNER:
+        return <Crown className="h-4 w-4 text-yellow-600" />;
+      case OrganizationRole.ADMIN:
+        return <Shield className="h-4 w-4 text-blue-600" />;
+      case OrganizationRole.MEMBER:
+        return <User className="h-4 w-4 text-gray-600" />;
+      default:
+        return <User className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getRoleColor = (role: OrganizationRole) => {
+    switch (role) {
+      case OrganizationRole.OWNER:
+        return "text-yellow-700 bg-yellow-50 border-yellow-200";
+      case OrganizationRole.ADMIN:
+        return "text-blue-700 bg-blue-50 border-blue-200";
+      case OrganizationRole.MEMBER:
+        return "text-gray-700 bg-gray-50 border-gray-200";
+      default:
+        return "text-gray-700 bg-gray-50 border-gray-200";
+    }
+  };
+
+  const getUserInitials = (user: OrganizationUser) => {
+    if (user.first_name && user.last_name) {
+      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    }
+    if (user.first_name) {
+      return user.first_name.substring(0, 2).toUpperCase();
+    }
+    if (user.last_name) {
+      return user.last_name.substring(0, 2).toUpperCase();
+    }
+    if (user.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return user.workos_user_id.substring(0, 2).toUpperCase();
+  };
+
+  if (isLoading) {
+    return <LoadingScreen>Loading organization members...</LoadingScreen>;
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="flex items-center space-x-2 mb-6">
+        <Users className="h-5 w-5 text-gray-500" />
+        <h2 className="text-lg font-semibold">Organization Members</h2>
+        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+          {members.length} member{members.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+
+      {members.length === 0 ? (
+        <div className="text-center py-8">
+          <Users className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No members found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            This organization doesn't have any members yet.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Desktop table view */}
+          <div className="hidden md:block">
+            <div className="overflow-hidden border border-gray-200 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Joined
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {members.map((member) => (
+                    <tr key={member.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-8 w-8">
+                            <div className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center">
+                              <span className="text-xs font-medium text-sky-700">
+                                {getUserInitials(member.user)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {member.user.first_name && member.user.last_name
+                                ? `${member.user.first_name} ${member.user.last_name}`
+                                : member.user.email || member.user.workos_user_id
+                              }
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {member.user.email && (member.user.first_name || member.user.last_name) && (
+                                <div>{member.user.email}</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          {getRoleIcon(member.role)}
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getRoleColor(member.role)}`}>
+                            {member.role}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(member.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-3">
+            {members.map((member) => (
+              <div key={member.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center">
+                      <span className="text-xs font-medium text-sky-700">
+                        {getUserInitials(member.user)}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {member.user.first_name && member.user.last_name
+                          ? `${member.user.first_name} ${member.user.last_name}`
+                          : member.user.email || member.user.workos_user_id
+                        }
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {member.user.email && (member.user.first_name || member.user.last_name) && (
+                          <div>{member.user.email}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {getRoleIcon(member.role)}
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getRoleColor(member.role)}`}>
+                      {member.role}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1 text-sm text-gray-500">
+                  <Calendar className="h-3 w-3" />
+                  <span>Joined {new Date(member.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Read-only notice */}
+      <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          <strong>Read-only view:</strong> User management functionality (invite, remove, role changes) is not available in this interface.
+        </p>
+      </div>
+    </div>
+  );
+}

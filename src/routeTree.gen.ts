@@ -12,32 +12,15 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as WorkflowsImport } from './routes/workflows'
-import { Route as UsersImport } from './routes/users'
-import { Route as SettingsImport } from './routes/settings'
 import { Route as ProvidersImport } from './routes/providers'
 import { Route as IndexImport } from './routes/index'
 import { Route as SettingsIndexImport } from './routes/settings/index'
-import { Route as SettingsUsersImport } from './routes/settings/users'
-import { Route as SettingsOrganizationImport } from './routes/settings/organization'
-import { Route as SettingsAdvancedImport } from './routes/settings/advanced'
 
 // Create/Update Routes
 
 const WorkflowsRoute = WorkflowsImport.update({
   id: '/workflows',
   path: '/workflows',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const UsersRoute = UsersImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const SettingsRoute = SettingsImport.update({
-  id: '/settings',
-  path: '/settings',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -54,27 +37,9 @@ const IndexRoute = IndexImport.update({
 } as any)
 
 const SettingsIndexRoute = SettingsIndexImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SettingsRoute,
-} as any)
-
-const SettingsUsersRoute = SettingsUsersImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => SettingsRoute,
-} as any)
-
-const SettingsOrganizationRoute = SettingsOrganizationImport.update({
-  id: '/organization',
-  path: '/organization',
-  getParentRoute: () => SettingsRoute,
-} as any)
-
-const SettingsAdvancedRoute = SettingsAdvancedImport.update({
-  id: '/advanced',
-  path: '/advanced',
-  getParentRoute: () => SettingsRoute,
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => rootRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -95,20 +60,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProvidersImport
       parentRoute: typeof rootRoute
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsImport
-      parentRoute: typeof rootRoute
-    }
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersImport
-      parentRoute: typeof rootRoute
-    }
     '/workflows': {
       id: '/workflows'
       path: '/workflows'
@@ -116,77 +67,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkflowsImport
       parentRoute: typeof rootRoute
     }
-    '/settings/advanced': {
-      id: '/settings/advanced'
-      path: '/advanced'
-      fullPath: '/settings/advanced'
-      preLoaderRoute: typeof SettingsAdvancedImport
-      parentRoute: typeof SettingsImport
-    }
-    '/settings/organization': {
-      id: '/settings/organization'
-      path: '/organization'
-      fullPath: '/settings/organization'
-      preLoaderRoute: typeof SettingsOrganizationImport
-      parentRoute: typeof SettingsImport
-    }
-    '/settings/users': {
-      id: '/settings/users'
-      path: '/users'
-      fullPath: '/settings/users'
-      preLoaderRoute: typeof SettingsUsersImport
-      parentRoute: typeof SettingsImport
-    }
     '/settings/': {
       id: '/settings/'
-      path: '/'
-      fullPath: '/settings/'
+      path: '/settings'
+      fullPath: '/settings'
       preLoaderRoute: typeof SettingsIndexImport
-      parentRoute: typeof SettingsImport
+      parentRoute: typeof rootRoute
     }
   }
 }
 
 // Create and export the route tree
 
-interface SettingsRouteChildren {
-  SettingsAdvancedRoute: typeof SettingsAdvancedRoute
-  SettingsOrganizationRoute: typeof SettingsOrganizationRoute
-  SettingsUsersRoute: typeof SettingsUsersRoute
-  SettingsIndexRoute: typeof SettingsIndexRoute
-}
-
-const SettingsRouteChildren: SettingsRouteChildren = {
-  SettingsAdvancedRoute: SettingsAdvancedRoute,
-  SettingsOrganizationRoute: SettingsOrganizationRoute,
-  SettingsUsersRoute: SettingsUsersRoute,
-  SettingsIndexRoute: SettingsIndexRoute,
-}
-
-const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
-  SettingsRouteChildren,
-)
-
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/users': typeof UsersRoute
   '/workflows': typeof WorkflowsRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
-  '/settings/organization': typeof SettingsOrganizationRoute
-  '/settings/users': typeof SettingsUsersRoute
-  '/settings/': typeof SettingsIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
-  '/users': typeof UsersRoute
   '/workflows': typeof WorkflowsRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
-  '/settings/organization': typeof SettingsOrganizationRoute
-  '/settings/users': typeof SettingsUsersRoute
   '/settings': typeof SettingsIndexRoute
 }
 
@@ -194,65 +97,31 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/users': typeof UsersRoute
   '/workflows': typeof WorkflowsRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
-  '/settings/organization': typeof SettingsOrganizationRoute
-  '/settings/users': typeof SettingsUsersRoute
   '/settings/': typeof SettingsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/providers'
-    | '/settings'
-    | '/users'
-    | '/workflows'
-    | '/settings/advanced'
-    | '/settings/organization'
-    | '/settings/users'
-    | '/settings/'
+  fullPaths: '/' | '/providers' | '/workflows' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/providers'
-    | '/users'
-    | '/workflows'
-    | '/settings/advanced'
-    | '/settings/organization'
-    | '/settings/users'
-    | '/settings'
-  id:
-    | '__root__'
-    | '/'
-    | '/providers'
-    | '/settings'
-    | '/users'
-    | '/workflows'
-    | '/settings/advanced'
-    | '/settings/organization'
-    | '/settings/users'
-    | '/settings/'
+  to: '/' | '/providers' | '/workflows' | '/settings'
+  id: '__root__' | '/' | '/providers' | '/workflows' | '/settings/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProvidersRoute: typeof ProvidersRoute
-  SettingsRoute: typeof SettingsRouteWithChildren
-  UsersRoute: typeof UsersRoute
   WorkflowsRoute: typeof WorkflowsRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProvidersRoute: ProvidersRoute,
-  SettingsRoute: SettingsRouteWithChildren,
-  UsersRoute: UsersRoute,
   WorkflowsRoute: WorkflowsRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -267,9 +136,8 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/providers",
-        "/settings",
-        "/users",
-        "/workflows"
+        "/workflows",
+        "/settings/"
       ]
     },
     "/": {
@@ -278,36 +146,11 @@ export const routeTree = rootRoute
     "/providers": {
       "filePath": "providers.tsx"
     },
-    "/settings": {
-      "filePath": "settings.tsx",
-      "children": [
-        "/settings/advanced",
-        "/settings/organization",
-        "/settings/users",
-        "/settings/"
-      ]
-    },
-    "/users": {
-      "filePath": "users.tsx"
-    },
     "/workflows": {
       "filePath": "workflows.tsx"
     },
-    "/settings/advanced": {
-      "filePath": "settings/advanced.tsx",
-      "parent": "/settings"
-    },
-    "/settings/organization": {
-      "filePath": "settings/organization.tsx",
-      "parent": "/settings"
-    },
-    "/settings/users": {
-      "filePath": "settings/users.tsx",
-      "parent": "/settings"
-    },
     "/settings/": {
-      "filePath": "settings/index.tsx",
-      "parent": "/settings"
+      "filePath": "settings/index.tsx"
     }
   }
 }

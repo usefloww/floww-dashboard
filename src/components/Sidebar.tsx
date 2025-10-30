@@ -1,8 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
-import { useOrganizationStore } from "@/stores/organizationStore";
-import { useNamespaceStore } from "@/stores/namespaceStore";
+import { useNamespaceStore, WorkspaceItem } from "@/stores/namespaceStore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -51,80 +50,49 @@ const getNavigationItems = (isOrganizationContext: boolean): NavigationItem[] =>
 export function Sidebar() {
   const { user, logout } = useAuthStore();
   const {
-    organizations,
-    currentOrganization,
-    setCurrentOrganization,
-    fetchOrganizations,
-    createOrganization,
+    currentNamespace,
+    setCurrentNamespace,
+    createNamespace,
+    getWorkspaceItems,
+    getCurrentWorkspaceContext,
+    fetchNamespaces,
     isLoading
-  } = useOrganizationStore();
-  const { fetchNamespaces } = useNamespaceStore();
+  } = useNamespaceStore();
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({ name: "", display_name: "" });
   const [createError, setCreateError] = useState("");
 
   useEffect(() => {
-    fetchOrganizations();
     fetchNamespaces();
-  }, [fetchOrganizations, fetchNamespaces]);
+  }, [fetchNamespaces]);
 
   // Determine if we're in an organization context
-  // Check if current organization has organization_owner_id or if there are organization-owned namespaces
-  const isOrganizationContext = currentOrganization !== null;
+  const { isOrganizationContext } = getCurrentWorkspaceContext();
 
   const navigationItems = getNavigationItems(isOrganizationContext);
 
-  // Create workspace items (combination of personal and organizations)
-  const workspaceItems = [
-    // Personal workspace
-    {
-      id: 'personal',
-      name: 'Personal',
-      display_name: 'Personal',
-      type: 'personal' as const,
-      isPersonal: true,
-    },
-    // Organization workspaces
-    ...(Array.isArray(organizations) ? organizations.map(org => ({
-      id: org.id,
-      name: org.name,
-      display_name: org.display_name,
-      type: 'organization' as const,
-      isPersonal: false,
-    })) : [])
-  ];
+  // Get workspace items from namespaces
+  const workspaceItems = getWorkspaceItems();
 
-  const currentWorkspace = currentOrganization
-    ? workspaceItems.find(w => w.id === currentOrganization.id)
-    : workspaceItems.find(w => w.isPersonal);
+  const currentWorkspace = workspaceItems.find(w => w.id === currentNamespace?.id);
 
-  const handleWorkspaceSelect = (workspace: typeof workspaceItems[0]) => {
-    if (workspace.isPersonal) {
-      // For personal workspace, clear the current organization
-      setCurrentOrganization(null);
-    } else {
-      const org = Array.isArray(organizations)
-        ? organizations.find(o => o.id === workspace.id)
-        : null;
-      if (org) {
-        setCurrentOrganization(org);
-      }
-    }
+  const handleWorkspaceSelect = (workspace: WorkspaceItem) => {
+    setCurrentNamespace(workspace.namespace);
     setIsWorkspaceDropdownOpen(false);
   };
 
-  const handleCreateOrganization = async (e: React.FormEvent) => {
+  const handleCreateNamespace = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError("");
-    
+
     if (!formData.name.trim() || !formData.display_name.trim()) {
       setCreateError("Both name and display name are required");
       return;
     }
 
     try {
-      await createOrganization({ name: formData.name, display_name: formData.display_name });
+      await createNamespace({ name: formData.name, display_name: formData.display_name });
       setFormData({ name: "", display_name: "" });
       setIsCreateDialogOpen(false);
     } catch (error) {
@@ -132,8 +100,22 @@ export function Sidebar() {
     }
   };
 
-  const getUserInitials = (userId: string) => {
-    return userId.substring(0, 2).toUpperCase();
+  const getUserInitials = () => {
+    if (!user) return "U";
+
+    if (user.first_name && user.last_name) {
+      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    }
+    if (user.first_name) {
+      return user.first_name.substring(0, 2).toUpperCase();
+    }
+    if (user.last_name) {
+      return user.last_name.substring(0, 2).toUpperCase();
+    }
+    if (user.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return (user.workos_user_id || user.id).substring(0, 2).toUpperCase();
   };
 
   return (
@@ -143,12 +125,14 @@ export function Sidebar() {
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="bg-sky-100 text-sky-700">
-              {user ? getUserInitials(user.workos_user_id || user.id) : "U"}
+              {getUserInitials()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">
-              {user?.workos_user_id || user?.id || "User"}
+              {user?.first_name && user?.last_name
+                ? `${user.first_name} ${user.last_name}`
+                : user?.first_name || user?.last_name || user?.email || "User"}
             </p>
             <button
               onClick={logout}
@@ -224,7 +208,7 @@ export function Sidebar() {
                         <DialogHeader>
                           <DialogTitle>Create Organization</DialogTitle>
                         </DialogHeader>
-                        <form onSubmit={handleCreateOrganization} className="space-y-4">
+                        <form onSubmit={handleCreateNamespace} className="space-y-4">
                           <div className="space-y-2">
                             <label htmlFor="name" className="text-sm font-medium">
                               Name
