@@ -8,10 +8,11 @@ import viteReact from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [
     tsConfigPaths(),
-    tanstackStart({spa: {
-      // enabled: true,
-    },
-}),
+    tanstackStart({
+      sitemap: {
+        enabled: false,
+      }
+    }),
     viteReact(),
     tailwindcss(),
   ],
