@@ -285,13 +285,6 @@ export function Sidebar() {
           })}
         </div>
       </nav>
-
-      {/* Bottom Brand */}
-      <div className="p-4 border-t border-gray-200">
-        <Link to="/" className="flex items-center space-x-2 group">
-          <span className="text-lg font-bold text-sky-950">Floww</span>
-        </Link>
-      </div>
     </div>
   );
 }

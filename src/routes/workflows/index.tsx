@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { Loader } from "@/components/Loader";
 import { Search, Workflow as WorkflowIcon, Calendar, User, Info, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/workflows/")({
@@ -11,6 +11,7 @@ export const Route = createFileRoute("/workflows/")({
 });
 
 function WorkflowsPage() {
+  console.log("WorkflowsPage loaded");
   const { currentNamespace } = useNamespaceStore();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,13 +20,16 @@ function WorkflowsPage() {
 
   useEffect(() => {
     fetchWorkflows();
-  }, [currentNamespace]);
+    console.log("useEffect");
+  }, []);
 
   const fetchWorkflows = async () => {
     try {
+      console.log("fetchWorkflows");
       setIsLoading(true);
       setError(null);
       const params = currentNamespace?.id ? { namespace_id: currentNamespace.id } : undefined;
+      console.log("params",params);
       const data = await api.get<{ results: Workflow[] }>("/workflows", { params });
       setWorkflows(Array.isArray(data?.results) ? data.results : []);
     } catch (error) {
@@ -43,10 +47,6 @@ function WorkflowsPage() {
         (workflow?.description && workflow.description.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     : [];
-
-  if (isLoading) {
-    return <LoadingScreen>Loading workflows...</LoadingScreen>;
-  }
 
   return (
     <div className="space-y-6">
@@ -94,24 +94,26 @@ function WorkflowsPage() {
       )}
 
       {/* Workflows list */}
-      {filteredWorkflows.length === 0 ? (
-        <div className="text-center py-12">
-          <WorkflowIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No workflows</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {searchTerm ? "No workflows match your search." : "No workflows found in this namespace."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filteredWorkflows.map((workflow) => (
-            <WorkflowCard
-              key={workflow.id}
-              workflow={workflow}
-            />
-          ))}
-        </div>
-      )}
+      <Loader isLoading={isLoading} loadingMessage="Loading workflows...">
+        {filteredWorkflows.length === 0 ? (
+          <div className="text-center py-12">
+            <WorkflowIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No workflows</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {searchTerm ? "No workflows match your search." : "No workflows found in this namespace."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredWorkflows.map((workflow) => (
+              <WorkflowCard
+                key={workflow.id}
+                workflow={workflow}
+              />
+            ))}
+          </div>
+        )}
+      </Loader>
 
     </div>
   );

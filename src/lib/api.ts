@@ -26,6 +26,7 @@ class ApiClient {
     endpoint: string,
     options: ApiRequestOptions = {}
   ): Promise<T> {
+    console.log('[ApiClient] Requesting:', endpoint);
     const {
       params,
       timeout = this.defaultTimeout,

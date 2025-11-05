@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     // In production, you would send this to an error reporting service
-    // like Sentry (which is already configured in main.tsx)
+    // like Sentry (configured in your app entry point)
   }
 
   handleReload = () => {
