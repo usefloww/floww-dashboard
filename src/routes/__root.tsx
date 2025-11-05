@@ -28,13 +28,15 @@ export const Route = createRootRoute({
     links: [{ rel: 'stylesheet', href: appCss }],
   }),
   component: RootComponent,
-    beforeLoad: async () => {
+    beforeLoad: async ({ location }) => {
     // Check authentication server-side before loading any route
     const user = await getCurrentUser()
 
     if (!user) {
       // Redirect to backend login page if not authenticated
-      const nextParam = encodeURIComponent(`${typeof window !== 'undefined' ? window.location.origin : ''}/`)
+      // Use the current pathname + searchStr (location.search is an object, not a string)
+      const currentPath = location.pathname + (location.searchStr || '')
+      const nextParam = encodeURIComponent(currentPath)
       throw redirect({
         href: `/auth/login?next=${nextParam}`,
       })

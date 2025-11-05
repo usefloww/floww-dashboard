@@ -44,23 +44,6 @@ function WorkflowsPage() {
       <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Workflows</h1>
-          <p className="text-gray-600 mt-1">
-            {currentNamespace?.organization
-              ? `View workflows in ${currentNamespace.organization.display_name}`
-              : "View your workflows"
-            }
-          </p>
-        </div>
-
-        {/* Read-only notice */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2">
-            <Info className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-900">Read-only Mode</span>
-          </div>
-          <p className="text-sm text-blue-700 mt-1">
-            Currently viewing workflows in read-only mode. Workflow creation and editing is not available.
-          </p>
         </div>
       </div>
 

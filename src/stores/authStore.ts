@@ -33,10 +33,11 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: () => {
-        // Redirect to backend auth endpoint
-        // Have backend redirect directly to frontend homepage after auth
-        const nextParam = encodeURIComponent(`${window.location.origin}/`);
-        window.location.href = `/auth/login?next=${nextParam}`;
+        // Redirect to backend auth endpoint with current path
+        // Use prompt=select_account to always show account selection
+        const currentPath = window.location.pathname + window.location.search;
+        const nextParam = encodeURIComponent(currentPath);
+        window.location.href = `/auth/login?next=${nextParam}&prompt=select_account`;
       },
 
       logout: async () => {
@@ -55,8 +56,8 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false
           });
-          // Redirect to login page
-          window.location.href = '/auth/login';
+          // Redirect to login page with prompt=select_account to show account selection
+          window.location.href = '/auth/login?prompt=select_account';
         }
       },
 

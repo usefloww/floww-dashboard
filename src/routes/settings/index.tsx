@@ -20,10 +20,6 @@ function OrganizationSettings() {
             <Building2 className="h-5 w-5 text-gray-500" />
             <h2 className="text-lg font-semibold">Organization Details</h2>
           </div>
-          <button className="flex items-center space-x-2 text-sky-600 hover:text-sky-700 text-sm">
-            <Edit className="h-4 w-4" />
-            <span>Edit</span>
-          </button>
         </div>
 
         {organization && (
@@ -32,18 +28,6 @@ function OrganizationSettings() {
               <label className="block text-sm font-medium text-gray-700">Organization Name</label>
               <p className="mt-1 text-sm text-gray-900">
                 {organization.display_name}
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Slug</label>
-              <p className="mt-1 text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border">
-                {organization.name}
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Organization ID</label>
-              <p className="mt-1 text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border">
-                {organization.id}
               </p>
             </div>
           </div>
