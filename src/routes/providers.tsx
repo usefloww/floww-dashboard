@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Provider } from "@/types/api";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { Loader } from "@/components/Loader";
 import { Search, Building2, CheckCircle, XCircle, Clock, Info } from "lucide-react";
 
 // Provider logo mapping to Simple Icons CDN
@@ -39,29 +40,20 @@ export const Route = createFileRoute("/providers")({
 
 function ProvidersPage() {
   const { currentNamespace } = useNamespaceStore();
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    fetchProviders();
-  }, [currentNamespace]);
-
-  const fetchProviders = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Use TanStack Query to fetch providers
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['providers', currentNamespace?.id],
+    queryFn: async () => {
       const params = currentNamespace?.id ? { namespace_id: currentNamespace.id } : undefined;
       const data = await api.get<{ results: Provider[] }>("/providers", { params });
-      setProviders(Array.isArray(data?.results) ? data.results : []);
-    } catch (error) {
-      setError(handleApiError(error));
-      setProviders([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return Array.isArray(data?.results) ? data.results : [];
+    },
+  });
+
+  const providers = data || [];
+  const errorMessage = error ? handleApiError(error) : null;
 
   const filteredProviders = Array.isArray(providers)
     ? providers.filter(provider =>
@@ -69,10 +61,6 @@ function ProvidersPage() {
         provider?.type?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
-
-  if (isLoading) {
-    return <LoadingScreen>Loading providers...</LoadingScreen>;
-  }
 
   return (
     <div className="space-y-6">
@@ -113,31 +101,33 @@ function ProvidersPage() {
       </div>
 
       {/* Error message */}
-      {error && (
+      {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+          {errorMessage}
         </div>
       )}
 
       {/* Providers list */}
-      {filteredProviders.length === 0 ? (
-        <div className="text-center py-12">
-          <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No providers</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {searchTerm ? "No providers match your search." : "No providers found in this namespace."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filteredProviders.map((provider) => (
-            <ProviderCard
-              key={provider.id}
-              provider={provider}
-            />
-          ))}
-        </div>
-      )}
+      <Loader isLoading={isLoading} loadingMessage="Loading providers...">
+        {filteredProviders.length === 0 ? (
+          <div className="text-center py-12">
+            <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No providers</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {searchTerm ? "No providers match your search." : "No providers found in this namespace."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredProviders.map((provider) => (
+              <ProviderCard
+                key={provider.id}
+                provider={provider}
+              />
+            ))}
+          </div>
+        )}
+      </Loader>
     </div>
   );
 }

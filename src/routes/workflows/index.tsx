@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
@@ -13,33 +14,22 @@ export const Route = createFileRoute("/workflows/")({
 function WorkflowsPage() {
   console.log("WorkflowsPage loaded");
   const { currentNamespace } = useNamespaceStore();
-  const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    fetchWorkflows();
-    console.log("useEffect");
-  }, []);
-
-  const fetchWorkflows = async () => {
-    try {
-      console.log("fetchWorkflows");
-      setIsLoading(true);
-      setError(null);
+  // Use TanStack Query to fetch workflows
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['workflows', currentNamespace?.id],
+    queryFn: async () => {
+      console.log("fetchWorkflows via useQuery");
       const params = currentNamespace?.id ? { namespace_id: currentNamespace.id } : undefined;
-      console.log("params",params);
+      console.log("params", params);
       const data = await api.get<{ results: Workflow[] }>("/workflows", { params });
-      setWorkflows(Array.isArray(data?.results) ? data.results : []);
-    } catch (error) {
-      setError(handleApiError(error));
-      setWorkflows([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return Array.isArray(data?.results) ? data.results : [];
+    },
+  });
 
+  const workflows = data || [];
+  const errorMessage = error ? handleApiError(error) : null;
 
   const filteredWorkflows = Array.isArray(workflows)
     ? workflows.filter(workflow =>
@@ -87,9 +77,9 @@ function WorkflowsPage() {
       </div>
 
       {/* Error message */}
-      {error && (
+      {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+          {errorMessage}
         </div>
       )}
 

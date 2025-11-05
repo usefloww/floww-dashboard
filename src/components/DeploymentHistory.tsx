@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api, handleApiError } from "@/lib/api";
 import { WorkflowDeployment, WorkflowDeploymentsResponse } from "@/types/api";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { Loader } from "@/components/Loader";
 import { MoreVertical, Edit2, Trash2 } from "lucide-react";
 
 interface DeploymentHistoryProps {
@@ -10,69 +11,54 @@ interface DeploymentHistoryProps {
 }
 
 export function DeploymentHistory({ workflowId, onEdit }: DeploymentHistoryProps) {
-  const [deployments, setDeployments] = useState<WorkflowDeployment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchDeployments();
-  }, [workflowId]);
-
-  const fetchDeployments = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Use TanStack Query to fetch deployments
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['deployments', workflowId],
+    queryFn: async () => {
       const params = { workflow_id: workflowId };
       const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
       const sorted = (data.deployments || []).sort(
         (a, b) => new Date(b.deployed_at).getTime() - new Date(a.deployed_at).getTime()
       );
-      setDeployments(sorted);
-    } catch (error) {
-      setError(handleApiError(error));
-      setDeployments([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return sorted;
+    },
+  });
 
-  if (isLoading) {
-    return <LoadingScreen>Loading deployments...</LoadingScreen>;
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-        {error}
-      </div>
-    );
-  }
-
-  if (deployments.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No deployments</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          No deployments found for this workflow.
-        </p>
-      </div>
-    );
-  }
+  const deployments = data || [];
+  const errorMessage = error ? handleApiError(error) : null;
 
   return (
-    <div className="space-y-4">
-      {deployments.map((deployment, index) => (
-        <DeploymentCard
-          key={deployment.id}
-          deployment={deployment}
-          versionNumber={deployments.length - index}
-          isDropdownOpen={openDropdown === deployment.id}
-          onDropdownToggle={(isOpen) => setOpenDropdown(isOpen ? deployment.id : null)}
-          onEdit={onEdit}
-        />
-      ))}
-    </div>
+    <Loader isLoading={isLoading} loadingMessage="Loading deployments...">
+      <div className="space-y-4">
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        {deployments.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No deployments</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              No deployments found for this workflow.
+            </p>
+          </div>
+        ) : (
+          deployments.map((deployment, index) => (
+            <DeploymentCard
+              key={deployment.id}
+              deployment={deployment}
+              versionNumber={deployments.length - index}
+              isDropdownOpen={openDropdown === deployment.id}
+              onDropdownToggle={(isOpen) => setOpenDropdown(isOpen ? deployment.id : null)}
+              onEdit={onEdit}
+            />
+          ))
+        )}
+      </div>
+    </Loader>
   );
 }
 

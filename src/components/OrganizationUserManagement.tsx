@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api, handleApiError } from "@/lib/api";
 import { OrganizationRole, OrganizationMember, OrganizationUser } from "@/types/api";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { Loader } from "@/components/Loader";
 import { Users, Crown, Shield, User, Calendar } from "lucide-react";
 
 interface OrganizationUserManagementProps {
@@ -9,27 +9,17 @@ interface OrganizationUserManagementProps {
 }
 
 export function OrganizationUserManagement({ organizationId }: OrganizationUserManagementProps) {
-  const [members, setMembers] = useState<OrganizationMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchMembers = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Use TanStack Query to fetch members
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['organization-members', organizationId],
+    queryFn: async () => {
       const data = await api.get<OrganizationMember[]>(`/organizations/${organizationId}/members`);
-      setMembers(Array.isArray(data) ? data : []);
-    } catch (error) {
-      setError(handleApiError(error));
-      setMembers([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organizationId]);
+      return Array.isArray(data) ? data : [];
+    },
+  });
 
-  useEffect(() => {
-    fetchMembers();
-  }, [fetchMembers]);
+  const members = data || [];
+  const errorMessage = error ? handleApiError(error) : null;
 
   const getRoleIcon = (role: OrganizationRole) => {
     switch (role) {
@@ -73,25 +63,22 @@ export function OrganizationUserManagement({ organizationId }: OrganizationUserM
     return user.workos_user_id.substring(0, 2).toUpperCase();
   };
 
-  if (isLoading) {
-    return <LoadingScreen>Loading organization members...</LoadingScreen>;
-  }
-
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
-      <div className="flex items-center space-x-2 mb-6">
-        <Users className="h-5 w-5 text-gray-500" />
-        <h2 className="text-lg font-semibold">Organization Members</h2>
-        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-          {members.length} member{members.length !== 1 ? 's' : ''}
-        </span>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-          {error}
+    <Loader isLoading={isLoading} loadingMessage="Loading organization members...">
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center space-x-2 mb-6">
+          <Users className="h-5 w-5 text-gray-500" />
+          <h2 className="text-lg font-semibold">Organization Members</h2>
+          <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+            {members.length} member{members.length !== 1 ? 's' : ''}
+          </span>
         </div>
-      )}
+
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {errorMessage}
+          </div>
+        )}
 
       {members.length === 0 ? (
         <div className="text-center py-8">
@@ -210,12 +197,13 @@ export function OrganizationUserManagement({ organizationId }: OrganizationUserM
         </div>
       )}
 
-      {/* Read-only notice */}
-      <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-700">
-          <strong>Read-only view:</strong> User management functionality (invite, remove, role changes) is not available in this interface.
-        </p>
+        {/* Read-only notice */}
+        <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-700">
+            <strong>Read-only view:</strong> User management functionality (invite, remove, role changes) is not available in this interface.
+          </p>
+        </div>
       </div>
-    </div>
+    </Loader>
   );
 }

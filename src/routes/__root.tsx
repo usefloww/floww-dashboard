@@ -1,18 +1,27 @@
 /// <reference types="vite/client" />
 import {
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   createRootRoute,
   redirect,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import * as React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import appCss from '../styles/app.css?url'
 import { NotificationContainer } from '@/components/NotificationToast'
 import { Sidebar } from '@/components/Sidebar'
 import { getCurrentUser } from '@/lib/server/auth'
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // 1 minute
+      refetchOnWindowFocus: false,
+    },
+  },
+})
 
 export const Route = createRootRoute({
   head: () => ({
@@ -42,14 +51,10 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-  return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
-  )
+  return <RootDocument />
 }
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument() {
   return (
     <html>
       <head>
@@ -57,19 +62,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
 
       <body>
-        <div className="min-h-screen">
-          <div className="flex h-screen">
-            <Sidebar />
-            <main className="flex-1 overflow-auto">
-              <div className="p-8">
-                <Outlet />
-              </div>
-            </main>
-          </div>
+        <QueryClientProvider client={queryClient}>
+          <div className="min-h-screen">
+            <div className="flex h-screen">
+              <Sidebar />
+              <main className="flex-1 overflow-auto">
+                <div className="p-8">
+                  <Outlet />
+                </div>
+              </main>
+            </div>
 
-          <NotificationContainer />
-          <TanStackRouterDevtools />
-        </div>
+            <NotificationContainer />
+            <TanStackRouterDevtools />
+          </div>
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>

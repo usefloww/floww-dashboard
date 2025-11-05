@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, handleApiError } from "@/lib/api";
 import { WorkflowDeployment, WorkflowDeploymentsResponse, WorkflowDeploymentStatus } from "@/types/api";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { Loader } from "@/components/Loader";
 import { Save, X, Loader2 } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { showSuccessNotification, showErrorNotification } from "@/stores/notificationStore";
@@ -14,9 +15,7 @@ interface DeploymentEditorProps {
 }
 
 export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }: DeploymentEditorProps) {
-  const [deployment, setDeployment] = useState<WorkflowDeployment | null>(null);
-  const [allDeployments, setAllDeployments] = useState<WorkflowDeployment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState<Record<string, string>>({});
@@ -24,88 +23,68 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
   const [currentFile, setCurrentFile] = useState<string>("");
   const [selectedDeploymentId, setSelectedDeploymentId] = useState<string | null>(deploymentId || null);
 
-  useEffect(() => {
-    fetchDeployments();
-  }, [workflowId]);
-
-  useEffect(() => {
-    if (allDeployments.length > 0 && !deployment) {
-      if (deploymentId && allDeployments.find(d => d.id === deploymentId)) {
-        // Use the provided deploymentId if it exists
-        setSelectedDeploymentId(deploymentId);
-        fetchDeployment(deploymentId);
-      } else if (!selectedDeploymentId) {
-        // Default to latest deployment
-        const latest = allDeployments.sort(
-          (a, b) => new Date(b.deployed_at).getTime() - new Date(a.deployed_at).getTime()
-        )[0];
-        setSelectedDeploymentId(latest.id);
-        fetchDeployment(latest.id);
-      }
-    }
-  }, [allDeployments, deploymentId]);
-
-  useEffect(() => {
-    if (selectedDeploymentId && (!deployment || deployment.id !== selectedDeploymentId)) {
-      fetchDeployment(selectedDeploymentId);
-    }
-  }, [selectedDeploymentId]);
-
-  const fetchDeployments = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Fetch all deployments
+  const { data: allDeployments = [], isLoading: isLoadingDeployments } = useQuery({
+    queryKey: ['deployments', workflowId],
+    queryFn: async () => {
       const params = { workflow_id: workflowId };
       const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
       const sorted = (data.deployments || []).sort(
         (a, b) => new Date(b.deployed_at).getTime() - new Date(a.deployed_at).getTime()
       );
-      setAllDeployments(sorted);
-      
-      // If no deploymentId provided, use latest
-      if (!deploymentId && sorted.length > 0) {
-        setSelectedDeploymentId(sorted[0].id);
-      }
-    } catch (error) {
-      setError(handleApiError(error));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return sorted;
+    },
+  });
 
-  const fetchDeployment = async (id: string) => {
-    try {
-      setError(null);
-      const data = await api.get<WorkflowDeployment>(`/workflow_deployments/${id}`);
-      setDeployment(data);
-      
-      // Filter to only TypeScript/JavaScript files
-      const allFiles = data.user_code?.files || {};
-      const tsFiles: Record<string, string> = {};
-      Object.keys(allFiles).forEach((fileName) => {
-        if (
-          fileName.endsWith('.ts') ||
-          fileName.endsWith('.tsx') ||
-          fileName.endsWith('.js') ||
-          fileName.endsWith('.jsx')
-        ) {
-          tsFiles[fileName] = allFiles[fileName];
-        }
-      });
-      
-      setCode(tsFiles);
-      const initialEntrypoint = data.user_code?.entrypoint || "";
-      const initialFile = 
-        (initialEntrypoint && (initialEntrypoint.endsWith('.ts') || initialEntrypoint.endsWith('.tsx') || initialEntrypoint.endsWith('.js') || initialEntrypoint.endsWith('.jsx')) && tsFiles[initialEntrypoint])
-          ? initialEntrypoint
-          : Object.keys(tsFiles)[0] || "";
-      
-      setEntrypoint(initialFile);
-      setCurrentFile(initialFile);
-    } catch (error) {
-      setError(handleApiError(error));
+  // Auto-select deployment if not already selected
+  useEffect(() => {
+    if (allDeployments.length > 0 && !selectedDeploymentId) {
+      if (deploymentId && allDeployments.find(d => d.id === deploymentId)) {
+        setSelectedDeploymentId(deploymentId);
+      } else {
+        setSelectedDeploymentId(allDeployments[0].id);
+      }
     }
-  };
+  }, [allDeployments, deploymentId, selectedDeploymentId]);
+
+  // Fetch selected deployment details
+  const { data: deployment, isLoading: isLoadingDeployment } = useQuery({
+    queryKey: ['deployment', selectedDeploymentId],
+    queryFn: async () => {
+      if (!selectedDeploymentId) return null;
+      return await api.get<WorkflowDeployment>(`/workflow_deployments/${selectedDeploymentId}`);
+    },
+    enabled: !!selectedDeploymentId,
+  });
+
+  // Update local state when deployment data changes
+  useEffect(() => {
+    if (!deployment) return;
+
+    // Filter to only TypeScript/JavaScript files
+    const allFiles = deployment.user_code?.files || {};
+    const tsFiles: Record<string, string> = {};
+    Object.keys(allFiles).forEach((fileName) => {
+      if (
+        fileName.endsWith('.ts') ||
+        fileName.endsWith('.tsx') ||
+        fileName.endsWith('.js') ||
+        fileName.endsWith('.jsx')
+      ) {
+        tsFiles[fileName] = allFiles[fileName];
+      }
+    });
+
+    setCode(tsFiles);
+    const initialEntrypoint = deployment.user_code?.entrypoint || "";
+    const initialFile =
+      (initialEntrypoint && (initialEntrypoint.endsWith('.ts') || initialEntrypoint.endsWith('.tsx') || initialEntrypoint.endsWith('.js') || initialEntrypoint.endsWith('.jsx')) && tsFiles[initialEntrypoint])
+        ? initialEntrypoint
+        : Object.keys(tsFiles)[0] || "";
+
+    setEntrypoint(initialFile);
+    setCurrentFile(initialFile);
+  }, [deployment]);
 
   const handleSave = async () => {
     if (!deployment) return;
@@ -113,7 +92,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
     try {
       setIsSaving(true);
       setError(null);
-      
+
       // Get all files from original deployment to preserve non-TS files
       const allFiles = {
         ...deployment.user_code.files,
@@ -138,9 +117,9 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
         "Your deployment has been saved as a new version."
       );
 
-      // Refresh deployments list
-      await fetchDeployments();
-      
+      // Invalidate queries to refetch deployments
+      await queryClient.invalidateQueries({ queryKey: ['deployments', workflowId] });
+
       // Reset to show the new deployment
       setSelectedDeploymentId(null);
 
@@ -159,34 +138,9 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
     }
   };
 
-  if (isLoading) {
-    return <LoadingScreen>Loading deployment...</LoadingScreen>;
-  }
-
-  if (!deployment) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No deployment found</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          No deployment found for this workflow.
-        </p>
-      </div>
-    );
-  }
-
+  const isLoading = isLoadingDeployments || isLoadingDeployment;
   const currentFileContent = code[currentFile] || "";
   const tsFileNames = Object.keys(code);
-
-  if (tsFileNames.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No TypeScript files</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          This deployment doesn't contain any TypeScript files to edit.
-        </p>
-      </div>
-    );
-  }
 
   // Format deployment date for dropdown
   const formatDeploymentDate = (deployment: WorkflowDeployment) => {
@@ -195,16 +149,33 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
   };
 
   return (
-    <div className="space-y-4">
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
+    <Loader isLoading={isLoading} loadingMessage="Loading deployment...">
+      <div className="space-y-4">
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
 
-      {/* Version Selector and Actions */}
-      <div className="flex items-center justify-between">
+        {!deployment ? (
+          <div className="text-center py-12">
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No deployment found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              No deployment found for this workflow.
+            </p>
+          </div>
+        ) : tsFileNames.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No TypeScript files</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              This deployment doesn't contain any TypeScript files to edit.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Version Selector and Actions */}
+            <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <label className="text-sm font-medium text-gray-700">Version:</label>
           <select
@@ -310,7 +281,10 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
           }}
         />
       </div>
-    </div>
+            </>
+        )}
+      </div>
+    </Loader>
   );
 }
 
