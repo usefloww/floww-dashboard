@@ -5,7 +5,7 @@ import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Workflow as WorkflowIcon, Calendar, User, Info, Clock } from "lucide-react";
+import { Search, Workflow as WorkflowIcon, Calendar, User, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/workflows/")({
   component: WorkflowsPage,
