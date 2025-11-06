@@ -1,10 +1,61 @@
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 import { createServer } from 'node:http'
+import { readFile } from 'node:fs/promises'
+import { join, dirname, resolve, normalize } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+// In production, server.js is in dist/server/, so we go up one level to get to dist/
+const distRoot = join(__dirname, '..')
+const clientRoot = join(distRoot, 'client')
 
 const serverEntry: ServerEntry = {
   fetch(request) {
     return handler.fetch(request)
   },
+}
+
+async function serveStaticFile(filePath: string, res: any): Promise<boolean> {
+  try {
+    // Prevent path traversal attacks - normalize and resolve to absolute path
+    const normalizedPath = normalize(filePath).replace(/^\/+/, '')
+    const fullPath = resolve(clientRoot, normalizedPath)
+    
+    // Ensure the resolved path is within clientRoot
+    const resolvedClientRoot = resolve(clientRoot)
+    if (!fullPath.startsWith(resolvedClientRoot)) {
+      return false
+    }
+    
+    const file = await readFile(fullPath)
+    
+    // Set appropriate content type
+    const ext = filePath.split('.').pop()?.toLowerCase()
+    const contentTypes: Record<string, string> = {
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'json': 'application/json',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'svg': 'image/svg+xml',
+      'ico': 'image/x-icon',
+      'woff': 'font/woff',
+      'woff2': 'font/woff2',
+      'ttf': 'font/ttf',
+      'eot': 'application/vnd.ms-fontobject',
+    }
+    
+    const contentType = contentTypes[ext || ''] || 'application/octet-stream'
+    res.setHeader('Content-Type', contentType)
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.statusCode = 200
+    res.end(file)
+    return true
+  } catch (error) {
+    return false
+  }
 }
 
 // Start HTTP server when this file is executed directly
@@ -26,6 +77,20 @@ if (isMainModule) {
 
   const server = createServer(async (req, res) => {
     try {
+      const urlPath = req.url || '/'
+      
+      // Try to serve static files first (assets, favicon, etc.)
+      // Remove leading slash and check if it's a static asset
+      const staticPath = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath
+      
+      // Check if it's a static asset request (assets/, favicon, vite.svg, etc.)
+      if (staticPath.startsWith('assets/') || staticPath === 'favicon.ico' || staticPath === 'vite.svg') {
+        const served = await serveStaticFile(staticPath, res)
+        if (served) {
+          return
+        }
+      }
+      
       // Convert Node.js request to Fetch API Request
       const url = `http://${req.headers.host}${req.url}`
       
