@@ -94,22 +94,35 @@ export const useNamespaceStore = create<NamespaceState>()(
         try {
           set({ isLoading: true, error: null });
 
-          // First create the organization
-          const organization = await api.post<Organization>('/organizations', organizationData);
+          // Create the organization (namespace will be created automatically)
+          await api.post<Organization>('/organizations', organizationData);
 
-          // Then create a namespace for the organization
-          const namespace = await api.post<Namespace>('/namespaces', {
-            organization_id: organization.id
-          });
+          // Refresh namespaces to get the automatically created namespace
+          const response = await api.get<NamespaceResponse>('/namespaces');
+          const namespaces = response.results;
 
-          // Add to local state
-          const namespaces = [...get().namespaces, namespace];
+          // Find the namespace for the newly created organization
+          const newNamespace = namespaces.find(
+            ns => ns.organization?.name === organizationData.name
+          );
+
+          // Update state with refreshed namespaces
+          const current = get().currentNamespace;
+          const newCurrent = current && namespaces.find(ns => ns.id === current.id)
+            ? current
+            : newNamespace || namespaces.find(ns => ns.user) || namespaces[0] || null;
+
           set({
             namespaces,
+            currentNamespace: newCurrent,
             isLoading: false
           });
 
-          return namespace;
+          if (!newNamespace) {
+            throw new Error('Namespace was not automatically created for the organization');
+          }
+
+          return newNamespace;
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Failed to create namespace',

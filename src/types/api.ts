@@ -153,3 +153,41 @@ export interface WorkflowDeployment {
 export interface WorkflowDeploymentsResponse {
   deployments: WorkflowDeployment[];
 }
+
+// Service Account types
+export interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  created_at: string;
+  last_used_at?: string | null;
+  revoked_at?: string | null;
+}
+
+export interface ApiKeyCreatedResponse extends ApiKey {
+  api_key: string;
+}
+
+export interface ServiceAccount {
+  id: string;
+  name: string;
+  organization_id: string;
+  api_keys: ApiKey[];
+}
+
+export interface ServiceAccountCreate {
+  name: string;
+  organization_id: string;
+}
+
+export interface ServiceAccountUpdate {
+  name?: string;
+}
+
+export interface ApiKeyCreate {
+  name: string;
+}
+
+export interface ServiceAccountsListResponse {
+  results: ServiceAccount[];
+}

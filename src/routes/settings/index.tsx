@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { OrganizationUserManagement } from "@/components/OrganizationUserManagement";
+import { ServiceAccountsManagement } from "@/components/ServiceAccountsManagement";
 import { Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/settings/")({
@@ -36,7 +37,10 @@ function OrganizationSettings() {
 
       {/* Organization Members */}
       {isOrganizationContext && organization ? (
-        <OrganizationUserManagement organizationId={organization.id} />
+        <>
+          <OrganizationUserManagement organizationId={organization.id} />
+          <ServiceAccountsManagement organizationId={organization.id} />
+        </>
       ) : (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-yellow-900 mb-2">No Organization Selected</h2>
