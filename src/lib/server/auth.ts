@@ -5,6 +5,10 @@ import { User } from '@/types/api'
 // Get the backend API URL from environment variable, fallback to localhost for dev
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8000'
 
+if (!BACKEND_API_URL) {
+  throw new Error('BACKEND_API_URL is not set')
+}
+
 /**
  * Server function to check authentication by calling the backend whoami endpoint
  * This runs on the server and forwards cookies from the browser request
@@ -29,6 +33,7 @@ export const getCurrentUser = createServerFn({ method: 'GET' }).handler(async ()
     const userData = await response.json() as User
     return userData
   } catch (error) {
+    console.error('Server auth check failed:', error)
     return null
   }
 })
