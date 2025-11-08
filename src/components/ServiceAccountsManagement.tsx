@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, handleApiError } from "@/lib/api";
-import { ServiceAccount, ServiceAccountsListResponse, ApiKey } from "@/types/api";
+import { ServiceAccountsListResponse, ApiKey } from "@/types/api";
 import { Loader } from "@/components/Loader";
 import { Key, Plus, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
