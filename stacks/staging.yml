@@ -11,7 +11,7 @@ services:
       - NODE_ENV=staging
       - PORT=8080
       - HOST=0.0.0.0
-      - BACKEND_API_URL=http://floww-backend-staging_app:8000
+      - BACKEND_URL=http://floww-backend-staging_app:8000
 
     deploy:
       mode: replicated
