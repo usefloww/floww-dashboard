@@ -11,6 +11,12 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +25,12 @@ import {
   Building2,
   ChevronDown,
   Plus,
-  LogOut
+  LogOut,
+  User,
+  UserCircle
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 interface NavigationItem {
   name: string;
@@ -40,6 +49,11 @@ const getNavigationItems = (isOrganizationContext: boolean): NavigationItem[] =>
     to: "/providers",
     icon: Building2,
   },
+  {
+    name: "Profile",
+    to: "/profile",
+    icon: User,
+  },
   ...(isOrganizationContext ? [{
     name: "Organization Settings",
     to: "/settings",
@@ -49,6 +63,7 @@ const getNavigationItems = (isOrganizationContext: boolean): NavigationItem[] =>
 
 export function Sidebar() {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const {
     currentNamespace,
     setCurrentNamespace,
@@ -122,27 +137,35 @@ export function Sidebar() {
     <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200">
       {/* User Section */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-sky-100 text-sky-700">
-              {getUserInitials()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {user?.first_name && user?.last_name
-                ? `${user.first_name} ${user.last_name}`
-                : user?.first_name || user?.last_name || user?.email || "User"}
-            </p>
-            <button
-              onClick={logout}
-              className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
-            >
-              <LogOut className="h-3 w-3" />
-              <span>Logout</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center space-x-3 hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-sky-100 text-sky-700">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.first_name && user?.last_name
+                    ? `${user.first_name} ${user.last_name}`
+                    : user?.first_name || user?.last_name || user?.email || "User"}
+                </p>
+              </div>
+              <ChevronDown className="h-4 w-4 text-gray-400" />
             </button>
-          </div>
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
+              <UserCircle className="h-4 w-4 mr-2" />
+              Manage Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Workspace Switcher */}

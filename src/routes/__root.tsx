@@ -58,7 +58,7 @@ function RootComponent() {
 
 function RootDocument() {
   return (
-    <html>
+    <html suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
