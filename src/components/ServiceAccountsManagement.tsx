@@ -81,12 +81,12 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
   return (
     <>
       <Loader isLoading={isLoading} loadingMessage="Loading service accounts...">
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="bg-card border border-border rounded-lg p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
-              <Key className="h-5 w-5 text-gray-500" />
+              <Key className="h-5 w-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Service Accounts</h2>
-              <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+              <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded">
                 {serviceAccounts.length} account{serviceAccounts.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -100,16 +100,16 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
           </div>
 
           {errorMessage && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4">
               {errorMessage}
             </div>
           )}
 
           {serviceAccounts.length === 0 ? (
             <div className="text-center py-8">
-              <Key className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No service accounts</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <Key className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-medium text-foreground">No service accounts</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Create a service account to generate API keys for programmatic access.
               </p>
             </div>
@@ -118,19 +118,19 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
               {serviceAccounts.map((serviceAccount) => (
                 <div
                   key={serviceAccount.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  className="border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900">
+                        <h3 className="font-semibold text-lg text-foreground">
                           {serviceAccount.name}
                         </h3>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                           {serviceAccount.api_keys.length} key{serviceAccount.api_keys.length !== 1 ? 's' : ''}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-muted-foreground">
                         ID: {serviceAccount.id}
                       </div>
                     </div>
@@ -160,33 +160,33 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
                   </div>
 
                   {serviceAccount.api_keys.length === 0 ? (
-                    <div className="text-sm text-gray-500 py-2">
+                    <div className="text-sm text-muted-foreground py-2">
                       No API keys created yet.
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="text-sm font-medium text-gray-700 mb-2">API Keys:</div>
+                      <div className="text-sm font-medium text-foreground mb-2">API Keys:</div>
                       {serviceAccount.api_keys.map((apiKey) => (
                         <div
                           key={apiKey.id}
                           className={`flex items-center justify-between p-3 rounded-lg border ${
                             isApiKeyRevoked(apiKey)
-                              ? "bg-gray-50 border-gray-200 opacity-60"
-                              : "bg-gray-50 border-gray-200"
+                              ? "bg-muted border-border opacity-60"
+                              : "bg-muted border-border"
                           }`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium text-sm text-gray-900">
+                              <span className="font-medium text-sm text-foreground">
                                 {apiKey.name}
                               </span>
                               {isApiKeyRevoked(apiKey) && (
-                                <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                <span className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded">
                                   Revoked
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                            <div className="flex items-center space-x-4 mt-1 text-xs text-muted-foreground">
                               <span className="font-mono">{apiKey.prefix}••••••••</span>
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-3 w-3" />

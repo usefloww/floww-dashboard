@@ -30,35 +30,35 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
     switch (subscription.status) {
       case 'active':
         return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 dark:text-green-300 hover:bg-green-100">
             <CheckCircle className="h-3 w-3 mr-1" />
             Active
           </Badge>
         );
       case 'trialing':
         return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+          <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 dark:text-blue-300 hover:bg-blue-100">
             <Clock className="h-3 w-3 mr-1" />
             Trial
           </Badge>
         );
       case 'past_due':
         return (
-          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          <Badge className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 dark:text-yellow-300 hover:bg-yellow-100">
             <AlertCircle className="h-3 w-3 mr-1" />
             Past Due
           </Badge>
         );
       case 'canceled':
         return (
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+          <Badge className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 dark:text-red-300 hover:bg-red-100">
             <XCircle className="h-3 w-3 mr-1" />
             Canceled
           </Badge>
         );
       case 'incomplete':
         return (
-          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+          <Badge className="bg-muted text-foreground hover:bg-muted">
             <AlertCircle className="h-3 w-3 mr-1" />
             Incomplete
           </Badge>
@@ -104,7 +104,7 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
       <CardContent>
         <div className="flex items-start gap-4">
           <div className="p-3 bg-blue-100 rounded-lg">
-            <CreditCard className="h-6 w-6 text-blue-600" />
+            <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
 
           <div className="flex-1">
@@ -114,12 +114,12 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
             </div>
 
             {statusMessage && (
-              <p className="text-sm text-gray-600 mt-2">{statusMessage}</p>
+              <p className="text-sm text-muted-foreground mt-2">{statusMessage}</p>
             )}
 
             {subscription.status === 'past_due' && (
-              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p className="text-sm text-yellow-800">
+              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800/50 rounded-md">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
                   Please update your payment method to continue using Hobby features.
                 </p>
               </div>

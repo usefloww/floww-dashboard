@@ -18,9 +18,9 @@ export function UsageCard({ usage }: UsageCardProps) {
   const executionPercentage = (usage.executions_this_month / usage.executions_limit) * 100;
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    return 'bg-blue-500';
+    if (percentage >= 90) return 'bg-red-50 dark:bg-red-900/300';
+    if (percentage >= 75) return 'bg-yellow-50 dark:bg-yellow-900/300';
+    return 'bg-blue-50 dark:bg-blue-900/300';
   };
 
   const getWarningMessage = (percentage: number, type: string) => {
@@ -45,11 +45,11 @@ export function UsageCard({ usage }: UsageCardProps) {
       <CardContent className="space-y-6">
         <div>
           <div className="flex items-center gap-3 mb-3">
-            <Workflow className="h-5 w-5 text-gray-500" />
+            <Workflow className="h-5 w-5 text-muted-foreground" />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-sm font-medium">Workflows</p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   {usage.workflows} / {usage.workflows_limit}
                 </p>
               </div>
@@ -67,11 +67,11 @@ export function UsageCard({ usage }: UsageCardProps) {
 
         <div>
           <div className="flex items-center gap-3 mb-3">
-            <Activity className="h-5 w-5 text-gray-500" />
+            <Activity className="h-5 w-5 text-muted-foreground" />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-sm font-medium">Executions this month</p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   {usage.executions_this_month.toLocaleString()} / {usage.executions_limit.toLocaleString()}
                 </p>
               </div>

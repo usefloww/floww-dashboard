@@ -69,7 +69,7 @@ export function BillingActionsCard({ subscription }: BillingActionsCardProps) {
       <CardContent>
         <div className="space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm">
               {error}
             </div>
           )}
@@ -120,9 +120,9 @@ export function BillingActionsCard({ subscription }: BillingActionsCardProps) {
           </div>
 
           {showUpgradeButton && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">Hobby Plan Benefits</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Hobby Plan Benefits</h4>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                 <li>• Up to 100 workflows</li>
                 <li>• 10,000 executions per month</li>
                 <li>• Priority support</li>
@@ -132,7 +132,7 @@ export function BillingActionsCard({ subscription }: BillingActionsCardProps) {
           )}
 
           {showManageButton && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Update payment method, view invoices, or manage your subscription settings through the customer portal.
             </p>
           )}

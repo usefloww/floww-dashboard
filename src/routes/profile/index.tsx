@@ -79,7 +79,7 @@ function ProfilePage() {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Profile</h1>
-        <p className="text-gray-600 mt-1">
+        <p className="text-muted-foreground mt-1">
           {isBillingEnabled
             ? 'Manage your personal information and subscription'
             : 'Manage your personal information'}
@@ -90,17 +90,11 @@ function ProfilePage() {
         <PersonalInfoCard user={user} />
 
         {!isBillingEnabled ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="font-semibold text-blue-900 mb-2">Self-hosted Mode</h3>
-            <p className="text-sm text-blue-800">
-              Billing and subscription management are not available in self-hosted mode.
-              All features are available without restrictions.
-            </p>
-          </div>
+          <div/>
         ) : (
           <Loader isLoading={isLoading} loadingMessage="Loading subscription details...">
             {hasError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg p-4 text-red-600 dark:text-red-400">
                 Failed to load subscription information. Please try again later.
               </div>
             ) : (

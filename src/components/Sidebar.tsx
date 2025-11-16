@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import { useNamespaceStore, WorkspaceItem } from "@/stores/namespaceStore";
+import { useTheme } from "@/hooks/useTheme";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Workflow,
   Settings,
@@ -26,8 +28,11 @@ import {
   ChevronDown,
   Plus,
   LogOut,
-  User,
-  UserCircle
+  UserCircle,
+  Monitor,
+  Moon,
+  Sun,
+  Palette
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -49,11 +54,6 @@ const getNavigationItems = (isOrganizationContext: boolean): NavigationItem[] =>
     to: "/providers",
     icon: Building2,
   },
-  {
-    name: "Profile",
-    to: "/profile",
-    icon: User,
-  },
   ...(isOrganizationContext ? [{
     name: "Organization Settings",
     to: "/settings",
@@ -64,6 +64,7 @@ const getNavigationItems = (isOrganizationContext: boolean): NavigationItem[] =>
 export function Sidebar() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const {
     currentNamespace,
     setCurrentNamespace,
@@ -134,25 +135,25 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200">
+    <div className="flex h-screen w-64 flex-col bg-card border-r border-border">
       {/* User Section */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-border">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center space-x-3 hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors">
+            <button className="w-full flex items-center space-x-3 hover:bg-muted rounded-md p-2 -m-2 transition-colors">
               <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-sky-100 text-sky-700">
+                <AvatarFallback className="bg-primary/10 text-primary">
                   {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {user?.first_name && user?.last_name
                     ? `${user.first_name} ${user.last_name}`
                     : user?.first_name || user?.last_name || user?.email || "User"}
                 </p>
               </div>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -160,6 +161,64 @@ export function Sidebar() {
               <UserCircle className="h-4 w-4 mr-2" />
               Manage Profile
             </DropdownMenuItem>
+            <div className="px-2 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Palette className="h-4 w-4" />
+                  <span className="text-sm">Theme</span>
+                </div>
+                <div className="flex items-center gap-1 p-1 bg-muted rounded-md">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setTheme('light')}
+                        className={cn(
+                          "flex items-center justify-center p-1.5 rounded transition-colors",
+                          theme === 'light'
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Sun className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Light</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setTheme('dark')}
+                        className={cn(
+                          "flex items-center justify-center p-1.5 rounded transition-colors",
+                          theme === 'dark'
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Moon className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Dark</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setTheme('system')}
+                        className={cn(
+                          "flex items-center justify-center p-1.5 rounded transition-colors",
+                          theme === 'system'
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Monitor className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>System</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
             <DropdownMenuItem onClick={logout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -169,29 +228,29 @@ export function Sidebar() {
       </div>
 
       {/* Workspace Switcher */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-border">
         <div className="relative">
           <button
             onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="w-full flex items-center justify-between px-3 py-2 text-sm bg-muted border border-border rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <div className="flex items-center space-x-2">
-              <Building2 className="h-4 w-4 text-gray-500" />
-              <span className="font-medium text-gray-900 truncate">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-foreground truncate">
                 {currentWorkspace?.display_name || "Select Workspace"}
               </span>
             </div>
             <ChevronDown className={cn(
-              "h-4 w-4 text-gray-400 transition-transform",
+              "h-4 w-4 text-muted-foreground transition-transform",
               isWorkspaceDropdownOpen && "transform rotate-180"
             )} />
           </button>
 
           {isWorkspaceDropdownOpen && (
             <>
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-50">
                 <div className="py-1">
-                  <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">
                     Workspaces
                   </div>
                   {workspaceItems.map((workspace) => (
@@ -199,29 +258,29 @@ export function Sidebar() {
                       key={workspace.id}
                       onClick={() => handleWorkspaceSelect(workspace)}
                       className={cn(
-                        "w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2",
+                        "w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center space-x-2",
                         currentWorkspace?.id === workspace.id
-                          ? "bg-sky-50 text-sky-700"
-                          : "text-gray-700"
+                          ? "bg-primary/10 text-primary"
+                          : "text-foreground"
                       )}
                     >
                       <Building2 className="h-4 w-4" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{workspace.display_name}</div>
                         {!workspace.isPersonal && (
-                          <div className="text-xs text-gray-500 truncate">{workspace.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{workspace.name}</div>
                         )}
                       </div>
                     </button>
                   ))}
-                  <div className="border-t border-gray-100 mt-1">
+                  <div className="border-t border-border mt-1">
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                       <DialogTrigger asChild>
                         <button
                           onClick={() => {
                             setIsWorkspaceDropdownOpen(true);
                           }}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center space-x-2"
+                          className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-muted flex items-center space-x-2"
                         >
                           <Plus className="h-4 w-4" />
                           <span>Create Organization</span>
@@ -257,7 +316,7 @@ export function Sidebar() {
                             />
                           </div>
                           {createError && (
-                            <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-2 rounded">
                               {createError}
                             </div>
                           )}
@@ -299,7 +358,7 @@ export function Sidebar() {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 hover:text-gray-900 [&.active]:bg-sky-100 [&.active]:text-sky-700"
+                className="flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-md text-foreground hover:bg-muted hover:text-foreground [&.active]:bg-primary/10 [&.active]:text-primary"
               >
                 <Icon className="h-5 w-5" />
                 <span>{item.name}</span>

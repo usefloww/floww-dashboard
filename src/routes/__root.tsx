@@ -12,6 +12,7 @@ import appCss from '../styles/app.css?url'
 import { NotificationContainer } from '@/components/NotificationToast'
 import { Sidebar } from '@/components/Sidebar'
 import { getCurrentUser } from '@/lib/server/auth'
+import { useTheme } from '@/hooks/useTheme'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -53,6 +54,7 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  useTheme();
   return <RootDocument />
 }
 

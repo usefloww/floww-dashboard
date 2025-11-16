@@ -15,10 +15,10 @@ function OrganizationSettings() {
   return (
     <div className="space-y-6">
       {/* Current Organization */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <Building2 className="h-5 w-5 text-gray-500" />
+            <Building2 className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Organization Details</h2>
           </div>
         </div>
@@ -26,8 +26,8 @@ function OrganizationSettings() {
         {organization && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Organization Name</label>
-              <p className="mt-1 text-sm text-gray-900">
+              <label className="block text-sm font-medium text-foreground">Organization Name</label>
+              <p className="mt-1 text-sm text-foreground">
                 {organization.display_name}
               </p>
             </div>
@@ -42,8 +42,8 @@ function OrganizationSettings() {
           <ServiceAccountsManagement organizationId={organization.id} />
         </>
       ) : (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-yellow-900 mb-2">No Organization Selected</h2>
+        <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-yellow-900 dark:text-yellow-200 mb-2">No Organization Selected</h2>
           <p className="text-yellow-700 text-sm">
             To view and manage organization members, please select an organization from the workspace switcher in the sidebar.
           </p>
@@ -52,19 +52,19 @@ function OrganizationSettings() {
 
       {/* Danger Zone - Only show for organizations */}
       {/* {isOrganizationContext && organization && (
-        <div className="bg-white border border-red-200 rounded-lg p-6">
+        <div className="bg-card border border-red-200 dark:border-red-800/50 rounded-lg p-6">
           <div className="flex items-center space-x-2 mb-4">
-            <Trash2 className="h-5 w-5 text-red-500" />
-            <h2 className="text-lg font-semibold text-red-900">Danger Zone</h2>
+            <Trash2 className="h-5 w-5 text-red-500 dark:text-red-400" />
+            <h2 className="text-lg font-semibold text-red-900 dark:text-red-200">Danger Zone</h2>
           </div>
           <div className="space-y-4">
             <div>
-              <h3 className="font-medium text-gray-900">Delete Organization</h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <h3 className="font-medium text-foreground">Delete Organization</h3>
+              <p className="text-sm text-muted-foreground mt-1">
                 Permanently delete this organization and all associated data. This action cannot be undone.
               </p>
             </div>
-            <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
+            <button className="bg-red-600 dark:bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-800 transition-colors text-sm">
               Delete Organization
             </button>
           </div>

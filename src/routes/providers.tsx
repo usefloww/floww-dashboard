@@ -67,16 +67,16 @@ function ProvidersPage() {
       {/* Header */}
       <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Providers</h1>
+          <h1 className="text-3xl font-bold text-foreground">Providers</h1>
         </div>
 
         {/* Read-only notice */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
           <div className="flex items-center space-x-2">
-            <Info className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-900">Read-only Mode</span>
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm font-medium text-blue-900 dark:text-blue-200">Read-only Mode</span>
           </div>
-          <p className="text-sm text-blue-700 mt-1">
+          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
             Currently viewing providers in read-only mode. Provider creation and configuration is not available.
           </p>
         </div>
@@ -84,19 +84,19 @@ function ProvidersPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
         <input
           type="text"
           placeholder="Search providers..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
         />
       </div>
 
       {/* Error message */}
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
           {errorMessage}
         </div>
       )}
@@ -105,9 +105,9 @@ function ProvidersPage() {
       <Loader isLoading={isLoading} loadingMessage="Loading providers...">
         {filteredProviders.length === 0 ? (
           <div className="text-center py-12">
-            <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No providers</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-2 text-sm font-medium text-foreground">No providers</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               {searchTerm ? "No providers match your search." : "No providers found in this namespace."}
             </p>
           </div>
@@ -146,31 +146,31 @@ function ProviderCard({ provider }: ProviderCardProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'connected':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
       case 'disconnected':
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
       default:
-        return <XCircle className="h-4 w-4 text-gray-400" />;
+        return <XCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
-        return 'text-green-700 bg-green-50';
+        return 'text-green-700 bg-green-50 dark:bg-green-900/30';
       case 'disconnected':
-        return 'text-red-700 bg-red-50';
+        return 'text-red-700 bg-red-50 dark:bg-red-900/30';
       case 'pending':
-        return 'text-yellow-700 bg-yellow-50';
+        return 'text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30';
       default:
-        return 'text-gray-700 bg-gray-50';
+        return 'text-foreground bg-muted';
     }
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4 flex-1 min-w-0">
           {/* Provider Logo */}
@@ -183,17 +183,17 @@ function ProviderCard({ provider }: ProviderCardProps) {
                 onError={() => setImageError(true)}
               />
             ) : (
-              <Building2 className="h-10 w-10 text-gray-400" />
+              <Building2 className="h-10 w-10 text-muted-foreground" />
             )}
           </div>
           
           {/* Provider Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3">
-              <h3 className="font-semibold text-lg text-gray-900 truncate">{providerName}</h3>
-              <span className="text-sm text-gray-500 uppercase">{provider.type}</span>
+              <h3 className="font-semibold text-lg text-foreground truncate">{providerName}</h3>
+              <span className="text-sm text-muted-foreground uppercase">{provider.type}</span>
             </div>
-            <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
+            <div className="flex items-center space-x-4 mt-1 text-sm text-muted-foreground">
               <span>Created: {formattedDate}</span>
               <span>Last used: {lastUsedDate}</span>
             </div>

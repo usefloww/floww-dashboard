@@ -91,11 +91,11 @@ export function CreateApiKeyModal({
 
         {createdApiKey ? (
           <div className="space-y-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 font-medium mb-2">
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-2">
                 ⚠️ Important: Copy this key now
               </p>
-              <p className="text-sm text-yellow-700">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
                 This is the only time you'll be able to see the full API key. Make sure to copy it and store it securely.
               </p>
             </div>
@@ -117,7 +117,7 @@ export function CreateApiKeyModal({
                   className="flex-shrink-0"
                 >
                   {copied ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
@@ -144,13 +144,13 @@ export function CreateApiKeyModal({
                 disabled={createMutation.isPending}
                 className="mt-1"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Give this key a descriptive name to help you identify it later.
               </p>
             </div>
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-3 rounded-md">
                 {error}
               </div>
             )}

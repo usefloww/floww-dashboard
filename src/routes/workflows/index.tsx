@@ -43,25 +43,25 @@ function WorkflowsPage() {
       {/* Header */}
       <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Workflows</h1>
+          <h1 className="text-3xl font-bold text-foreground">Workflows</h1>
         </div>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
         <input
           type="text"
           placeholder="Search workflows..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
         />
       </div>
 
       {/* Error message */}
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
           {errorMessage}
         </div>
       )}
@@ -70,9 +70,9 @@ function WorkflowsPage() {
       <Loader isLoading={isLoading} loadingMessage="Loading workflows...">
         {filteredWorkflows.length === 0 ? (
           <div className="text-center py-12">
-            <WorkflowIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No workflows</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <WorkflowIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-2 text-sm font-medium text-foreground">No workflows</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               {searchTerm ? "No workflows match your search." : "No workflows found in this namespace."}
             </p>
           </div>
@@ -106,23 +106,23 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
     <Link
       {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "block" } as any)}
     >
-      <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+      <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1 min-w-0">
             {/* Workflow Icon */}
             <div className="flex-shrink-0">
-              <WorkflowIcon className="h-10 w-10 text-sky-600" />
+              <WorkflowIcon className="h-10 w-10 text-primary" />
             </div>
             
             {/* Workflow Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-gray-900 truncate">{workflow.name}</h3>
+              <h3 className="font-semibold text-lg text-foreground truncate">{workflow.name}</h3>
               {workflow.description && (
-                <p className="text-gray-600 text-sm mt-1 line-clamp-1">
+                <p className="text-muted-foreground text-sm mt-1 line-clamp-1">
                   {workflow.description}
                 </p>
               )}
-              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+              <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center space-x-1">
                   <Calendar className="h-3 w-3" />
                   <span>Created: {formattedDate}</span>

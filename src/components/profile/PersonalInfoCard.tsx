@@ -44,25 +44,25 @@ export function PersonalInfoCard({ user }: PersonalInfoCardProps) {
 
           <div className="flex-1 space-y-4">
             <div className="flex items-center gap-3">
-              <User className="h-4 w-4 text-gray-500" />
+              <User className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm text-gray-500">Name</p>
+                <p className="text-sm text-muted-foreground">Name</p>
                 <p className="font-medium">{getFullName()}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <Mail className="h-4 w-4 text-gray-500" />
+              <Mail className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm text-gray-500">Email</p>
+                <p className="text-sm text-muted-foreground">Email</p>
                 <p className="font-medium">{user.email || 'Not provided'}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <Calendar className="h-4 w-4 text-gray-500" />
+              <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm text-gray-500">Member since</p>
+                <p className="text-sm text-muted-foreground">Member since</p>
                 <p className="font-medium">{formatDate(user.created_at)}</p>
               </div>
             </div>

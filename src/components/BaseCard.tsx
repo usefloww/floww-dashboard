@@ -12,7 +12,7 @@ export function BaseCard({ to, params, children }: BaseCardProps) {
     <Link
       to={to as any}
       params={params as any}
-      className="block p-6 bg-white border border-gray-200 rounded-lg hover:shadow-lg hover:border-sky-300 transition-all duration-200 group"
+      className="block p-6 bg-card border border-border rounded-lg hover:shadow-lg hover:border-primary transition-all duration-200 group"
     >
       <div className="space-y-2">
         {children}

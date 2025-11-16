@@ -47,12 +47,12 @@ export function CreateOrganizationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+      <div className="bg-card rounded-lg p-6 w-full max-w-md mx-4">
         <h2 className="text-xl font-semibold mb-4">Create Organization</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="display_name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="display_name" className="block text-sm font-medium text-foreground mb-1">
               Display Name
             </label>
             <Input
@@ -66,7 +66,7 @@ export function CreateOrganizationModal({
           </div>
 
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
               Name (URL-friendly)
             </label>
             <Input
@@ -80,7 +80,7 @@ export function CreateOrganizationModal({
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
+            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-2 rounded-md">
               {error}
             </div>
           )}

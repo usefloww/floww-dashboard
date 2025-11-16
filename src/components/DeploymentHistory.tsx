@@ -33,15 +33,15 @@ export function DeploymentHistory({ workflowId, onEdit }: DeploymentHistoryProps
     <Loader isLoading={isLoading} loadingMessage="Loading deployments...">
       <div className="space-y-4">
         {errorMessage && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
             {errorMessage}
           </div>
         )}
 
         {deployments.length === 0 ? (
           <div className="text-center py-12">
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No deployments</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="mt-2 text-sm font-medium text-foreground">No deployments</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               No deployments found for this workflow.
             </p>
           </div>
@@ -98,16 +98,16 @@ function DeploymentCard({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+    <div className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <h3 className="font-semibold text-lg text-gray-900">{versionLabel}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">created_at: {deployedTimestamp}</p>
+          <h3 className="font-semibold text-lg text-foreground">{versionLabel}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">created_at: {deployedTimestamp}</p>
         </div>
         <div className="relative">
           <button
             onClick={() => onDropdownToggle(!isDropdownOpen)}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 text-muted-foreground hover:text-muted-foreground rounded-lg hover:bg-muted transition-colors"
             aria-label="Options"
           >
             <MoreVertical className="h-5 w-5" />
@@ -118,16 +118,16 @@ function DeploymentCard({
                 className="fixed inset-0 z-10"
                 onClick={() => onDropdownToggle(false)}
               />
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-20">
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 rounded-t-lg"
+                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center space-x-2 rounded-t-lg"
                   onClick={handleEdit}
                 >
                   <Edit2 className="h-4 w-4" />
                   <span>Edit</span>
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center space-x-2 rounded-b-lg"
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-muted flex items-center space-x-2 rounded-b-lg"
                   onClick={() => {
                     onDropdownToggle(false);
                     // TODO: Handle delete

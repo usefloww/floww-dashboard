@@ -153,22 +153,22 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
       <div className="space-y-4">
         {/* Error message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
             {error}
           </div>
         )}
 
         {!deployment ? (
           <div className="text-center py-12">
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No deployment found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="mt-2 text-sm font-medium text-foreground">No deployment found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               No deployment found for this workflow.
             </p>
           </div>
         ) : tsFileNames.length === 0 ? (
           <div className="text-center py-12">
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No TypeScript files</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="mt-2 text-sm font-medium text-foreground">No TypeScript files</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               This deployment doesn't contain any TypeScript files to edit.
             </p>
           </div>
@@ -177,12 +177,12 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
             {/* Version Selector and Actions */}
             <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <label className="text-sm font-medium text-gray-700">Version:</label>
+          <label className="text-sm font-medium text-foreground">Version:</label>
           <select
             value={selectedDeploymentId || ""}
             onChange={(e) => setSelectedDeploymentId(e.target.value)}
             disabled={isSaving}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {allDeployments.map((dep) => (
               <option key={dep.id} value={dep.id}>
@@ -196,7 +196,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
             <button
               onClick={onCancel}
               disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               <X className="h-4 w-4" />
               <span>Cancel</span>
@@ -205,7 +205,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all"
           >
             {isSaving ? (
               <>
@@ -224,28 +224,28 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
 
       {/* Saving indicator */}
       {isSaving && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center space-x-3">
-          <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 flex items-center space-x-3">
+          <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
           <div>
-            <p className="text-sm font-medium text-blue-900">Creating new version...</p>
-            <p className="text-xs text-blue-700 mt-0.5">Please wait while we save your changes</p>
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Creating new version...</p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Please wait while we save your changes</p>
           </div>
         </div>
       )}
 
       {/* Monaco Editor with Tabs */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
         {/* File Tabs */}
         {tsFileNames.length > 1 && (
-          <div className="border-b border-gray-200 bg-gray-50 flex overflow-x-auto">
+          <div className="border-b border-border bg-muted flex overflow-x-auto">
             {tsFileNames.map((fileName) => (
               <button
                 key={fileName}
                 onClick={() => setCurrentFile(fileName)}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                   fileName === currentFile
-                    ? "border-sky-500 text-sky-600 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    ? "border-primary text-primary bg-card"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 {fileName}
@@ -256,8 +256,8 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
         
         {/* Single file indicator when only one file */}
         {tsFileNames.length === 1 && (
-          <div className="border-b border-gray-200 px-4 py-2 bg-gray-50">
-            <span className="text-sm font-medium text-gray-700">{tsFileNames[0]}</span>
+          <div className="border-b border-border px-4 py-2 bg-muted">
+            <span className="text-sm font-medium text-foreground">{tsFileNames[0]}</span>
           </div>
         )}
 

@@ -49,18 +49,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="max-w-md w-full bg-white border border-gray-200 rounded-lg p-6 text-center">
+        <div className="min-h-screen flex items-center justify-center bg-muted">
+          <div className="max-w-md w-full bg-card border border-border rounded-lg p-6 text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Something went wrong
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               We apologize for the inconvenience. The application encountered an unexpected error.
             </p>
 
             {import.meta.env.DEV && this.state.error && (
-              <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 text-left">
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded p-3 mb-4 text-left">
                 <p className="text-red-800 text-sm font-mono">
                   {this.state.error.message}
                 </p>
@@ -69,7 +69,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     <summary className="text-red-700 text-xs cursor-pointer">
                       Component Stack
                     </summary>
-                    <pre className="text-red-600 text-xs mt-2 overflow-auto">
+                    <pre className="text-red-600 dark:text-red-400 text-xs mt-2 overflow-auto">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   </details>
@@ -80,13 +80,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <div className="flex space-x-3">
               <button
                 onClick={this.handleReset}
-                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 bg-muted text-foreground px-4 py-2 rounded-lg hover:bg-muted transition-colors"
               >
                 Try Again
               </button>
               <button
                 onClick={this.handleReload}
-                className="flex-1 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-2"
               >
                 <RefreshCw className="h-4 w-4" />
                 <span>Reload Page</span>

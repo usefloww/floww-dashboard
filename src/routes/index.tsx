@@ -29,8 +29,8 @@ const navigationItems: NavigationItem[] = [
 function NavigationCard({ item }: { item: NavigationItem }) {
   return (
     <BaseCard to={item.to as any} params={item.params as any}>
-      <h2 className="text-2xl font-bold text-gray-900">{item.name}</h2>
-      <p className="text-gray-500 text-sm">{item.description}</p>
+      <h2 className="text-2xl font-bold text-foreground">{item.name}</h2>
+      <p className="text-muted-foreground text-sm">{item.description}</p>
     </BaseCard>
   );
 }
@@ -43,10 +43,10 @@ function HomePage() {
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="text-center mb-16">
-        <h1 className="text-5xl font-bold m-6 bg-sky-950 bg-clip-text text-transparent">
+        <h1 className="text-5xl font-bold m-6 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
           Welcome to Floww
         </h1>
-        <div className="text-md text-gray-600 max-w-2xl mx-auto text-middle">
+        <div className="text-md text-muted-foreground max-w-2xl mx-auto text-middle">
           Your central hub for managing workflows, organizations, and automating
           your development processes.
         </div>
