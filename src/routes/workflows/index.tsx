@@ -98,9 +98,25 @@ interface WorkflowCardProps {
 
 function WorkflowCard({ workflow }: WorkflowCardProps) {
   const formattedDate = new Date(workflow.created_at).toLocaleDateString();
-  const lastDeployedDate = workflow.last_deployed_at 
-    ? new Date(workflow.last_deployed_at).toLocaleDateString() 
+  const lastDeployedDate = workflow.last_deployed_at
+    ? new Date(workflow.last_deployed_at).toLocaleDateString()
     : null;
+
+  const getCreatorName = () => {
+    if (!workflow.created_by) {
+      return workflow.created_by_id.slice(0, 8) + "...";
+    }
+
+    const { first_name, last_name } = workflow.created_by;
+
+    if (first_name && last_name) {
+      return `${first_name} ${last_name}`;
+    }
+    if (first_name) {
+      return first_name;
+    }
+    return workflow.created_by_id.slice(0, 8) + "...";
+  };
 
   return (
     <Link
@@ -135,7 +151,7 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
                 )}
                 <div className="flex items-center space-x-1">
                   <User className="h-3 w-3" />
-                  <span>Creator: {workflow.created_by_id.slice(0, 8)}...</span>
+                  <span>Creator: {getCreatorName()}</span>
                 </div>
               </div>
             </div>

@@ -50,12 +50,20 @@ export interface OrganizationMemberUpdate {
   role: OrganizationRole;
 }
 
+export interface CreatedByUser {
+  id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
 export interface Workflow {
   id: string;
   name: string;
   description?: string;
   namespace_id: string;
   created_by_id: string;
+  created_by?: CreatedByUser;
   created_at: string;
   updated_at: string;
   last_deployed_at?: string | null;
@@ -190,4 +198,33 @@ export interface ApiKeyCreate {
 
 export interface ServiceAccountsListResponse {
   results: ServiceAccount[];
+}
+
+export type ExecutionStatus =
+  | "received"
+  | "started"
+  | "completed"
+  | "failed"
+  | "timeout"
+  | "no_deployment";
+
+export interface ExecutionHistory {
+  id: string;
+  workflow_id: string;
+  trigger_id: string | null;
+  deployment_id: string | null;
+  status: ExecutionStatus;
+  received_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  duration_ms: number | null;
+  error_message: string | null;
+  trigger_type: string | null;
+  webhook_path: string | null;
+  webhook_method: string | null;
+}
+
+export interface ExecutionHistoryResponse {
+  executions: ExecutionHistory[];
+  total: number;
 }

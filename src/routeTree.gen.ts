@@ -15,6 +15,7 @@ import { Route as WorkflowsIndexRouteImport } from './routes/workflows/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as WorkflowsWorkflowIdDeploymentsRouteImport } from './routes/workflows/$workflowId.deployments'
+import { Route as WorkflowsWorkflowIdExecutionsExecutionIdRouteImport } from './routes/workflows/$workflowId.executions.$executionId'
 import { Route as WorkflowsWorkflowIdDeploymentsDeploymentIdEditRouteImport } from './routes/workflows/$workflowId.deployments.$deploymentId.edit'
 
 const ProvidersRoute = ProvidersRouteImport.update({
@@ -48,6 +49,12 @@ const WorkflowsWorkflowIdDeploymentsRoute =
     path: '/workflows/$workflowId/deployments',
     getParentRoute: () => rootRouteImport,
   } as any)
+const WorkflowsWorkflowIdExecutionsExecutionIdRoute =
+  WorkflowsWorkflowIdExecutionsExecutionIdRouteImport.update({
+    id: '/workflows/$workflowId/executions/$executionId',
+    path: '/workflows/$workflowId/executions/$executionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute =
   WorkflowsWorkflowIdDeploymentsDeploymentIdEditRouteImport.update({
     id: '/$deploymentId/edit',
@@ -62,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
   '/workflows/$workflowId/deployments': typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
+  '/workflows/$workflowId/executions/$executionId': typeof WorkflowsWorkflowIdExecutionsExecutionIdRoute
   '/workflows/$workflowId/deployments/$deploymentId/edit': typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -71,6 +79,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
   '/workflows/$workflowId/deployments': typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
+  '/workflows/$workflowId/executions/$executionId': typeof WorkflowsWorkflowIdExecutionsExecutionIdRoute
   '/workflows/$workflowId/deployments/$deploymentId/edit': typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute
 }
 export interface FileRoutesById {
@@ -81,6 +90,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
   '/workflows/$workflowId/deployments': typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
+  '/workflows/$workflowId/executions/$executionId': typeof WorkflowsWorkflowIdExecutionsExecutionIdRoute
   '/workflows/$workflowId/deployments/$deploymentId/edit': typeof WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute
 }
 export interface FileRouteTypes {
@@ -92,6 +102,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/workflows'
     | '/workflows/$workflowId/deployments'
+    | '/workflows/$workflowId/executions/$executionId'
     | '/workflows/$workflowId/deployments/$deploymentId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -101,6 +112,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/workflows'
     | '/workflows/$workflowId/deployments'
+    | '/workflows/$workflowId/executions/$executionId'
     | '/workflows/$workflowId/deployments/$deploymentId/edit'
   id:
     | '__root__'
@@ -110,6 +122,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/workflows/'
     | '/workflows/$workflowId/deployments'
+    | '/workflows/$workflowId/executions/$executionId'
     | '/workflows/$workflowId/deployments/$deploymentId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -120,6 +133,7 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   WorkflowsIndexRoute: typeof WorkflowsIndexRoute
   WorkflowsWorkflowIdDeploymentsRoute: typeof WorkflowsWorkflowIdDeploymentsRouteWithChildren
+  WorkflowsWorkflowIdExecutionsExecutionIdRoute: typeof WorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -166,6 +180,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkflowsWorkflowIdDeploymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workflows/$workflowId/executions/$executionId': {
+      id: '/workflows/$workflowId/executions/$executionId'
+      path: '/workflows/$workflowId/executions/$executionId'
+      fullPath: '/workflows/$workflowId/executions/$executionId'
+      preLoaderRoute: typeof WorkflowsWorkflowIdExecutionsExecutionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workflows/$workflowId/deployments/$deploymentId/edit': {
       id: '/workflows/$workflowId/deployments/$deploymentId/edit'
       path: '/$deploymentId/edit'
@@ -199,6 +220,8 @@ const rootRouteChildren: RootRouteChildren = {
   WorkflowsIndexRoute: WorkflowsIndexRoute,
   WorkflowsWorkflowIdDeploymentsRoute:
     WorkflowsWorkflowIdDeploymentsRouteWithChildren,
+  WorkflowsWorkflowIdExecutionsExecutionIdRoute:
+    WorkflowsWorkflowIdExecutionsExecutionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

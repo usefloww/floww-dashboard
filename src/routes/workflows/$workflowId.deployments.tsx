@@ -1,14 +1,19 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Code, History } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Code, Package, Activity } from "lucide-react";
+import { api, handleApiError } from "@/lib/api";
+import { Workflow } from "@/types/api";
+import { Loader } from "@/components/Loader";
 import { DeploymentEditor } from "@/components/DeploymentEditor";
 import { DeploymentHistory } from "@/components/DeploymentHistory";
+import { ExecutionHistory } from "@/components/ExecutionHistory";
 
 export const Route = createFileRoute("/workflows/$workflowId/deployments")({
   component: DeploymentsPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      tab: (search.tab as "edit" | "history") || "edit",
+      tab: (search.tab as "edit" | "deployments" | "executions") || "edit",
     };
   },
 });
@@ -20,7 +25,7 @@ function DeploymentsPage() {
   const pathname = routerState.location.pathname;
 
   // Check if we're on a child route (like /edit)
-  const isOnChildRoute = pathname.includes('/deployments/') && 
+  const isOnChildRoute = pathname.includes('/deployments/') &&
     pathname.split('/deployments/')[1] !== '';
 
   // If we're on a child route, just render the outlet
@@ -28,8 +33,18 @@ function DeploymentsPage() {
     return <Outlet />;
   }
 
-  const [activeTab, setActiveTab] = useState<"edit" | "history">((tab || "edit") as "edit" | "history");
+  const [activeTab, setActiveTab] = useState<"edit" | "deployments" | "executions">((tab || "edit") as "edit" | "deployments" | "executions");
   const [selectedDeploymentId, setSelectedDeploymentId] = useState<string | null>(null);
+
+  // Fetch workflow to get the name
+  const { data: workflow, isLoading, error } = useQuery({
+    queryKey: ['workflow', workflowId],
+    queryFn: async () => {
+      return await api.get<Workflow>(`/workflows/${workflowId}`);
+    },
+  });
+
+  const errorMessage = error ? handleApiError(error) : null;
 
   const handleEdit = (deploymentId: string) => {
     setSelectedDeploymentId(deploymentId);
@@ -42,20 +57,32 @@ function DeploymentsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        <Link
-          to="/workflows"
-          className="text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Deployments</h1>
-          <p className="text-muted-foreground mt-1">Edit and manage workflow deployments</p>
+    <Loader isLoading={isLoading} loadingMessage="Loading workflow...">
+      <div className="space-y-6">
+        {/* Error message */}
+        {errorMessage && (
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="flex items-center space-x-4">
+          <Link
+            to="/workflows"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {workflow?.name || "Workflow"}
+            </h1>
+            {workflow?.description && (
+              <p className="text-muted-foreground mt-1">{workflow.description}</p>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Tabs */}
       <div className="border-b border-border">
@@ -82,18 +109,36 @@ function DeploymentsPage() {
             {...({
               to: "/workflows/$workflowId/deployments",
               params: { workflowId },
-              search: { tab: "history" },
+              search: { tab: "deployments" },
               className: `py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === "history"
+                activeTab === "deployments"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               }`
             } as any)}
-            onClick={() => setActiveTab("history")}
+            onClick={() => setActiveTab("deployments")}
           >
             <div className="flex items-center space-x-2">
-              <History className="h-4 w-4" />
-              <span>History</span>
+              <Package className="h-4 w-4" />
+              <span>Deployments</span>
+            </div>
+          </Link>
+          <Link
+            {...({
+              to: "/workflows/$workflowId/deployments",
+              params: { workflowId },
+              search: { tab: "executions" },
+              className: `py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "executions"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`
+            } as any)}
+            onClick={() => setActiveTab("executions")}
+          >
+            <div className="flex items-center space-x-2">
+              <Activity className="h-4 w-4" />
+              <span>Executions</span>
             </div>
           </Link>
         </nav>
@@ -107,17 +152,22 @@ function DeploymentsPage() {
             deploymentId={selectedDeploymentId || undefined}
             onSave={handleSave}
           />
-        ) : (
+        ) : activeTab === "deployments" ? (
           <DeploymentHistory
             workflowId={workflowId}
             onEdit={handleEdit}
           />
+        ) : (
+          <ExecutionHistory
+            workflowId={workflowId}
+          />
         )}
       </div>
 
-      {/* Render child routes */}
-      <Outlet />
-    </div>
+        {/* Render child routes */}
+        <Outlet />
+      </div>
+    </Loader>
   );
 }
 
