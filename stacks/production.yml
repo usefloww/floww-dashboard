@@ -36,7 +36,7 @@ services:
           memory: 256M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.floww-dashboard.rule=Host(`dashboard.usefloww.dev`)"
+        - "traefik.http.routers.floww-dashboard.rule=Host(`app.usefloww.dev`)"
         - "traefik.http.routers.floww-dashboard.entrypoints=websecure"
         - "traefik.http.routers.floww-dashboard.tls.certresolver=myresolver"
         - "traefik.http.services.floww-dashboard.loadbalancer.server.port=8080"
