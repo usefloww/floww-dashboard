@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join, dirname, resolve, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { IncomingMessage, ServerResponse } from "node:http";
+import { IncomingMessage } from "node:http";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -23,48 +23,6 @@ export async function convertToFetchRequest(
     headers: req.headers as HeadersInit,
     body,
   });
-}
-
-export async function transparentProxy(req: IncomingMessage, res: ServerResponse, targetBase: string) {
-  try {
-    const targetUrl = new URL(req.url || "/", targetBase);
-    const chunks = [];
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      for await (const chunk of req) chunks.push(chunk);
-    }
-    const body = chunks.length ? Buffer.concat(chunks) : undefined;
-
-    const backendResponse = await fetch(targetUrl, {
-      method: req.method,
-      headers: req.headers as HeadersInit,
-      body,
-      redirect: "manual",
-    });
-
-    // set headers BEFORE writing any body data
-    res.statusCode = backendResponse.status;
-    res.statusMessage = backendResponse.statusText;
-    for (const [key, value] of backendResponse.headers) {
-      res.setHeader(key, value);
-    }
-
-    // stream safely
-    if (backendResponse.body) {
-      const reader = backendResponse.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-    }
-    res.end();
-  } catch (err) {
-    console.error("transparent proxy failed", err);
-    if (!res.headersSent) {
-      res.statusCode = 502;
-      res.end("bad gateway");
-    } else res.end();
-  }
 }
 
 export async function serveStaticFile(

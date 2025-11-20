@@ -1,10 +1,8 @@
 import handler, { type ServerEntry } from "@tanstack/react-start/server-entry";
 import { createServer } from "node:http";
-import { settings } from "./settings";
 import {
   convertToFetchRequest,
   serveStaticFile,
-  transparentProxy,
 } from "./serverUtils";
 
 const serverEntry: ServerEntry = {
