@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { BaseCard } from "@/components/BaseCard";
+import { ExecutionChart } from "@/components/ExecutionChart";
+import { useNamespaceStore } from "@/stores/namespaceStore";
+import { api } from "@/lib/api";
+import { SummaryResponse } from "@/types/api";
 
 interface NavigationItem {
   name: string;
@@ -40,25 +45,45 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+  const { currentNamespace } = useNamespaceStore();
+
+  // Fetch summary data when namespace is available
+  const { data: summaryData, isLoading, error } = useQuery({
+    queryKey: ["summary", currentNamespace?.id],
+    queryFn: async () => {
+      if (!currentNamespace?.id) {
+        return null;
+      }
+      return await api.get<SummaryResponse>("/summary", {
+        params: { namespace_id: currentNamespace.id, days: 7 },
+      });
+    },
+    enabled: !!currentNamespace?.id,
+  });
+
   return (
     <div className="container mx-auto py-12 px-4">
-      <div className="text-center mb-16">
-        <h1 className="text-5xl font-bold m-6 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-          Welcome to Floww
-        </h1>
-        <div className="text-md text-muted-foreground max-w-2xl mx-auto text-middle">
-          Your central hub for managing workflows, organizations, and automating
-          your development processes.
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Overview</h1>
       </div>
 
+      {/* Chart Section */}
+      {currentNamespace && (
+        <div className="mb-12">
+          <ExecutionChart
+            data={summaryData || undefined}
+            isLoading={isLoading}
+            error={error as Error | null}
+          />
+        </div>
+      )}
+
+      {/* Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {navigationItems.map((item) => (
           <NavigationCard key={item.name} item={item} />
         ))}
       </div>
-
-
     </div>
   );
 }

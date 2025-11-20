@@ -32,7 +32,8 @@ import {
   Monitor,
   Moon,
   Sun,
-  Palette
+  Palette,
+  LayoutDashboard
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -44,6 +45,11 @@ interface NavigationItem {
 }
 
 const getNavigationItems = (isOrganizationContext: boolean): NavigationItem[] => [
+  {
+    name: "Overview",
+    to: "/",
+    icon: LayoutDashboard,
+  },
   {
     name: "Workflows",
     to: "/workflows",

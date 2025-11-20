@@ -266,3 +266,22 @@ export interface ExecutionHistoryResponse {
   executions: ExecutionHistory[];
   total: number;
 }
+
+export interface ExecutionDaySummary {
+  date: string;
+  total: number;
+  completed: number;
+  failed: number;
+  started: number;
+  received: number;
+  timeout: number;
+  no_deployment: number;
+}
+
+export interface SummaryResponse {
+  executions_by_day: ExecutionDaySummary[];
+  total_executions: number;
+  total_completed: number;
+  total_failed: number;
+  period_days: number;
+}
