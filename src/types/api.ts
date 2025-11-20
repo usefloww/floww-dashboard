@@ -97,6 +97,44 @@ export interface Provider {
   configuration?: Record<string, string | number | boolean>;
 }
 
+export interface ProviderCreate {
+  namespace_id: string;
+  type: string;
+  alias: string;
+  config: Record<string, any>;
+}
+
+export interface ProviderUpdate {
+  type?: string;
+  alias?: string;
+  config?: Record<string, any>;
+}
+
+export interface ProviderSetupStep {
+  type: "value" | "secret" | "oauth" | "choice" | "file" | "info";
+  title: string;
+  description?: string;
+  alias: string;
+  required?: boolean;
+  placeholder?: string;
+  default?: string;
+  // For choice type
+  options?: string[];
+  // For oauth type
+  provider_name?: string;
+  scopes?: string[];
+  redirect_uri?: string;
+  // For info type
+  message?: string;
+  action_text?: string;
+  action_url?: string;
+}
+
+export interface ProviderType {
+  provider_type: string;
+  setup_steps: ProviderSetupStep[];
+}
+
 export interface Namespace {
   id: string;
   user?: {

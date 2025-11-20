@@ -1,3 +1,5 @@
+import { ProviderType } from "@/types/api";
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -161,3 +163,29 @@ export const handleApiError = (error: unknown): string => {
   }
   return 'An unexpected error occurred';
 };
+
+// Provider API methods
+export async function getProviderType(providerType: string): Promise<ProviderType> {
+  return api.get<ProviderType>(`/provider_types/${providerType}`);
+}
+
+export async function createProvider(data: { namespace_id: string; type: string; alias: string; config: Record<string, any> }) {
+  return api.post<any>("/providers", data);
+}
+
+export async function updateProvider(providerId: string, data: { type?: string; alias?: string; config?: Record<string, any> }) {
+  return api.patch<any>(`/providers/${providerId}`, data);
+}
+
+export async function deleteProvider(providerId: string) {
+  return api.delete<void>(`/providers/${providerId}`);
+}
+
+// Workflow API methods
+export async function updateWorkflow(workflowId: string, data: { name?: string; description?: string }) {
+  return api.patch<any>(`/workflows/${workflowId}`, data);
+}
+
+export async function deleteWorkflow(workflowId: string) {
+  return api.delete<void>(`/workflows/${workflowId}`);
+}

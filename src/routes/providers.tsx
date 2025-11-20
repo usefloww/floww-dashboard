@@ -5,7 +5,16 @@ import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Provider } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Building2, CheckCircle, XCircle, Clock, Info } from "lucide-react";
+import { Search, Building2, CheckCircle, XCircle, Clock, MoreVertical, Settings, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ProviderConfigModal } from "@/components/ProviderConfigModal";
+import { DeleteProviderDialog } from "@/components/DeleteProviderDialog";
 
 // Provider logo mapping to Simple Icons CDN
 const getProviderLogoUrl = (type: string): string | null => {
@@ -41,6 +50,10 @@ export const Route = createFileRoute("/providers")({
 function ProvidersPage() {
   const { currentNamespace } = useNamespaceStore();
   const [searchTerm, setSearchTerm] = useState("");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
 
   // Use TanStack Query to fetch providers
   const { data, isLoading, error } = useQuery({
@@ -62,23 +75,51 @@ function ProvidersPage() {
       )
     : [];
 
+  const handleConfigure = (provider: Provider) => {
+    setSelectedProvider(provider);
+    setEditModalOpen(true);
+  };
+
+  const handleDelete = (provider: Provider) => {
+    setSelectedProvider(provider);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCreateClick = () => {
+    setSelectedProvider(null);
+    setCreateModalOpen(true);
+  };
+
+  const handleEditModalClose = (open: boolean) => {
+    setEditModalOpen(open);
+    if (!open) {
+      setSelectedProvider(null);
+    }
+  };
+
+  const handleDeleteDialogClose = (open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setSelectedProvider(null);
+    }
+  };
+
+  const handleCreateModalClose = (open: boolean) => {
+    setCreateModalOpen(open);
+    if (!open) {
+      setSelectedProvider(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-4">
-        <div>
+        <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Providers</h1>
-        </div>
-
-        {/* Read-only notice */}
-        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
-          <div className="flex items-center space-x-2">
-            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium text-blue-900 dark:text-blue-200">Read-only Mode</span>
-          </div>
-          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-            Currently viewing providers in read-only mode. Provider creation and configuration is not available.
-          </p>
+          <Button onClick={handleCreateClick}>
+            Create Provider
+          </Button>
         </div>
       </div>
 
@@ -117,26 +158,54 @@ function ProvidersPage() {
               <ProviderCard
                 key={provider.id}
                 provider={provider}
+                onConfigure={() => handleConfigure(provider)}
+                onDelete={() => handleDelete(provider)}
               />
             ))}
           </div>
         )}
       </Loader>
+
+      {/* Modals */}
+      {currentNamespace && (
+        <>
+          <ProviderConfigModal
+            open={createModalOpen}
+            onOpenChange={handleCreateModalClose}
+            namespaceId={currentNamespace.id}
+          />
+          <ProviderConfigModal
+            open={editModalOpen}
+            onOpenChange={handleEditModalClose}
+            provider={selectedProvider}
+            namespaceId={currentNamespace.id}
+          />
+          <DeleteProviderDialog
+            open={deleteDialogOpen}
+            onOpenChange={handleDeleteDialogClose}
+            provider={selectedProvider}
+            namespaceId={currentNamespace.id}
+          />
+        </>
+      )}
     </div>
   );
 }
 
 interface ProviderCardProps {
   provider: Provider;
+  onConfigure: () => void;
+  onDelete: () => void;
 }
 
-function ProviderCard({ provider }: ProviderCardProps) {
+function ProviderCard({ provider, onConfigure, onDelete }: ProviderCardProps) {
   const providerName = provider.alias || provider.name || 'Unnamed Provider';
   const formattedDate = provider.created_at ? new Date(provider.created_at).toLocaleDateString() : 'N/A';
   const lastUsedDate = provider.last_used_at ? new Date(provider.last_used_at).toLocaleDateString() : 'Never';
-  const status = provider.status || 'pending';
+  const status = 'connected';
   const logoUrl = getProviderLogoUrl(provider.type);
   const [imageError, setImageError] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Reset image error when provider or logo URL changes
   useEffect(() => {
@@ -200,15 +269,46 @@ function ProviderCard({ provider }: ProviderCardProps) {
           </div>
         </div>
 
-        {/* Status */}
-        {status && (
-          <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
-            {getStatusIcon(status)}
-            <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(status)}`}>
-              {status}
-            </span>
-          </div>
-        )}
+        {/* Status and Actions */}
+        <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
+          {status && (
+            <div className="flex items-center space-x-2">
+              {getStatusIcon(status)}
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(status)}`}>
+                {status}
+              </span>
+            </div>
+          )}
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setDropdownOpen(false);
+                  onConfigure();
+                }}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configure
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setDropdownOpen(false);
+                  onDelete();
+                }}
+                className="text-red-600 dark:text-red-400"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

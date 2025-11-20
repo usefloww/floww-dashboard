@@ -1,19 +1,21 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Code, Package, Activity } from "lucide-react";
+import { ArrowLeft, Code, Package, Activity, Settings } from "lucide-react";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Loader } from "@/components/Loader";
 import { DeploymentEditor } from "@/components/DeploymentEditor";
 import { DeploymentHistory } from "@/components/DeploymentHistory";
 import { ExecutionHistory } from "@/components/ExecutionHistory";
+import { WorkflowConfiguration } from "@/components/WorkflowConfiguration";
+import { useNamespaceStore } from "@/stores/namespaceStore";
 
 export const Route = createFileRoute("/workflows/$workflowId/deployments")({
   component: DeploymentsPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      tab: (search.tab as "edit" | "deployments" | "executions") || "edit",
+      tab: (search.tab as "edit" | "deployments" | "executions" | "config") || "edit",
     };
   },
 });
@@ -33,8 +35,9 @@ function DeploymentsPage() {
     return <Outlet />;
   }
 
-  const [activeTab, setActiveTab] = useState<"edit" | "deployments" | "executions">((tab || "edit") as "edit" | "deployments" | "executions");
+  const [activeTab, setActiveTab] = useState<"edit" | "deployments" | "executions" | "config">((tab || "edit") as "edit" | "deployments" | "executions" | "config");
   const [selectedDeploymentId, setSelectedDeploymentId] = useState<string | null>(null);
+  const { currentNamespace } = useNamespaceStore();
 
   // Fetch workflow to get the name
   const { data: workflow, isLoading, error } = useQuery({
@@ -141,6 +144,24 @@ function DeploymentsPage() {
               <span>Executions</span>
             </div>
           </Link>
+          <Link
+            {...({
+              to: "/workflows/$workflowId/deployments",
+              params: { workflowId },
+              search: { tab: "config" },
+              className: `py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "config"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`
+            } as any)}
+            onClick={() => setActiveTab("config")}
+          >
+            <div className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>Configuration</span>
+            </div>
+          </Link>
         </nav>
       </div>
 
@@ -157,11 +178,18 @@ function DeploymentsPage() {
             workflowId={workflowId}
             onEdit={handleEdit}
           />
-        ) : (
+        ) : activeTab === "executions" ? (
           <ExecutionHistory
             workflowId={workflowId}
           />
-        )}
+        ) : activeTab === "config" ? (
+          workflow && currentNamespace ? (
+            <WorkflowConfiguration
+              workflow={workflow}
+              namespaceId={currentNamespace.id}
+            />
+          ) : null
+        ) : null}
       </div>
 
         {/* Render child routes */}

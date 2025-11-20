@@ -5,7 +5,15 @@ import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Workflow as WorkflowIcon, Calendar, User, Clock } from "lucide-react";
+import { Search, Workflow as WorkflowIcon, Calendar, User, Clock, MoreVertical, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DeleteWorkflowDialog } from "@/components/DeleteWorkflowDialog";
 
 export const Route = createFileRoute("/workflows/")({
   component: WorkflowsPage,
@@ -15,6 +23,8 @@ function WorkflowsPage() {
   console.log("WorkflowsPage loaded");
   const { currentNamespace } = useNamespaceStore();
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
 
   // Use TanStack Query to fetch workflows
   const { data, isLoading, error } = useQuery({
@@ -37,6 +47,20 @@ function WorkflowsPage() {
         (workflow?.description && workflow.description.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     : [];
+
+  const handleDelete = (workflow: Workflow, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedWorkflow(workflow);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteDialogClose = (open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setSelectedWorkflow(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -82,21 +106,33 @@ function WorkflowsPage() {
               <WorkflowCard
                 key={workflow.id}
                 workflow={workflow}
+                onDelete={handleDelete}
               />
             ))}
           </div>
         )}
       </Loader>
 
+      {/* Delete Dialog */}
+      {currentNamespace && (
+        <DeleteWorkflowDialog
+          open={deleteDialogOpen}
+          onOpenChange={handleDeleteDialogClose}
+          workflow={selectedWorkflow}
+          namespaceId={currentNamespace.id}
+        />
+      )}
     </div>
   );
 }
 
 interface WorkflowCardProps {
   workflow: Workflow;
+  onDelete: (workflow: Workflow, e: React.MouseEvent) => void;
 }
 
-function WorkflowCard({ workflow }: WorkflowCardProps) {
+function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const formattedDate = new Date(workflow.created_at).toLocaleDateString();
   const lastDeployedDate = workflow.last_deployed_at
     ? new Date(workflow.last_deployed_at).toLocaleDateString()
@@ -119,45 +155,75 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
   };
 
   return (
-    <Link
-      {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "block" } as any)}
-    >
-      <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            {/* Workflow Icon */}
-            <div className="flex-shrink-0">
-              <WorkflowIcon className="h-10 w-10 text-primary" />
-            </div>
-            
-            {/* Workflow Info */}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-foreground truncate">{workflow.name}</h3>
-              {workflow.description && (
-                <p className="text-muted-foreground text-sm mt-1 line-clamp-1">
-                  {workflow.description}
-                </p>
+    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <Link
+          {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "flex items-center space-x-4 flex-1 min-w-0" } as any)}
+        >
+          {/* Workflow Icon */}
+          <div className="flex-shrink-0">
+            <WorkflowIcon className="h-10 w-10 text-primary" />
+          </div>
+          
+          {/* Workflow Info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-lg text-foreground truncate">{workflow.name}</h3>
+            {workflow.description && (
+              <p className="text-muted-foreground text-sm mt-1 line-clamp-1">
+                {workflow.description}
+              </p>
+            )}
+            <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+              <div className="flex items-center space-x-1">
+                <Calendar className="h-3 w-3" />
+                <span>Created: {formattedDate}</span>
+              </div>
+              {lastDeployedDate && (
+                <div className="flex items-center space-x-1">
+                  <Clock className="h-3 w-3" />
+                  <span>Last deployed: {lastDeployedDate}</span>
+                </div>
               )}
-              <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>Created: {formattedDate}</span>
-                </div>
-                {lastDeployedDate && (
-                  <div className="flex items-center space-x-1">
-                    <Clock className="h-3 w-3" />
-                    <span>Last deployed: {lastDeployedDate}</span>
-                  </div>
-                )}
-                <div className="flex items-center space-x-1">
-                  <User className="h-3 w-3" />
-                  <span>Creator: {getCreatorName()}</span>
-                </div>
+              <div className="flex items-center space-x-1">
+                <User className="h-3 w-3" />
+                <span>Creator: {getCreatorName()}</span>
               </div>
             </div>
           </div>
+        </Link>
+
+        {/* Actions */}
+        <div className="flex-shrink-0 ml-4">
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  setDropdownOpen(false);
+                  onDelete(workflow, e);
+                }}
+                className="text-red-600 dark:text-red-400"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
