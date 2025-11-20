@@ -1,22 +1,16 @@
 import { z } from 'zod'
 
-/**
- * Environment variables schema with validation
- */
+// schema
 const envSchema = z.object({
-  BACKEND_URL: z
+  EXAMPLE_ENV_VAR: z
     .string()
-    .url('BACKEND_URL must be a valid URL')
-    .describe('Backend API base URL for server requests'),
+    .describe('Example environment variable'),
 })
 
-/**
- * Parse and validate environment variables
- * Falls back to sensible defaults for development
- */
+// parse env
 const parseEnv = () => {
   const env = {
-    BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:8000',
+    EXAMPLE_ENV_VAR: process.env.EXAMPLE_ENV_VAR || 'default value',
   }
 
   try {
@@ -28,17 +22,5 @@ const parseEnv = () => {
   }
 }
 
-/**
- * Validated and type-safe application settings
- *
- * @example
- * import { settings } from '@/settings'
- *
- * fetch(`${settings.BACKEND_URL}/api/users`)
- */
 export const settings = parseEnv()
-
-/**
- * TypeScript type for settings
- */
 export type Settings = z.infer<typeof envSchema>

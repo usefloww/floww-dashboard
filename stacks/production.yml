@@ -11,7 +11,6 @@ services:
       - NODE_ENV=production
       - PORT=8080
       - HOST=0.0.0.0
-      - BACKEND_URL=http://floww-backend_app:8000
 
     deploy:
       mode: replicated

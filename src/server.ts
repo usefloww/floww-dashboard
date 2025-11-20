@@ -37,16 +37,6 @@ if (isMainModule) {
     try {
       const urlPath = req.url || "/";
 
-      // Proxy API, auth, and admin requests to backend
-      if (
-        urlPath.startsWith("/api") ||
-        urlPath.startsWith("/auth") ||
-        urlPath.startsWith("/admin")
-      ) {
-        await transparentProxy(req, res, settings.BACKEND_URL);
-        return;
-      }
-
       // Try to serve static files first (assets, favicon, etc.)
       // Remove leading slash and check if it's a static asset
       const staticPath = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;

@@ -1,7 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { User } from '@/types/api'
-import { settings } from '@/settings'
 
 /**
  * Server function to check authentication by calling the backend whoami endpoint
@@ -14,7 +13,7 @@ export const getCurrentUser = createServerFn({ method: 'GET' }).handler(async ()
     const cookies = request.headers.get('cookie')
 
     // Call the backend API to check authentication
-    const response = await fetch(`${settings.BACKEND_URL}/api/whoami`, {
+    const response = await fetch(`/api/whoami`, {
       headers: {
         'Content-Type': 'application/json',
         ...(cookies ? { 'Cookie': cookies } : {}),
@@ -41,7 +40,7 @@ export const logoutUser = createServerFn({ method: 'POST' }).handler(async () =>
     const request = getRequest()
     const cookies = request.headers.get('cookie')
 
-    const response = await fetch(`${settings.BACKEND_URL}/auth/logout`, {
+    const response = await fetch(`/auth/logout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
