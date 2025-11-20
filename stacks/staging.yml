@@ -11,6 +11,7 @@ services:
       - NODE_ENV=staging
       - PORT=8080
       - HOST=0.0.0.0
+      - PUBLIC_API_URL=https://app.flow.toondn.app
 
     deploy:
       mode: replicated
