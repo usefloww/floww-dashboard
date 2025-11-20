@@ -35,7 +35,7 @@ services:
           memory: 256M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.floww-dashboard-staging.rule=Host(`dashboard.flow.toondn.app`)"
+        - "traefik.http.routers.floww-dashboard-staging.rule=Host(`app.flow.toondn.app`)"
         - "traefik.http.routers.floww-dashboard-staging.entrypoints=websecure"
         - "traefik.http.routers.floww-dashboard-staging.tls.certresolver=myresolver"
         - "traefik.http.services.floww-dashboard-staging.loadbalancer.server.port=8080"
