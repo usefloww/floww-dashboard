@@ -184,6 +184,20 @@ function ExecutionDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Logs */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Logs</h3>
+              {execution.logs ? (
+                <div className="bg-zinc-900 dark:bg-zinc-950 border border-zinc-700 dark:border-zinc-800 rounded-lg p-4 max-h-96 overflow-auto">
+                  <pre className="text-sm text-zinc-100 whitespace-pre-wrap font-mono">
+                    {execution.logs}
+                  </pre>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No logs available</p>
+              )}
+            </div>
           </div>
         )}
       </div>

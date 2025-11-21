@@ -257,6 +257,7 @@ export interface ExecutionHistory {
   completed_at: string | null;
   duration_ms: number | null;
   error_message: string | null;
+  logs: string | null;
   trigger_type: string | null;
   webhook_path: string | null;
   webhook_method: string | null;
