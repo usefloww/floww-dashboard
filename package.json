@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc -b --incremental",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node dist/server/server.js"
+    "start": "node dist/server/server.js",
+    "prepare": "husky"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
@@ -67,6 +69,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "get-graphql-schema": "^2.1.2",
     "globals": "^16.0.0",
+    "husky": "^9.1.7",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.5",
     "tw-animate-css": "^1.3.4",
