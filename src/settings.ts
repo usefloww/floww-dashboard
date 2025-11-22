@@ -2,15 +2,13 @@ import { z } from "zod";
 
 // schema
 const envSchema = z.object({
-  EXAMPLE_ENV_VAR: z.string().describe("Example environment variable"),
-  PUBLIC_API_URL: z.string().describe("Public API URL"),
+  BACKEND_URL: z.string().describe("Backend API URL for server-side requests"),
 });
 
 // parse env
 const parseEnv = () => {
   const env = {
-    EXAMPLE_ENV_VAR: process.env.EXAMPLE_ENV_VAR || "default value",
-    PUBLIC_API_URL: process.env.PUBLIC_API_URL || "http://localhost:8000",
+    BACKEND_URL: process.env.BACKEND_URL || "http://localhost:8000",
   };
 
   try {
