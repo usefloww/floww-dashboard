@@ -65,10 +65,10 @@ function RootDocument() {
         <HeadContent />
       </head>
 
-      <body>
+      <body className="h-screen overflow-hidden">
         <QueryClientProvider client={queryClient}>
-          <div className="min-h-screen">
-            <div className="flex h-screen">
+          <div className="h-screen">
+            <div className="flex h-full">
               <Sidebar />
               <main className="flex-1 overflow-auto">
                 <div className="p-8">
