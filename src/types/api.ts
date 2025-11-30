@@ -66,7 +66,10 @@ export interface Workflow {
   created_by?: CreatedByUser;
   created_at: string;
   updated_at: string;
-  last_deployed_at?: string | null;
+  last_deployment?: {
+    deployed_at: string;
+    provider_definitions?: Array<{ type: string; alias: string }>;
+  } | null;
 }
 
 export interface WorkflowCreate {

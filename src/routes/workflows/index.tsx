@@ -5,7 +5,7 @@ import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Workflow as WorkflowIcon, Calendar, User, Clock, MoreVertical, Trash2 } from "lucide-react";
+import { Search, Workflow as WorkflowIcon, MoreVertical, Trash2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +14,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeleteWorkflowDialog } from "@/components/DeleteWorkflowDialog";
+
+// Provider logo mapping to Simple Icons CDN
+const getProviderLogoUrl = (type: string): string | null => {
+  const iconMap: Record<string, string> = {
+    "openai": "openai",
+    'aws': 'amazonaws',
+    'gcp': 'googlecloud',
+    'googlecloud': 'googlecloud',
+    'azure': 'microsoftazure',
+    'microsoftazure': 'microsoftazure',
+    'github': 'github',
+    'gitlab': 'gitlab',
+    'docker': 'docker',
+    'kubernetes': 'kubernetes',
+    'terraform': 'terraform',
+    'slack': 'slack',
+    'discord': 'discord',
+    'jenkins': 'jenkins',
+    'circleci': 'circleci',
+    'githubactions': 'githubactions',
+  };
+
+  const iconName = iconMap[type.toLowerCase()];
+  if (!iconName) return null;
+  
+  return `https://cdn.simpleicons.org/${iconName}`;
+};
 
 export const Route = createFileRoute("/workflows/")({
   component: WorkflowsPage,
@@ -133,38 +160,59 @@ interface WorkflowCardProps {
 
 function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const formattedDate = new Date(workflow.created_at).toLocaleDateString();
-  const lastDeployedDate = workflow.last_deployed_at
-    ? new Date(workflow.last_deployed_at).toLocaleDateString()
-    : null;
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
-  const getCreatorName = () => {
-    if (!workflow.created_by) {
-      return workflow.created_by_id.slice(0, 8) + "...";
-    }
+  // Extract unique provider types from last_deployment, filtering out "builtin"
+  const providerTypes = workflow.last_deployment?.provider_definitions
+    ? Array.from(
+        new Set(
+          workflow.last_deployment.provider_definitions
+            .map((p) => p.type)
+            .filter((type) => type.toLowerCase() !== "builtin")
+        )
+      )
+    : [];
 
-    const { first_name, last_name } = workflow.created_by;
-
-    if (first_name && last_name) {
-      return `${first_name} ${last_name}`;
-    }
-    if (first_name) {
-      return first_name;
-    }
-    return workflow.created_by_id.slice(0, 8) + "...";
+  const formatRelativeTime = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMinutes < 1) return "just now";
+    if (diffMinutes === 1) return "1 minute ago";
+    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+    if (diffHours === 1) return "1 hour ago";
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays === 1) return "1 day ago";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 14) return "1 week ago";
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 60) return "1 month ago";
+    return `${Math.floor(diffDays / 30)} months ago`;
   };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      day: 'numeric', 
+      month: 'long' 
+    });
+  };
+
+  const lastDeployedRelative = workflow.last_deployment?.deployed_at
+    ? formatRelativeTime(new Date(workflow.last_deployment.deployed_at))
+    : null;
+  const createdDate = formatDate(workflow.created_at);
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <Link
-          {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "flex items-center space-x-4 flex-1 min-w-0" } as any)}
+          {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "flex-1 min-w-0" } as any)}
         >
-          {/* Workflow Icon */}
-          <div className="flex-shrink-0">
-            <WorkflowIcon className="h-10 w-10 text-primary" />
-          </div>
-          
           {/* Workflow Info */}
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg text-foreground truncate">{workflow.name}</h3>
@@ -173,21 +221,44 @@ function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
                 {workflow.description}
               </p>
             )}
-            <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-3 w-3" />
-                <span>Created: {formattedDate}</span>
-              </div>
-              {lastDeployedDate && (
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-3 w-3" />
-                  <span>Last deployed: {lastDeployedDate}</span>
-                </div>
+            <div className="flex items-center space-x-2 mt-2 text-sm text-muted-foreground">
+              {lastDeployedRelative && (
+                <>
+                  <span>Last deployed {lastDeployedRelative}</span>
+                  {providerTypes.length > 0 && (
+                    <>
+                      <span>|</span>
+                      <div className="flex items-center space-x-1.5">
+                        {providerTypes.map((providerType) => {
+                          const logoUrl = getProviderLogoUrl(providerType);
+                          return (
+                            <div
+                              key={providerType}
+                              className="flex items-center justify-center h-4 w-4 rounded"
+                              title={providerType}
+                            >
+                              {logoUrl && !imageErrors.has(providerType) ? (
+                                <img
+                                  src={logoUrl}
+                                  alt={providerType}
+                                  className="h-4 w-4 object-contain opacity-70"
+                                  onError={() => {
+                                    setImageErrors((prev) => new Set(prev).add(providerType));
+                                  }}
+                                />
+                              ) : (
+                                <Building2 className="h-3 w-3 text-muted-foreground opacity-50" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </>
               )}
-              <div className="flex items-center space-x-1">
-                <User className="h-3 w-3" />
-                <span>Creator: {getCreatorName()}</span>
-              </div>
+              <span>|</span>
+              <span>Created {createdDate}</span>
             </div>
           </div>
         </Link>
