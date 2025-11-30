@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
-import { api, handleApiError } from "@/lib/api";
+import { api, handleApiError, updateWorkflow } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Workflow as WorkflowIcon, MoreVertical, Trash2, Building2 } from "lucide-react";
+import { Search, Workflow as WorkflowIcon, MoreVertical, Trash2, Building2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,7 +13,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import { DeleteWorkflowDialog } from "@/components/DeleteWorkflowDialog";
+import { showSuccessNotification, showErrorNotification } from "@/stores/notificationStore";
 
 // Provider logo mapping to Simple Icons CDN
 const getProviderLogoUrl = (type: string): string | null => {
@@ -161,6 +164,8 @@ interface WorkflowCardProps {
 function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
+  const { currentNamespace } = useNamespaceStore();
 
   // Extract unique provider types from last_deployment, filtering out "builtin"
   const providerTypes = workflow.last_deployment?.provider_definitions
@@ -207,21 +212,52 @@ function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
     : null;
   const createdDate = formatDate(workflow.created_at);
 
+  const toggleMutation = useMutation({
+    mutationFn: async (active: boolean) => {
+      return await updateWorkflow(workflow.id, { active });
+    },
+    onSuccess: (_, active) => {
+      queryClient.invalidateQueries({ queryKey: ['workflows', currentNamespace?.id] });
+      showSuccessNotification(
+        `Workflow ${active ? 'activated' : 'deactivated'}`,
+        `The workflow has been ${active ? 'activated' : 'deactivated'} successfully.`
+      );
+    },
+    onError: (error) => {
+      const errorMessage = handleApiError(error);
+      showErrorNotification("Failed to update workflow status", errorMessage);
+    },
+  });
+
+  const handleToggle = (checked: boolean) => {
+    toggleMutation.mutate(checked);
+  };
+
   return (
-    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div className="bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <Link
           {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "flex-1 min-w-0" } as any)}
         >
           {/* Workflow Info */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg text-foreground truncate">{workflow.name}</h3>
-            {workflow.description && (
-              <p className="text-muted-foreground text-sm mt-1 line-clamp-1">
-                {workflow.description}
-              </p>
-            )}
-            <div className="flex items-center space-x-2 mt-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-semibold text-lg text-foreground truncate">{workflow.name}</h3>
+              {workflow.description && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent 
+                    className="bg-popover text-popover-foreground border border-border"
+                    arrowClassName="bg-popover fill-popover"
+                  >
+                    <p className="max-w-xs">{workflow.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+            <div className="flex items-center space-x-2 mt-1 text-sm text-muted-foreground">
               {lastDeployedRelative && (
                 <>
                   <span>Last deployed {lastDeployedRelative}</span>
@@ -263,8 +299,22 @@ function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
           </div>
         </Link>
 
+        {/* Status Toggle */}
+        <div className="flex items-center gap-3 flex-shrink-0 ml-4" onClick={(e) => e.stopPropagation()}>
+          <Switch
+            checked={workflow.active ?? false}
+            onCheckedChange={handleToggle}
+            disabled={toggleMutation.isPending || !workflow.last_deployment || workflow.active === null || workflow.active === undefined}
+            aria-label={
+              !workflow.last_deployment || workflow.active === null || workflow.active === undefined
+                ? "Workflow status unavailable (no deployment)"
+                : `Toggle workflow ${workflow.active ? 'inactive' : 'active'}`
+            }
+          />
+        </div>
+
         {/* Actions */}
-        <div className="flex-shrink-0 ml-4">
+        <div className="flex-shrink-0 ml-2">
           <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button

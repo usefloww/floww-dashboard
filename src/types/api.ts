@@ -66,6 +66,7 @@ export interface Workflow {
   created_by?: CreatedByUser;
   created_at: string;
   updated_at: string;
+  active?: boolean | null;
   last_deployment?: {
     deployed_at: string;
     provider_definitions?: Array<{ type: string; alias: string }>;
@@ -82,6 +83,7 @@ export interface WorkflowUpdate {
   name?: string;
   description?: string;
   namespace_id?: string;
+  active?: boolean;
 }
 
 export interface Provider {

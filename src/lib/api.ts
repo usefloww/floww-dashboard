@@ -1,4 +1,4 @@
-import { ProviderType } from "@/types/api";
+import { ProviderType, WorkflowUpdate } from "@/types/api";
 
 export class ApiError extends Error {
   constructor(
@@ -182,7 +182,7 @@ export async function deleteProvider(providerId: string) {
 }
 
 // Workflow API methods
-export async function updateWorkflow(workflowId: string, data: { name?: string; description?: string }) {
+export async function updateWorkflow(workflowId: string, data: WorkflowUpdate) {
   return api.patch<any>(`/workflows/${workflowId}`, data);
 }
 
