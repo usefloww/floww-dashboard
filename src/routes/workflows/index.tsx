@@ -301,16 +301,33 @@ function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
 
         {/* Status Toggle */}
         <div className="flex items-center gap-3 flex-shrink-0 ml-4" onClick={(e) => e.stopPropagation()}>
-          <Switch
-            checked={workflow.active ?? false}
-            onCheckedChange={handleToggle}
-            disabled={toggleMutation.isPending || !workflow.last_deployment || workflow.active === null || workflow.active === undefined}
-            aria-label={
-              !workflow.last_deployment || workflow.active === null || workflow.active === undefined
-                ? "Workflow status unavailable (no deployment)"
-                : `Toggle workflow ${workflow.active ? 'inactive' : 'active'}`
-            }
-          />
+          {(!workflow.last_deployment || workflow.active === null || workflow.active === undefined) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Switch
+                    checked={workflow.active ?? false}
+                    onCheckedChange={handleToggle}
+                    disabled={true}
+                    aria-label="Workflow status unavailable (no deployment)"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent 
+                className="bg-popover text-popover-foreground border border-border"
+                arrowClassName="bg-popover fill-popover"
+              >
+                <p>Cannot activate workflow: no deployment exists</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Switch
+              checked={workflow.active ?? false}
+              onCheckedChange={handleToggle}
+              disabled={toggleMutation.isPending}
+              aria-label={`Toggle workflow ${workflow.active ? 'inactive' : 'active'}`}
+            />
+          )}
         </div>
 
         {/* Actions */}
