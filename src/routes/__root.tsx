@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import appCss from '../styles/app.css?url'
 import { NotificationContainer } from '@/components/NotificationToast'
 import { Sidebar } from '@/components/Sidebar'
+import { AuthProvider } from '@/components/AuthProvider'
 import { getCurrentUser } from '@/lib/server/auth'
 import { useTheme } from '@/hooks/useTheme'
 
@@ -67,19 +68,21 @@ function RootDocument() {
 
       <body className="h-screen overflow-hidden">
         <QueryClientProvider client={queryClient}>
-          <div className="h-screen">
-            <div className="flex h-full">
-              <Sidebar />
-              <main className="flex-1 overflow-auto">
-                <div className="p-8">
-                  <Outlet />
-                </div>
-              </main>
-            </div>
+          <AuthProvider>
+            <div className="h-screen">
+              <div className="flex h-full">
+                <Sidebar />
+                <main className="flex-1 overflow-auto">
+                  <div className="p-8">
+                    <Outlet />
+                  </div>
+                </main>
+              </div>
 
-            <NotificationContainer />
-            <TanStackRouterDevtools />
-          </div>
+              <NotificationContainer />
+              <TanStackRouterDevtools />
+            </div>
+          </AuthProvider>
         </QueryClientProvider>
         <Scripts />
       </body>

@@ -33,6 +33,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: () => {
+        console.log('Login called');
         // Redirect to backend auth endpoint with current path
         // Use prompt=select_account to always show account selection
         const currentPath = window.location.pathname + window.location.search;
@@ -79,6 +80,8 @@ export const useAuthStore = create<AuthState>()(
               'Content-Type': 'application/json',
             }
           });
+
+          console.log('Auth check response:', response);
 
           if (response.ok) {
             const userData = await response.json();

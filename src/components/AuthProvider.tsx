@@ -12,10 +12,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const routeContext = useRouteContext({ from: '__root__' });
 
   useEffect(() => {
-    // Set user from server-side auth check
-    if (routeContext.user) {
-      setUser(routeContext.user as User);
-    }
+    // Always sync user from server-side auth check to store
+    // This ensures the auth store matches the server state
+    setUser(routeContext.user as User | null);
   }, [routeContext.user, setUser]);
 
   return <>{children}</>;
