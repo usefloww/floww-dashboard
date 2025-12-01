@@ -4,7 +4,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public response?: Response
+    public response?: Response,
+    public data?: any
   ) {
     super(message);
     this.name = 'ApiError';
@@ -14,6 +15,38 @@ export class ApiError extends Error {
 export interface ApiRequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;
   timeout?: number;
+}
+
+// Helper function to format structured error objects
+function formatStructuredError(error: any): string {
+  if (typeof error === 'string') {
+    return error;
+  }
+  
+  if (error && typeof error === 'object') {
+    // Handle trigger errors with failed_triggers
+    if (error.failed_triggers && Array.isArray(error.failed_triggers)) {
+      const triggerErrors = error.failed_triggers.map((trigger: any) => {
+        const parts = [];
+        if (trigger.provider_type) parts.push(`Provider: ${trigger.provider_type}`);
+        if (trigger.trigger_type) parts.push(`Trigger: ${trigger.trigger_type}`);
+        if (trigger.error) parts.push(`Error: ${trigger.error}`);
+        return parts.join(', ');
+      });
+      const baseMessage = error.message || 'Failed to create one or more triggers';
+      return `${baseMessage}\n${triggerErrors.join('\n')}`;
+    }
+    
+    // Handle simple message objects
+    if (error.message) {
+      return error.message;
+    }
+    
+    // Fallback: format as JSON for debugging
+    return JSON.stringify(error, null, 2);
+  }
+  
+  return String(error);
 }
 
 class ApiClient {
@@ -69,14 +102,23 @@ class ApiClient {
       // Handle non-JSON responses
       if (!response.ok) {
         let errorMessage = `Request failed with status ${response.status}`;
+        let errorData: any = null;
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.detail || errorData.message || errorMessage;
+          errorData = await response.json();
+          // Extract message from error data
+          if (typeof errorData.detail === 'string') {
+            errorMessage = errorData.detail;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.detail) {
+            // If detail is an object, format it nicely
+            errorMessage = formatStructuredError(errorData.detail);
+          }
         } catch {
           // If response is not JSON, use status text
           errorMessage = response.statusText || errorMessage;
         }
-        throw new ApiError(errorMessage, response.status, response);
+        throw new ApiError(errorMessage, response.status, response, errorData);
       }
 
       // Handle empty responses (like 204 No Content)
@@ -156,6 +198,10 @@ export const api = new ApiClient();
 // Helper function to handle API errors in components
 export const handleApiError = (error: unknown): string => {
   if (error instanceof ApiError) {
+    // If we have structured error data, format it nicely
+    if (error.data?.detail && typeof error.data.detail === 'object') {
+      return formatStructuredError(error.data.detail);
+    }
     return error.message;
   }
   if (error instanceof Error) {

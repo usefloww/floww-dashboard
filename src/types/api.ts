@@ -26,7 +26,7 @@ export enum OrganizationRole {
 
 export interface OrganizationUser {
   id: string;
-  workos_user_id: string;
+  workos_user_id: string | null;
   email?: string;
   first_name?: string;
   last_name?: string;

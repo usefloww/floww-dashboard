@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, handleApiError } from "@/lib/api";
+import { api, handleApiError, ApiError } from "@/lib/api";
 import { WorkflowDeployment } from "@/types/api";
 import { Loader } from "@/components/Loader";
 import { ArrowLeft, Save, X } from "lucide-react";
@@ -86,7 +86,26 @@ function EditDeploymentPage() {
         search: { tab: "edit" },
       });
     } catch (error) {
-      setError(handleApiError(error));
+      // Extract structured error data if available
+      if (error instanceof ApiError && error.data?.detail) {
+        const errorDetail = error.data.detail;
+        // Format structured errors nicely
+        if (errorDetail.failed_triggers && Array.isArray(errorDetail.failed_triggers)) {
+          const formattedErrors = errorDetail.failed_triggers.map((trigger: any) => {
+            const parts = [];
+            if (trigger.provider_type) parts.push(`Provider: ${trigger.provider_type}`);
+            if (trigger.trigger_type) parts.push(`Trigger: ${trigger.trigger_type}`);
+            if (trigger.error) parts.push(`Error: ${trigger.error}`);
+            return parts.join(', ');
+          });
+          const baseMessage = errorDetail.message || 'Failed to create one or more triggers';
+          setError(`${baseMessage}\n\n${formattedErrors.join('\n')}`);
+        } else {
+          setError(handleApiError(error));
+        }
+      } else {
+        setError(handleApiError(error));
+      }
     } finally {
       setIsSaving(false);
     }
@@ -162,7 +181,7 @@ function EditDeploymentPage() {
             {/* Error message */}
             {error && (
               <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
-                {error}
+                <div className="whitespace-pre-wrap font-medium">{error}</div>
               </div>
             )}
 

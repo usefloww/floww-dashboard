@@ -60,7 +60,7 @@ export function OrganizationUserManagement({ organizationId }: OrganizationUserM
     if (user.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
-    return user.workos_user_id.substring(0, 2).toUpperCase();
+    return (user.workos_user_id || user.id).substring(0, 2).toUpperCase();
   };
 
   return (
