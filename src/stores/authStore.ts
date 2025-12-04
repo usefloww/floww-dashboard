@@ -10,12 +10,11 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   login: () => void;
   logout: () => void;
-  checkAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
@@ -59,56 +58,6 @@ export const useAuthStore = create<AuthState>()(
           });
           // Redirect to login page with prompt=select_account to show account selection
           window.location.href = '/auth/login?prompt=select_account';
-        }
-      },
-
-      checkAuth: async () => {
-        const currentState = get();
-
-        // Prevent multiple simultaneous auth checks
-        if (currentState.isLoading) {
-          return;
-        }
-
-        try {
-          set({ isLoading: true });
-
-          // Check if we have a session by calling the whoami endpoint
-          const response = await fetch('/api/whoami', {
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-
-          console.log('Auth check response:', response);
-
-          if (response.ok) {
-            const userData = await response.json();
-            set({
-              user: userData,
-              isAuthenticated: true,
-              isLoading: false
-            });
-          } else if (response.status === 401 || response.status === 403) {
-            // Clear auth state for unauthorized responses
-            set({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false
-            });
-          } else {
-            // For other errors, don't change auth state
-            set({ isLoading: false });
-          }
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          // On network errors, assume not authenticated
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false
-          });
         }
       },
     }),
