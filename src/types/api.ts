@@ -251,6 +251,16 @@ export type ExecutionStatus =
   | "timeout"
   | "no_deployment";
 
+export type LogLevel = "debug" | "info" | "warn" | "error" | "log";
+
+export interface ExecutionLogEntry {
+  id: string;
+  execution_id: string;
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+}
+
 export interface ExecutionHistory {
   id: string;
   workflow_id: string;
@@ -262,7 +272,7 @@ export interface ExecutionHistory {
   completed_at: string | null;
   duration_ms: number | null;
   error_message: string | null;
-  logs: string | null;
+  log_entries: ExecutionLogEntry[] | null;
   trigger_type: string | null;
   webhook_path: string | null;
   webhook_method: string | null;
@@ -271,6 +281,13 @@ export interface ExecutionHistory {
 export interface ExecutionHistoryResponse {
   executions: ExecutionHistory[];
   total: number;
+}
+
+export interface WorkflowLogsResponse {
+  workflow_id: string;
+  logs: ExecutionLogEntry[];
+  limit: number;
+  offset: number;
 }
 
 export interface ExecutionDaySummary {

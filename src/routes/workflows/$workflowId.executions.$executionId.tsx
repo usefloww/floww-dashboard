@@ -188,11 +188,41 @@ function ExecutionDetailPage() {
             {/* Logs */}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Logs</h3>
-              {execution.logs ? (
-                <div className="bg-zinc-900 dark:bg-zinc-950 border border-zinc-700 dark:border-zinc-800 rounded-lg p-4 max-h-96 overflow-auto">
-                  <pre className="text-sm text-zinc-100 whitespace-pre-wrap font-mono">
-                    {execution.logs}
-                  </pre>
+              {execution.log_entries && execution.log_entries.length > 0 ? (
+                <div className="bg-zinc-900 dark:bg-zinc-950 border border-zinc-700 dark:border-zinc-800 rounded-lg overflow-hidden max-h-96 overflow-auto">
+                  <div className="divide-y divide-zinc-700/50">
+                    {execution.log_entries.map((log) => (
+                      <div
+                        key={log.id}
+                        className="px-4 py-2 flex items-start gap-3"
+                      >
+                        <span className="font-mono text-xs text-zinc-500 whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleString("en-US", {
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false,
+                          })}
+                        </span>
+                        <Badge
+                          variant={
+                            log.level === "error" ? "destructive" :
+                            log.level === "warn" ? "default" :
+                            log.level === "debug" ? "outline" :
+                            "secondary"
+                          }
+                          className="font-mono text-xs"
+                        >
+                          {log.level.toUpperCase()}
+                        </Badge>
+                        <pre className="text-sm text-zinc-100 whitespace-pre-wrap font-mono flex-1 break-all">
+                          {log.message}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">No logs available</p>
