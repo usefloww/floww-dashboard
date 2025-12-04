@@ -87,7 +87,7 @@ function ProfilePage() {
       </div>
 
       <div className="space-y-6">
-        <PersonalInfoCard user={user} />
+        <PersonalInfoCard user={user!} />
 
         {!isBillingEnabled ? (
           <div/>
