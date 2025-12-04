@@ -35,6 +35,14 @@ if (isMainModule) {
     try {
       const urlPath = req.url || "/";
 
+      // Handle health check endpoint directly without any side effects
+      if (urlPath === "/health") {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ status: "ok" }));
+        return;
+      }
+
       // Try to serve static files first (assets, favicon, etc.)
       // Remove leading slash and check if it's a static asset
       const staticPath = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;

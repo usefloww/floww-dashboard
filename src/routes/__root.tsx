@@ -31,6 +31,11 @@ export const Route = createRootRoute({
   }),
   component: RootComponent,
     beforeLoad: async ({ location }) => {
+    // Skip authentication for health check endpoint
+    if (location.pathname === '/health') {
+      return {}
+    }
+
     // Check authentication server-side before loading any route
     const user = await getCurrentUser()
 
