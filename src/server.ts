@@ -7,6 +7,14 @@ import {
 
 const serverEntry: ServerEntry = {
   fetch(request) {
+    // Handle health check endpoint directly without any side effects
+    const url = new URL(request.url);
+    if (url.pathname === "/health") {
+      return new Response(JSON.stringify({ status: "ok" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return handler.fetch(request);
   },
 };
@@ -34,9 +42,11 @@ if (isMainModule) {
   const server = createServer(async (req, res) => {
     try {
       const urlPath = req.url || "/";
+      // Extract pathname (ignore query parameters and hash)
+      const pathname = urlPath.split("?")[0].split("#")[0];
 
       // Handle health check endpoint directly without any side effects
-      if (urlPath === "/health") {
+      if (pathname === "/health") {
         res.statusCode = 200;
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ status: "ok" }));
