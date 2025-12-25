@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
-import { useNamespaceStore, WorkspaceItem } from "@/stores/namespaceStore";
+import { useNamespaceStore, Namespace } from "@/stores/namespaceStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useTheme } from "@/hooks/useTheme";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -47,27 +47,11 @@ interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const getNavigationItems = (isOrganizationContext: boolean): NavigationItem[] => [
-  {
-    name: "Overview",
-    to: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Workflows",
-    to: "/workflows",
-    icon: Workflow,
-  },
-  {
-    name: "Providers",
-    to: "/providers",
-    icon: Building2,
-  },
-  ...(isOrganizationContext ? [{
-    name: "Organization Settings",
-    to: "/settings",
-    icon: Settings,
-  }] : []),
+const navigationItems: NavigationItem[] = [
+  { name: "Overview", to: "/", icon: LayoutDashboard },
+  { name: "Workflows", to: "/workflows", icon: Workflow },
+  { name: "Providers", to: "/providers", icon: Building2 },
+  { name: "Settings", to: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -76,11 +60,10 @@ export function Sidebar() {
   const { theme, setTheme } = useTheme();
   const { isCollapsed, toggleCollapsed } = useSidebarStore();
   const {
+    namespaces,
     currentNamespace,
     setCurrentNamespace,
     createNamespace,
-    getWorkspaceItems,
-    getCurrentWorkspaceContext,
     fetchNamespaces,
     isLoading
   } = useNamespaceStore();
@@ -93,18 +76,8 @@ export function Sidebar() {
     fetchNamespaces();
   }, [fetchNamespaces]);
 
-  // Determine if we're in an organization context
-  const { isOrganizationContext } = getCurrentWorkspaceContext();
-
-  const navigationItems = getNavigationItems(isOrganizationContext);
-
-  // Get workspace items from namespaces
-  const workspaceItems = getWorkspaceItems();
-
-  const currentWorkspace = workspaceItems.find(w => w.id === currentNamespace?.id);
-
-  const handleWorkspaceSelect = (workspace: WorkspaceItem) => {
-    setCurrentNamespace(workspace.namespace);
+  const handleWorkspaceSelect = (namespace: Namespace) => {
+    setCurrentNamespace(namespace);
     setIsWorkspaceDropdownOpen(false);
   };
 
@@ -128,21 +101,16 @@ export function Sidebar() {
 
   const getUserInitials = () => {
     if (!user) return "U";
-
     if (user.first_name && user.last_name) {
       return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
     }
-    if (user.first_name) {
-      return user.first_name.substring(0, 2).toUpperCase();
-    }
-    if (user.last_name) {
-      return user.last_name.substring(0, 2).toUpperCase();
-    }
-    if (user.email) {
-      return user.email.substring(0, 2).toUpperCase();
-    }
+    if (user.first_name) return user.first_name.substring(0, 2).toUpperCase();
+    if (user.last_name) return user.last_name.substring(0, 2).toUpperCase();
+    if (user.email) return user.email.substring(0, 2).toUpperCase();
     return (user.workos_user_id || user.id).substring(0, 2).toUpperCase();
   };
+
+  const currentDisplayName = currentNamespace?.organization.display_name || "Select Workspace";
 
   return (
     <div 
@@ -274,9 +242,7 @@ export function Sidebar() {
                   <Building2 className="h-5 w-5 text-muted-foreground" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                {currentWorkspace?.display_name || "Select Workspace"}
-              </TooltipContent>
+              <TooltipContent side="right">{currentDisplayName}</TooltipContent>
             </Tooltip>
           ) : (
             <button
@@ -285,9 +251,7 @@ export function Sidebar() {
             >
               <div className="flex items-center space-x-2">
                 <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium text-foreground truncate">
-                  {currentWorkspace?.display_name || "Select Workspace"}
-                </span>
+                <span className="font-medium text-foreground truncate">{currentDisplayName}</span>
               </div>
               <ChevronDown className={cn(
                 "h-4 w-4 text-muted-foreground transition-transform",
@@ -306,23 +270,21 @@ export function Sidebar() {
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">
                     Workspaces
                   </div>
-                  {workspaceItems.map((workspace) => (
+                  {namespaces.map((namespace) => (
                     <button
-                      key={workspace.id}
-                      onClick={() => handleWorkspaceSelect(workspace)}
+                      key={namespace.id}
+                      onClick={() => handleWorkspaceSelect(namespace)}
                       className={cn(
                         "w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center space-x-2",
-                        currentWorkspace?.id === workspace.id
+                        currentNamespace?.id === namespace.id
                           ? "bg-primary/10 text-primary"
                           : "text-foreground"
                       )}
                     >
                       <Building2 className="h-4 w-4" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{workspace.display_name}</div>
-                        {!workspace.isPersonal && (
-                          <div className="text-xs text-muted-foreground truncate">{workspace.name}</div>
-                        )}
+                        <div className="font-medium truncate">{namespace.organization.display_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{namespace.organization.name}</div>
                       </div>
                     </button>
                   ))}
@@ -330,9 +292,7 @@ export function Sidebar() {
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                       <DialogTrigger asChild>
                         <button
-                          onClick={() => {
-                            setIsWorkspaceDropdownOpen(true);
-                          }}
+                          onClick={() => setIsWorkspaceDropdownOpen(true)}
                           className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-muted flex items-center space-x-2"
                         >
                           <Plus className="h-4 w-4" />
@@ -345,9 +305,7 @@ export function Sidebar() {
                         </DialogHeader>
                         <form onSubmit={handleCreateNamespace} className="space-y-4">
                           <div className="space-y-2">
-                            <label htmlFor="name" className="text-sm font-medium">
-                              Name
-                            </label>
+                            <label htmlFor="name" className="text-sm font-medium">Name</label>
                             <Input
                               id="name"
                               value={formData.name}
@@ -357,9 +315,7 @@ export function Sidebar() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="display_name" className="text-sm font-medium">
-                              Display Name
-                            </label>
+                            <label htmlFor="display_name" className="text-sm font-medium">Display Name</label>
                             <Input
                               id="display_name"
                               value={formData.display_name}
@@ -374,11 +330,7 @@ export function Sidebar() {
                             </div>
                           )}
                           <DialogFooter>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setIsCreateDialogOpen(false)}
-                            >
+                            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                               Cancel
                             </Button>
                             <Button type="submit" disabled={isLoading}>
@@ -391,12 +343,7 @@ export function Sidebar() {
                   </div>
                 </div>
               </div>
-
-              {/* Click outside to close */}
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setIsWorkspaceDropdownOpen(false)}
-              />
+              <div className="fixed inset-0 z-40" onClick={() => setIsWorkspaceDropdownOpen(false)} />
             </>
           )}
         </div>

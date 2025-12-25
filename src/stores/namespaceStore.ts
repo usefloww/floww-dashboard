@@ -1,14 +1,10 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { api } from "@/lib/api";
-import { Organization } from "@/types/api";
 
 export interface Namespace {
   id: string;
-  user?: {
-    id: string;
-  };
-  organization?: {
+  organization: {
     id: string;
     name: string;
     display_name: string;
@@ -18,15 +14,6 @@ export interface Namespace {
 interface NamespaceResponse {
   results: Namespace[];
   total: number;
-}
-
-export interface WorkspaceItem {
-  id: string;
-  name: string;
-  display_name: string;
-  type: 'personal' | 'organization';
-  isPersonal: boolean;
-  namespace: Namespace;
 }
 
 interface NamespaceState {
@@ -39,18 +26,6 @@ interface NamespaceState {
   setCurrentNamespace: (namespace: Namespace | null) => void;
   fetchNamespaces: () => Promise<void>;
   createNamespace: (organizationData: { name: string; display_name: string }) => Promise<Namespace>;
-
-  // Filtering helpers
-  getPersonalNamespaces: () => Namespace[];
-  getOrganizationNamespaces: (organizationId?: string) => Namespace[];
-  getFilteredNamespaces: (currentOrganizationId?: string) => Namespace[];
-
-  // Workspace helpers
-  getWorkspaceItems: () => WorkspaceItem[];
-  getCurrentWorkspaceContext: () => {
-    isOrganizationContext: boolean;
-    organization?: { id: string; name: string; display_name: string }
-  };
 }
 
 export const useNamespaceStore = create<NamespaceState>()(
@@ -71,11 +46,11 @@ export const useNamespaceStore = create<NamespaceState>()(
           const response = await api.get<NamespaceResponse>('/namespaces');
           const namespaces = response.results;
 
-          // If no current namespace is set, set the first personal namespace or first available
+          // If no current namespace is set, set the first available
           const current = get().currentNamespace;
           const newCurrent = current && namespaces.find(ns => ns.id === current.id)
             ? current
-            : namespaces.find(ns => ns.user) || namespaces[0] || null;
+            : namespaces[0] || null;
 
           set({
             namespaces,
@@ -95,7 +70,7 @@ export const useNamespaceStore = create<NamespaceState>()(
           set({ isLoading: true, error: null });
 
           // Create the organization (namespace will be created automatically)
-          await api.post<Organization>('/organizations', organizationData);
+          await api.post('/organizations', organizationData);
 
           // Refresh namespaces to get the automatically created namespace
           const response = await api.get<NamespaceResponse>('/namespaces');
@@ -106,15 +81,10 @@ export const useNamespaceStore = create<NamespaceState>()(
             ns => ns.organization?.name === organizationData.name
           );
 
-          // Update state with refreshed namespaces
-          const current = get().currentNamespace;
-          const newCurrent = current && namespaces.find(ns => ns.id === current.id)
-            ? current
-            : newNamespace || namespaces.find(ns => ns.user) || namespaces[0] || null;
-
+          // Update state with refreshed namespaces and select the new one
           set({
             namespaces,
-            currentNamespace: newCurrent,
+            currentNamespace: newNamespace || namespaces[0] || null,
             isLoading: false
           });
 
@@ -131,53 +101,10 @@ export const useNamespaceStore = create<NamespaceState>()(
           throw error;
         }
       },
-
-      getPersonalNamespaces: () => {
-        return get().namespaces.filter(namespace => namespace.user);
-      },
-
-      getOrganizationNamespaces: (organizationId?: string) => {
-        const namespaces = get().namespaces.filter(namespace => namespace.organization);
-        if (organizationId) {
-          return namespaces.filter(namespace => namespace.organization?.id === organizationId);
-        }
-        return namespaces;
-      },
-
-      getFilteredNamespaces: (currentOrganizationId?: string) => {
-        if (currentOrganizationId) {
-          // Organization context - show only organization namespaces
-          return get().getOrganizationNamespaces(currentOrganizationId);
-        } else {
-          // Personal context - show only personal namespaces
-          return get().getPersonalNamespaces();
-        }
-      },
-
-      getWorkspaceItems: () => {
-        const namespaces = get().namespaces;
-        return namespaces.map(namespace => ({
-          id: namespace.id,
-          name: namespace.organization?.name || 'personal',
-          display_name: namespace.organization?.display_name || 'Personal',
-          type: namespace.organization ? 'organization' as const : 'personal' as const,
-          isPersonal: !namespace.organization,
-          namespace
-        }));
-      },
-
-      getCurrentWorkspaceContext: () => {
-        const currentNamespace = get().currentNamespace;
-        return {
-          isOrganizationContext: !!currentNamespace?.organization,
-          organization: currentNamespace?.organization
-        };
-      },
     }),
     {
       name: "namespace-storage",
       storage: createJSONStorage(() => localStorage),
-      // Only persist current namespace, not the full list
       partialize: (state) => ({
         currentNamespace: state.currentNamespace
       }),
