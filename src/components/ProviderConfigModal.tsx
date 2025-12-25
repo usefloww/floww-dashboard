@@ -147,7 +147,7 @@ export function ProviderConfigModal({
     const newErrors: Record<string, string> = {};
     if (providerTypeData) {
           providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
-        if (step.type !== "info" && step.type !== "oauth" && step.required) {
+        if (step.type !== "info" && step.type !== "oauth" && step.type !== "webhook" && step.required) {
           const value = config[step.alias];
           const hasExistingSecret = isEditMode && step.type === "secret" && provider && provider.config[step.alias];
           const isMasked = hasExistingSecret && (value === "••••••••" || value === "");
@@ -169,6 +169,15 @@ export function ProviderConfigModal({
     if (providerTypeData) {
       providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
         if (step.type !== "info" && step.type !== "oauth") {
+          // For webhook steps, include the default value if it exists
+          if (step.type === "webhook") {
+            const webhookUrl = provider?.config[step.alias] || step.default;
+            if (webhookUrl) {
+              configToSend[step.alias] = webhookUrl;
+            }
+            return;
+          }
+
           const value = config[step.alias];
           // In edit mode, if it's a secret field and value is empty or masked, preserve existing
           if (isEditMode && step.type === "secret" && (!value || value === "" || value === "••••••••")) {
@@ -232,6 +241,45 @@ export function ProviderConfigModal({
             >
               {step.action_text}
             </a>
+          )}
+        </div>
+      );
+    }
+
+    if (step.type === "webhook") {
+      // Use existing webhook URL from provider config, or the pre-generated default
+      const webhookUrl = provider?.config[step.alias] || step.default || "";
+      return (
+        <div key={step.alias}>
+          <Label htmlFor={step.alias}>{step.title}</Label>
+          {step.description && (
+            <p className="text-xs text-muted-foreground mt-0.5 mb-1">{step.description}</p>
+          )}
+          {webhookUrl ? (
+            <div className="mt-1 flex items-center gap-2">
+              <Input
+                id={step.alias}
+                type="text"
+                value={webhookUrl}
+                readOnly
+                className="font-mono text-sm bg-muted cursor-default select-none opacity-75"
+                onFocus={(e) => e.target.blur()}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(webhookUrl);
+                }}
+                className="px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                title="Copy to clipboard"
+              >
+                Copy
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-1 italic">
+              Webhook URL will be generated when you save this provider.
+            </p>
           )}
         </div>
       );

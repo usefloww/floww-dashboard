@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Code, Package, Activity, Settings, FileText } from "lucide-react";
+import { ArrowLeft, Code, Package, Activity, Settings, FileText, Sparkles } from "lucide-react";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Loader } from "@/components/Loader";
@@ -10,13 +10,16 @@ import { DeploymentHistory } from "@/components/DeploymentHistory";
 import { ExecutionHistory } from "@/components/ExecutionHistory";
 import { WorkflowConfiguration } from "@/components/WorkflowConfiguration";
 import { WorkflowLogs } from "@/components/WorkflowLogs";
+import { WorkflowBuilder } from "@/components/WorkflowBuilder";
 import { useNamespaceStore } from "@/stores/namespaceStore";
+
+type TabType = "edit" | "deployments" | "executions" | "logs" | "config" | "builder";
 
 export const Route = createFileRoute("/workflows/$workflowId/deployments")({
   component: DeploymentsPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      tab: (search.tab as "edit" | "deployments" | "executions" | "logs" | "config") || "edit",
+      tab: (search.tab as TabType) || "edit",
     };
   },
 });
@@ -36,7 +39,7 @@ function DeploymentsPage() {
     return <Outlet />;
   }
 
-  const [activeTab, setActiveTab] = useState<"edit" | "deployments" | "executions" | "logs" | "config">((tab || "edit") as "edit" | "deployments" | "executions" | "logs" | "config");
+  const [activeTab, setActiveTab] = useState<TabType>((tab || "edit") as TabType);
   const [selectedDeploymentId, setSelectedDeploymentId] = useState<string | null>(null);
   const { currentNamespace } = useNamespaceStore();
 
@@ -181,6 +184,24 @@ function DeploymentsPage() {
               <span>Configuration</span>
             </div>
           </Link>
+          <Link
+            {...({
+              to: "/workflows/$workflowId/deployments",
+              params: { workflowId },
+              search: { tab: "builder" },
+              className: `py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "builder"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`
+            } as any)}
+            onClick={() => setActiveTab("builder")}
+          >
+            <div className="flex items-center space-x-2">
+              <Sparkles className="h-4 w-4" />
+              <span>Builder</span>
+            </div>
+          </Link>
         </nav>
       </div>
 
@@ -212,6 +233,8 @@ function DeploymentsPage() {
               namespaceId={currentNamespace.id}
             />
           ) : null
+        ) : activeTab === "builder" ? (
+          <WorkflowBuilder workflowId={workflowId} />
         ) : null}
       </div>
 

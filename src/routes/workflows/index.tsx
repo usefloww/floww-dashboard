@@ -1,11 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError, updateWorkflow } from "@/lib/api";
-import { Workflow } from "@/types/api";
+import { Workflow, WorkflowCreate } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Workflow as WorkflowIcon, MoreVertical, Trash2, Building2, Info } from "lucide-react";
+import { Search, Workflow as WorkflowIcon, MoreVertical, Trash2, Building2, Info, Upload, Loader2, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +17,20 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Switch } from "@/components/ui/switch";
 import { DeleteWorkflowDialog } from "@/components/DeleteWorkflowDialog";
 import { showSuccessNotification, showErrorNotification } from "@/stores/notificationStore";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface N8nImportResponse {
+  workflow: Workflow;
+  generated_code: string;
+  message: string;
+}
 
 // Provider logo mapping to Simple Icons CDN
 const getProviderLogoUrl = (type: string): string | null => {
@@ -55,6 +69,85 @@ function WorkflowsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // Import mutation
+  const importMutation = useMutation({
+    mutationFn: async (n8nJson: object) => {
+      if (!currentNamespace?.id) {
+        throw new Error("No namespace selected");
+      }
+      return api.post<N8nImportResponse>("/workflows/import/n8n", {
+        namespace_id: currentNamespace.id,
+        n8n_json: n8nJson,
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['workflows', currentNamespace?.id] });
+      showSuccessNotification(
+        "Workflow imported",
+        data.message
+      );
+    },
+    onError: (error) => {
+      showErrorNotification("Import failed", handleApiError(error));
+    },
+  });
+
+  // Create workflow mutation for builder
+  const createWorkflowMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentNamespace?.id) {
+        throw new Error("No namespace selected");
+      }
+      const data: WorkflowCreate = {
+        name: "New Workflow",
+        namespace_id: currentNamespace.id,
+        description: "Created with AI Builder",
+      };
+      return api.post<Workflow>("/workflows", data);
+    },
+    onSuccess: (workflow) => {
+      queryClient.invalidateQueries({ queryKey: ['workflows', currentNamespace?.id] });
+      // Navigate to the workflow with builder tab
+      navigate({
+        to: "/workflows/$workflowId/deployments",
+        params: { workflowId: workflow.id },
+        search: { tab: "builder" },
+      } as any);
+    },
+    onError: (error) => {
+      showErrorNotification("Failed to create workflow", handleApiError(error));
+    },
+  });
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleUseBuilder = () => {
+    createWorkflowMutation.mutate();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      importMutation.mutate(json);
+    } catch {
+      showErrorNotification("Invalid file", "The selected file is not valid JSON");
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Use TanStack Query to fetch workflows
   const { data, isLoading, error } = useQuery({
@@ -101,16 +194,55 @@ function WorkflowsPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+      {/* Search and Import */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <input
+            type="text"
+            placeholder="Search workflows..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
+          />
+        </div>
         <input
-          type="text"
-          placeholder="Search workflows..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleFileChange}
+          className="hidden"
         />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              disabled={importMutation.isPending || createWorkflowMutation.isPending || !currentNamespace}
+              className="gap-2"
+            >
+              {(importMutation.isPending || createWorkflowMutation.isPending) ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {importMutation.isPending ? "Importing..." : "Creating..."}
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  New
+                </>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleUseBuilder}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Use builder
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleImportClick}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import from n8n
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Error message */}
@@ -120,7 +252,7 @@ function WorkflowsPage() {
         </div>
       )}
 
-      {/* Workflows list */}
+      {/* Workflows table */}
       <Loader isLoading={isLoading} loadingMessage="Loading workflows...">
         {filteredWorkflows.length === 0 ? (
           <div className="text-center py-12">
@@ -131,14 +263,28 @@ function WorkflowsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {filteredWorkflows.map((workflow) => (
-              <WorkflowCard
-                key={workflow.id}
-                workflow={workflow}
-                onDelete={handleDelete}
-              />
-            ))}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-[40%]">Name</TableHead>
+                  <TableHead>Providers</TableHead>
+                  <TableHead>Last Deployed</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-center">Active</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredWorkflows.map((workflow) => (
+                  <WorkflowRow
+                    key={workflow.id}
+                    workflow={workflow}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </Loader>
@@ -156,12 +302,12 @@ function WorkflowsPage() {
   );
 }
 
-interface WorkflowCardProps {
+interface WorkflowRowProps {
   workflow: Workflow;
   onDelete: (workflow: Workflow, e: React.MouseEvent) => void;
 }
 
-function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
+function WorkflowRow({ workflow, onDelete }: WorkflowRowProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
@@ -187,29 +333,29 @@ function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
     const diffDays = Math.floor(diffHours / 24);
     
     if (diffMinutes < 1) return "just now";
-    if (diffMinutes === 1) return "1 minute ago";
-    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
-    if (diffHours === 1) return "1 hour ago";
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    if (diffDays === 1) return "1 day ago";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 14) return "1 week ago";
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    if (diffDays < 60) return "1 month ago";
-    return `${Math.floor(diffDays / 30)} months ago`;
+    if (diffMinutes === 1) return "1m ago";
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours === 1) return "1h ago";
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return "1d ago";
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 14) return "1w ago";
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    if (diffDays < 60) return "1mo ago";
+    return `${Math.floor(diffDays / 30)}mo ago`;
   };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
       day: 'numeric', 
-      month: 'long' 
+      month: 'short' 
     });
   };
 
   const lastDeployedRelative = workflow.last_deployment?.deployed_at
     ? formatRelativeTime(new Date(workflow.last_deployment.deployed_at))
-    : null;
+    : "—";
   const createdDate = formatDate(workflow.created_at);
 
   const toggleMutation = useMutation({
@@ -234,134 +380,138 @@ function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
+    <TableRow className="group">
+      {/* Name */}
+      <TableCell>
         <Link
-          {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id }, className: "flex-1 min-w-0" } as any)}
+          {...({ to: "/workflows/$workflowId/deployments", params: { workflowId: workflow.id } } as any)}
+          className="flex items-center gap-2 hover:text-primary transition-colors"
         >
-          {/* Workflow Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h3 className="font-semibold text-lg text-foreground truncate">{workflow.name}</h3>
-              {workflow.description && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent 
-                    className="bg-popover text-popover-foreground border border-border"
-                    arrowClassName="bg-popover fill-popover"
-                  >
-                    <p className="max-w-xs">{workflow.description}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-            <div className="flex items-center space-x-2 mt-1 text-sm text-muted-foreground">
-              {lastDeployedRelative && (
-                <>
-                  <span>Last deployed {lastDeployedRelative}</span>
-                  {providerTypes.length > 0 && (
-                    <>
-                      <span>|</span>
-                      <div className="flex items-center space-x-1.5">
-                        {providerTypes.map((providerType) => {
-                          const logoUrl = getProviderLogoUrl(providerType);
-                          return (
-                            <div
-                              key={providerType}
-                              className="flex items-center justify-center h-4 w-4 rounded"
-                              title={providerType}
-                            >
-                              {logoUrl && !imageErrors.has(providerType) ? (
-                                <img
-                                  src={logoUrl}
-                                  alt={providerType}
-                                  className="h-4 w-4 object-contain opacity-70"
-                                  onError={() => {
-                                    setImageErrors((prev) => new Set(prev).add(providerType));
-                                  }}
-                                />
-                              ) : (
-                                <Building2 className="h-3 w-3 text-muted-foreground opacity-50" />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-              <span>|</span>
-              <span>Created {createdDate}</span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Status Toggle */}
-        <div className="flex items-center gap-3 flex-shrink-0 ml-4" onClick={(e) => e.stopPropagation()}>
-          {(!workflow.last_deployment || workflow.active === null || workflow.active === undefined) ? (
+          <span className="font-medium text-foreground truncate">{workflow.name}</span>
+          {workflow.description && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div>
-                  <Switch
-                    checked={workflow.active ?? false}
-                    onCheckedChange={handleToggle}
-                    disabled={true}
-                    aria-label="Workflow status unavailable (no deployment)"
-                  />
-                </div>
+                <Info className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
               </TooltipTrigger>
               <TooltipContent 
                 className="bg-popover text-popover-foreground border border-border"
                 arrowClassName="bg-popover fill-popover"
               >
-                <p>Cannot activate workflow: no deployment exists</p>
+                <p className="max-w-xs">{workflow.description}</p>
               </TooltipContent>
             </Tooltip>
-          ) : (
-            <Switch
-              checked={workflow.active ?? false}
-              onCheckedChange={handleToggle}
-              disabled={toggleMutation.isPending}
-              aria-label={`Toggle workflow ${workflow.active ? 'inactive' : 'active'}`}
-            />
           )}
-        </div>
+        </Link>
+      </TableCell>
 
-        {/* Actions */}
-        <div className="flex-shrink-0 ml-2">
-          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  setDropdownOpen(false);
-                  onDelete(workflow, e);
-                }}
-                className="text-red-600 dark:text-red-400"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </div>
+      {/* Providers */}
+      <TableCell>
+        {providerTypes.length > 0 ? (
+          <div className="flex items-center gap-1.5">
+            {providerTypes.map((providerType) => {
+              const logoUrl = getProviderLogoUrl(providerType);
+              return (
+                <Tooltip key={providerType}>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center h-5 w-5 rounded">
+                      {logoUrl && !imageErrors.has(providerType) ? (
+                        <img
+                          src={logoUrl}
+                          alt={providerType}
+                          className="h-4 w-4 object-contain opacity-70"
+                          onError={() => {
+                            setImageErrors((prev) => new Set(prev).add(providerType));
+                          }}
+                        />
+                      ) : (
+                        <Building2 className="h-4 w-4 text-muted-foreground opacity-60" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="capitalize">{providerType}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+
+      {/* Last Deployed */}
+      <TableCell className="text-muted-foreground text-sm">
+        {lastDeployedRelative}
+      </TableCell>
+
+      {/* Created */}
+      <TableCell className="text-muted-foreground text-sm">
+        {createdDate}
+      </TableCell>
+
+      {/* Active Toggle */}
+      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+        {!workflow.last_deployment ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex">
+                <Switch
+                  checked={false}
+                  onCheckedChange={handleToggle}
+                  disabled={true}
+                  aria-label="Workflow status unavailable (no deployment)"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent 
+              className="bg-popover text-popover-foreground border border-border"
+              arrowClassName="bg-popover fill-popover"
+            >
+              <p>Cannot activate: no deployment</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <Switch
+            checked={workflow.active ?? false}
+            onCheckedChange={handleToggle}
+            disabled={toggleMutation.isPending}
+            aria-label={`Toggle workflow ${workflow.active ? 'inactive' : 'active'}`}
+          />
+        )}
+      </TableCell>
+
+      {/* Actions */}
+      <TableCell>
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                setDropdownOpen(false);
+                onDelete(workflow, e);
+              }}
+              className="text-red-600 dark:text-red-400"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }

@@ -15,6 +15,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProviderConfigModal } from "@/components/ProviderConfigModal";
 import { DeleteProviderDialog } from "@/components/DeleteProviderDialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Provider logo mapping to Simple Icons CDN
 const getProviderLogoUrl = (type: string): string | null => {
@@ -142,7 +150,7 @@ function ProvidersPage() {
         </div>
       )}
 
-      {/* Providers list */}
+      {/* Providers table */}
       <Loader isLoading={isLoading} loadingMessage="Loading providers...">
         {filteredProviders.length === 0 ? (
           <div className="text-center py-12">
@@ -153,15 +161,30 @@ function ProvidersPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {filteredProviders.map((provider) => (
-              <ProviderCard
-                key={provider.id}
-                provider={provider}
-                onConfigure={() => handleConfigure(provider)}
-                onDelete={() => handleDelete(provider)}
-              />
-            ))}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Last Used</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProviders.map((provider) => (
+                  <ProviderRow
+                    key={provider.id}
+                    provider={provider}
+                    onConfigure={() => handleConfigure(provider)}
+                    onDelete={() => handleDelete(provider)}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </Loader>
@@ -192,16 +215,20 @@ function ProvidersPage() {
   );
 }
 
-interface ProviderCardProps {
+interface ProviderRowProps {
   provider: Provider;
   onConfigure: () => void;
   onDelete: () => void;
 }
 
-function ProviderCard({ provider, onConfigure, onDelete }: ProviderCardProps) {
+function ProviderRow({ provider, onConfigure, onDelete }: ProviderRowProps) {
   const providerName = provider.alias || provider.name || 'Unnamed Provider';
-  const formattedDate = provider.created_at ? new Date(provider.created_at).toLocaleDateString() : 'N/A';
-  const lastUsedDate = provider.last_used_at ? new Date(provider.last_used_at).toLocaleDateString() : 'Never';
+  const formattedDate = provider.created_at 
+    ? new Date(provider.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+    : '—';
+  const lastUsedDate = provider.last_used_at 
+    ? new Date(provider.last_used_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+    : 'Never';
   const status = 'connected';
   const logoUrl = getProviderLogoUrl(provider.type);
   const [imageError, setImageError] = useState(false);
@@ -215,101 +242,113 @@ function ProviderCard({ provider, onConfigure, onDelete }: ProviderCardProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'connected':
-        return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
+        return <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />;
       case 'disconnected':
-        return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
+        return <XCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />;
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
+        return <Clock className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />;
       default:
-        return <XCircle className="h-4 w-4 text-muted-foreground" />;
+        return <XCircle className="h-3.5 w-3.5 text-muted-foreground" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
-        return 'text-green-700 bg-green-50 dark:bg-green-900/30';
+        return 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30';
       case 'disconnected':
-        return 'text-red-700 bg-red-50 dark:bg-red-900/30';
+        return 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30';
       case 'pending':
-        return 'text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30';
+        return 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30';
       default:
         return 'text-foreground bg-muted';
     }
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4 flex-1 min-w-0">
-          {/* Provider Logo */}
-          <div className="flex-shrink-0">
-            {logoUrl && !imageError ? (
-              <img
-                src={logoUrl}
-                alt={provider.type}
-                className="h-10 w-10 object-contain"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <Building2 className="h-10 w-10 text-muted-foreground" />
-            )}
-          </div>
-          
-          {/* Provider Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-3">
-              <h3 className="font-semibold text-lg text-foreground truncate">{providerName}</h3>
-              <span className="text-sm text-muted-foreground uppercase">{provider.type}</span>
-            </div>
-            <div className="flex items-center space-x-4 mt-1 text-sm text-muted-foreground">
-              <span>Created: {formattedDate}</span>
-              <span>Last used: {lastUsedDate}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Status and Actions */}
-        <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
-          {status && (
-            <div className="flex items-center space-x-2">
-              {getStatusIcon(status)}
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(status)}`}>
-                {status}
-              </span>
-            </div>
+    <TableRow className="group">
+      {/* Logo */}
+      <TableCell className="w-[50px]">
+        <div className="flex items-center justify-center">
+          {logoUrl && !imageError ? (
+            <img
+              src={logoUrl}
+              alt={provider.type}
+              className="h-6 w-6 object-contain"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <Building2 className="h-6 w-6 text-muted-foreground" />
           )}
-          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setDropdownOpen(false);
-                  onConfigure();
-                }}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Configure
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setDropdownOpen(false);
-                  onDelete();
-                }}
-                className="text-red-600 dark:text-red-400"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
-      </div>
-    </div>
+      </TableCell>
+
+      {/* Name */}
+      <TableCell>
+        <span className="font-medium text-foreground">{providerName}</span>
+      </TableCell>
+
+      {/* Type */}
+      <TableCell>
+        <span className="text-muted-foreground uppercase text-sm">{provider.type}</span>
+      </TableCell>
+
+      {/* Created */}
+      <TableCell className="text-muted-foreground text-sm">
+        {formattedDate}
+      </TableCell>
+
+      {/* Last Used */}
+      <TableCell className="text-muted-foreground text-sm">
+        {lastUsedDate}
+      </TableCell>
+
+      {/* Status */}
+      <TableCell>
+        <div className="flex items-center gap-1.5">
+          {getStatusIcon(status)}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusColor(status)}`}>
+            {status}
+          </span>
+        </div>
+      </TableCell>
+
+      {/* Actions */}
+      <TableCell>
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                setDropdownOpen(false);
+                onConfigure();
+              }}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Configure
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setDropdownOpen(false);
+                onDelete();
+              }}
+              className="text-red-600 dark:text-red-400"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }

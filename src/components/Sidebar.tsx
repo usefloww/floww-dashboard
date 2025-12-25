@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import { useNamespaceStore, WorkspaceItem } from "@/stores/namespaceStore";
+import { useSidebarStore } from "@/stores/sidebarStore";
 import { useTheme } from "@/hooks/useTheme";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -33,7 +34,9 @@ import {
   Moon,
   Sun,
   Palette,
-  LayoutDashboard
+  LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -71,6 +74,7 @@ export function Sidebar() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { isCollapsed, toggleCollapsed } = useSidebarStore();
   const {
     currentNamespace,
     setCurrentNamespace,
@@ -141,26 +145,50 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-card border-r border-border">
+    <div 
+      className={cn(
+        "flex h-screen flex-col bg-card border-r border-border transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+    >
       {/* User Section */}
-      <div className="p-6 border-b border-border">
+      <div className={cn("border-b border-border", isCollapsed ? "p-3" : "p-6")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center space-x-3 hover:bg-muted rounded-md p-2 -m-2 transition-colors">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-foreground truncate">
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="w-full flex items-center justify-center hover:bg-muted rounded-md p-2 transition-colors">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
                   {user?.first_name && user?.last_name
                     ? `${user.first_name} ${user.last_name}`
                     : user?.first_name || user?.last_name || user?.email || "User"}
-                </p>
-              </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </button>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <button className="w-full flex items-center space-x-3 hover:bg-muted rounded-md p-2 -m-2 transition-colors">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {user?.first_name && user?.last_name
+                      ? `${user.first_name} ${user.last_name}`
+                      : user?.first_name || user?.last_name || user?.email || "User"}
+                  </p>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
@@ -234,27 +262,46 @@ export function Sidebar() {
       </div>
 
       {/* Workspace Switcher */}
-      <div className="p-4 border-b border-border">
+      <div className={cn("border-b border-border", isCollapsed ? "p-2" : "p-4")}>
         <div className="relative">
-          <button
-            onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm bg-muted border border-border rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <div className="flex items-center space-x-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-foreground truncate">
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
+                  className="w-full flex items-center justify-center p-2 text-sm bg-muted border border-border rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
                 {currentWorkspace?.display_name || "Select Workspace"}
-              </span>
-            </div>
-            <ChevronDown className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform",
-              isWorkspaceDropdownOpen && "transform rotate-180"
-            )} />
-          </button>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 text-sm bg-muted border border-border rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <div className="flex items-center space-x-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-foreground truncate">
+                  {currentWorkspace?.display_name || "Select Workspace"}
+                </span>
+              </div>
+              <ChevronDown className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                isWorkspaceDropdownOpen && "transform rotate-180"
+              )} />
+            </button>
+          )}
 
           {isWorkspaceDropdownOpen && (
             <>
-              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-50">
+              <div className={cn(
+                "absolute top-full mt-1 bg-card border border-border rounded-md shadow-lg z-50",
+                isCollapsed ? "left-full ml-2 -top-2 w-56" : "left-0 right-0"
+              )}>
                 <div className="py-1">
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">
                     Workspaces
@@ -356,11 +403,23 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className={cn("flex-1", isCollapsed ? "p-2" : "p-4")}>
         <div className="space-y-1">
           {navigationItems.map((item) => {
             const Icon = item.icon;
-            return (
+            return isCollapsed ? (
+              <Tooltip key={item.to}>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={item.to}
+                    className="flex items-center justify-center p-2 text-sm font-medium rounded-md text-foreground hover:bg-muted hover:text-foreground [&.active]:bg-primary/10 [&.active]:text-primary"
+                  >
+                    <Icon className="h-5 w-5" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.name}</TooltipContent>
+              </Tooltip>
+            ) : (
               <Link
                 key={item.to}
                 to={item.to}
@@ -373,6 +432,33 @@ export function Sidebar() {
           })}
         </div>
       </nav>
+
+      {/* Collapse Toggle */}
+      <div className={cn("border-t border-border", isCollapsed ? "p-2" : "p-4")}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={toggleCollapsed}
+              className={cn(
+                "flex items-center text-sm font-medium rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
+                isCollapsed ? "justify-center p-2 w-full" : "space-x-3 px-3 py-2 w-full"
+              )}
+            >
+              {isCollapsed ? (
+                <PanelLeftOpen className="h-5 w-5" />
+              ) : (
+                <>
+                  <PanelLeftClose className="h-5 w-5" />
+                  <span>Collapse</span>
+                </>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }

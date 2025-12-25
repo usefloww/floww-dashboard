@@ -50,6 +50,31 @@ export interface OrganizationMemberUpdate {
   role: OrganizationRole;
 }
 
+// Invitation types
+export interface Invitation {
+  id: string;
+  email: string;
+  state: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface InvitationCreate {
+  email: string;
+  role?: string;
+  expires_in_days?: number;
+}
+
+// SSO types
+export interface SSOSetupRequest {
+  return_url?: string;
+  success_url?: string;
+}
+
+export interface SSOSetupResponse {
+  admin_portal_link: string;
+}
+
 export interface CreatedByUser {
   id: string;
   email?: string;
@@ -116,7 +141,7 @@ export interface ProviderUpdate {
 }
 
 export interface ProviderSetupStep {
-  type: "value" | "secret" | "oauth" | "choice" | "file" | "info";
+  type: "value" | "secret" | "oauth" | "choice" | "file" | "info" | "webhook";
   title: string;
   description?: string;
   alias: string;
