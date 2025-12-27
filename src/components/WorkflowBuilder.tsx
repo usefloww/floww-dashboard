@@ -149,18 +149,18 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   // Deploy mutation
   const deployMutation = useMutation({
     mutationFn: async () => {
-      if (!latestDeployment) {
-        throw new Error("No existing deployment found. Please deploy manually first to set up a runtime.");
-      }
-      
-      const deploymentData = {
+      const deploymentData: Record<string, unknown> = {
         workflow_id: workflowId,
-        runtime_id: latestDeployment.runtime_id,
         code: {
           files: { "main.ts": code },
           entrypoint: "main.ts",
         },
       };
+      
+      // Use existing runtime if available, otherwise backend will use default runtime
+      if (latestDeployment?.runtime_id) {
+        deploymentData.runtime_id = latestDeployment.runtime_id;
+      }
       
       return api.post("/workflow_deployments", deploymentData);
     },
@@ -196,6 +196,9 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           user_message: userContent,
           current_code: code,
           namespace_id: currentNamespace?.id,
+        },
+        {
+          timeout: 30000,
         }
       );
 
@@ -296,6 +299,9 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           user_message: labelString,
           current_code: code,
           namespace_id: currentNamespace?.id,
+        },
+        {
+          timeout: 30000,
         }
       );
 
@@ -546,9 +552,9 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             height="100%"
             defaultLanguage="typescript"
             value={code}
+            onChange={(value) => setCode(value || "")}
             theme={monacoTheme}
             options={{
-                readOnly: true,
                 minimap: { enabled: false },
                 fontSize: 13,
                 lineHeight: 22,
