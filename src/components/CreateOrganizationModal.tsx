@@ -14,7 +14,6 @@ export function CreateOrganizationModal({
 }: CreateOrganizationModalProps) {
   const { createOrganization, isLoading } = useOrganizationStore();
   const [formData, setFormData] = useState({
-    name: "",
     display_name: "",
   });
   const [error, setError] = useState("");
@@ -22,15 +21,15 @@ export function CreateOrganizationModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.display_name.trim()) {
-      setError("Both name and display name are required");
+    if (!formData.display_name.trim()) {
+      setError("Organization name is required");
       return;
     }
 
     try {
       setError("");
       await createOrganization(formData);
-      setFormData({ name: "", display_name: "" });
+      setFormData({ display_name: "" });
       onOpenChange(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to create organization");
@@ -38,7 +37,7 @@ export function CreateOrganizationModal({
   };
 
   const handleCancel = () => {
-    setFormData({ name: "", display_name: "" });
+    setFormData({ display_name: "" });
     setError("");
     onOpenChange(false);
   };
@@ -53,7 +52,7 @@ export function CreateOrganizationModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="display_name" className="block text-sm font-medium text-foreground mb-1">
-              Display Name
+              Organization Name
             </label>
             <Input
               id="display_name"
@@ -61,20 +60,6 @@ export function CreateOrganizationModal({
               value={formData.display_name}
               onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
               placeholder="My Organization"
-              disabled={isLoading}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
-              Name (URL-friendly)
-            </label>
-            <Input
-              id="name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="my-organization"
               disabled={isLoading}
             />
           </div>

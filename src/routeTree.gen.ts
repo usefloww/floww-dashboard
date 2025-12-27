@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as ProvidersRouteImport } from './routes/providers'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkflowsIndexRouteImport } from './routes/workflows/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
@@ -18,9 +20,19 @@ import { Route as WorkflowsWorkflowIdDeploymentsRouteImport } from './routes/wor
 import { Route as WorkflowsWorkflowIdExecutionsExecutionIdRouteImport } from './routes/workflows/$workflowId.executions.$executionId'
 import { Route as WorkflowsWorkflowIdDeploymentsDeploymentIdEditRouteImport } from './routes/workflows/$workflowId.deployments.$deploymentId.edit'
 
+const UpgradeRoute = UpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProvidersRoute = ProvidersRouteImport.update({
   id: '/providers',
   path: '/providers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -64,7 +76,9 @@ const WorkflowsWorkflowIdDeploymentsDeploymentIdEditRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
   '/providers': typeof ProvidersRoute
+  '/upgrade': typeof UpgradeRoute
   '/profile': typeof ProfileIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
@@ -74,7 +88,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
   '/providers': typeof ProvidersRoute
+  '/upgrade': typeof UpgradeRoute
   '/profile': typeof ProfileIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
@@ -85,7 +101,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
   '/providers': typeof ProvidersRoute
+  '/upgrade': typeof UpgradeRoute
   '/profile/': typeof ProfileIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
@@ -97,7 +115,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/checkout'
     | '/providers'
+    | '/upgrade'
     | '/profile'
     | '/settings'
     | '/workflows'
@@ -107,7 +127,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/checkout'
     | '/providers'
+    | '/upgrade'
     | '/profile'
     | '/settings'
     | '/workflows'
@@ -117,7 +139,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/checkout'
     | '/providers'
+    | '/upgrade'
     | '/profile/'
     | '/settings/'
     | '/workflows/'
@@ -128,7 +152,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CheckoutRoute: typeof CheckoutRoute
   ProvidersRoute: typeof ProvidersRoute
+  UpgradeRoute: typeof UpgradeRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   WorkflowsIndexRoute: typeof WorkflowsIndexRoute
@@ -138,11 +164,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/upgrade': {
+      id: '/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof UpgradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/providers': {
       id: '/providers'
       path: '/providers'
       fullPath: '/providers'
       preLoaderRoute: typeof ProvidersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -214,7 +254,9 @@ const WorkflowsWorkflowIdDeploymentsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CheckoutRoute: CheckoutRoute,
   ProvidersRoute: ProvidersRoute,
+  UpgradeRoute: UpgradeRoute,
   ProfileIndexRoute: ProfileIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   WorkflowsIndexRoute: WorkflowsIndexRoute,

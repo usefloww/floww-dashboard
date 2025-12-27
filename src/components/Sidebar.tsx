@@ -69,7 +69,7 @@ export function Sidebar() {
   } = useNamespaceStore();
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: "", display_name: "" });
+  const [formData, setFormData] = useState({ display_name: "" });
   const [createError, setCreateError] = useState("");
 
   useEffect(() => {
@@ -85,14 +85,14 @@ export function Sidebar() {
     e.preventDefault();
     setCreateError("");
 
-    if (!formData.name.trim() || !formData.display_name.trim()) {
-      setCreateError("Both name and display name are required");
+    if (!formData.display_name.trim()) {
+      setCreateError("Organization name is required");
       return;
     }
 
     try {
-      await createNamespace({ name: formData.name, display_name: formData.display_name });
-      setFormData({ name: "", display_name: "" });
+      await createNamespace({ display_name: formData.display_name });
+      setFormData({ display_name: "" });
       setIsCreateDialogOpen(false);
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : "Failed to create organization");
@@ -284,7 +284,6 @@ export function Sidebar() {
                       <Building2 className="h-4 w-4" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{namespace.organization.display_name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{namespace.organization.name}</div>
                       </div>
                     </button>
                   ))}
@@ -305,22 +304,12 @@ export function Sidebar() {
                         </DialogHeader>
                         <form onSubmit={handleCreateNamespace} className="space-y-4">
                           <div className="space-y-2">
-                            <label htmlFor="name" className="text-sm font-medium">Name</label>
-                            <Input
-                              id="name"
-                              value={formData.name}
-                              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                              placeholder="organization-name"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label htmlFor="display_name" className="text-sm font-medium">Display Name</label>
+                            <label htmlFor="display_name" className="text-sm font-medium">Organization Name</label>
                             <Input
                               id="display_name"
                               value={formData.display_name}
                               onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
-                              placeholder="Organization Display Name"
+                              placeholder="My Organization"
                               required
                             />
                           </div>

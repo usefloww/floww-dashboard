@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, handleApiError } from "@/lib/api";
 import { OrganizationRole, OrganizationMember, OrganizationUser, Invitation, InvitationCreate } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Users, Crown, Shield, User, Calendar, UserPlus, Trash2, Mail, Clock, X, ChevronDown } from "lucide-react";
+import { Users, Crown, Shield, User, Calendar, UserPlus, Trash2, Mail, Clock, X, ChevronDown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -16,9 +16,13 @@ import {
 
 interface OrganizationUserManagementProps {
   organizationId: string;
+  isTeamPlan?: boolean;
 }
 
-export function OrganizationUserManagement({ organizationId }: OrganizationUserManagementProps) {
+export function OrganizationUserManagement({
+  organizationId,
+  isTeamPlan = false,
+}: OrganizationUserManagementProps) {
   const queryClient = useQueryClient();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -173,10 +177,20 @@ export function OrganizationUserManagement({ organizationId }: OrganizationUserM
               {members.length} member{members.length !== 1 ? 's' : ''}
             </span>
           </div>
-          <Button onClick={() => setShowInviteModal(true)} size="sm">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invite User
-          </Button>
+          {isTeamPlan ? (
+            <Button onClick={() => setShowInviteModal(true)} size="sm">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite User
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button size="sm" disabled variant="outline">
+                <Lock className="h-4 w-4 mr-2" />
+                Invite User
+              </Button>
+              <span className="text-xs text-muted-foreground">Team plan required</span>
+            </div>
+          )}
         </div>
 
         {errorMessage && (

@@ -2,19 +2,16 @@
 
 export interface Organization {
   id: string;
-  name: string;
   display_name: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface OrganizationCreate {
-  name: string;
   display_name: string;
 }
 
 export interface OrganizationUpdate {
-  name?: string;
   display_name?: string;
 }
 
@@ -172,7 +169,6 @@ export interface Namespace {
   };
   organization?: {
     id: string;
-    name: string;
     display_name: string;
   };
 }

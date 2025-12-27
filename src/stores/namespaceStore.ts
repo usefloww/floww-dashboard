@@ -6,7 +6,6 @@ export interface Namespace {
   id: string;
   organization: {
     id: string;
-    name: string;
     display_name: string;
   };
 }
@@ -25,7 +24,7 @@ interface NamespaceState {
   // Actions
   setCurrentNamespace: (namespace: Namespace | null) => void;
   fetchNamespaces: () => Promise<void>;
-  createNamespace: (organizationData: { name: string; display_name: string }) => Promise<Namespace>;
+  createNamespace: (organizationData: { display_name: string }) => Promise<Namespace>;
 }
 
 export const useNamespaceStore = create<NamespaceState>()(
@@ -46,15 +45,16 @@ export const useNamespaceStore = create<NamespaceState>()(
           const response = await api.get<NamespaceResponse>('/namespaces');
           const namespaces = response.results;
 
-          // If no current namespace is set, set the first available
+          // If current namespace exists, find the fresh version from the API response
+          // Otherwise, default to the first available namespace
           const current = get().currentNamespace;
-          const newCurrent = current && namespaces.find(ns => ns.id === current.id)
-            ? current
+          const freshCurrent = current 
+            ? namespaces.find(ns => ns.id === current.id) || namespaces[0] || null
             : namespaces[0] || null;
 
           set({
             namespaces,
-            currentNamespace: newCurrent,
+            currentNamespace: freshCurrent,
             isLoading: false
           });
         } catch (error) {
@@ -78,7 +78,7 @@ export const useNamespaceStore = create<NamespaceState>()(
 
           // Find the namespace for the newly created organization
           const newNamespace = namespaces.find(
-            ns => ns.organization?.name === organizationData.name
+            ns => ns.organization?.display_name === organizationData.display_name
           );
 
           // Update state with refreshed namespaces and select the new one
