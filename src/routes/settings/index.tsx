@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
@@ -89,6 +89,7 @@ function BillingSection({ organizationId }: { organizationId: string }) {
   const [showPaymentMethodForm, setShowPaymentMethodForm] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const { checkout } = Route.useSearch();
 
   const { data: config } = useQuery<{ is_cloud: boolean }>({
     queryKey: ["config"],
@@ -106,6 +107,7 @@ function BillingSection({ organizationId }: { organizationId: string }) {
     queryFn: () =>
       api.get<SubscriptionData>(`/organizations/${organizationId}/subscription`),
     enabled: isBillingEnabled,
+    refetchOnMount: checkout === "success" ? "always" : true,
   });
 
   const {
@@ -117,6 +119,20 @@ function BillingSection({ organizationId }: { organizationId: string }) {
     queryFn: () => api.get<UsageData>(`/organizations/${organizationId}/usage`),
     enabled: isBillingEnabled,
   });
+
+  useEffect(() => {
+    if (checkout === "success") {
+      queryClient.invalidateQueries({ queryKey: ["subscription", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["usage", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["paymentMethod", organizationId] });
+
+      const timer = setTimeout(() => {
+        navigate({ to: "/settings", search: { tab: "billing" }, replace: true });
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [checkout, organizationId, queryClient, navigate]);
 
   const {
     data: paymentMethod,

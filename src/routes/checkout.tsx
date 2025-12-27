@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -236,9 +236,54 @@ function CheckoutContent({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const intentCreatedRef = useRef(false);
+
+  const elementsOptions: StripeElementsOptions = useMemo(() => ({
+    clientSecret: clientSecret || "",
+    appearance: {
+      theme: theme === "dark" ? "night" : "stripe",
+      variables: {
+        colorPrimary: "#6366f1",
+        colorBackground: theme === "dark" ? "#0a0a0f" : "#ffffff",
+        colorText: theme === "dark" ? "#f8fafc" : "#0f172a",
+        colorDanger: "#ef4444",
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+        borderRadius: "8px",
+        spacingUnit: "4px",
+      },
+      rules: {
+        ".Input": {
+          border: theme === "dark" ? "1px solid #27272a" : "1px solid #e4e4e7",
+          boxShadow: "none",
+          padding: "12px",
+        },
+        ".Input:focus": {
+          border: "1px solid #6366f1",
+          boxShadow: "0 0 0 1px #6366f1",
+        },
+        ".Label": {
+          fontWeight: "500",
+          marginBottom: "8px",
+        },
+        ".Tab": {
+          border: theme === "dark" ? "1px solid #27272a" : "1px solid #e4e4e7",
+          borderRadius: "8px",
+        },
+        ".Tab--selected": {
+          border: "1px solid #6366f1",
+          backgroundColor: theme === "dark" ? "#1e1b4b" : "#eef2ff",
+        },
+      },
+    },
+  }), [clientSecret, theme]);
 
   useEffect(() => {
+    if (intentCreatedRef.current) {
+      return;
+    }
+
     const createIntent = async () => {
+      intentCreatedRef.current = true;
       setIsLoading(true);
       setError(null);
 
@@ -251,6 +296,7 @@ function CheckoutContent({
         setClientSecret(response.client_secret);
       } catch (err) {
         setError(handleApiError(err));
+        intentCreatedRef.current = false;
       } finally {
         setIsLoading(false);
       }
@@ -291,47 +337,8 @@ function CheckoutContent({
     return null;
   }
 
-  const elementsOptions: StripeElementsOptions = {
-    clientSecret,
-    appearance: {
-      theme: theme === "dark" ? "night" : "stripe",
-      variables: {
-        colorPrimary: "#6366f1",
-        colorBackground: theme === "dark" ? "#0a0a0f" : "#ffffff",
-        colorText: theme === "dark" ? "#f8fafc" : "#0f172a",
-        colorDanger: "#ef4444",
-        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-        borderRadius: "8px",
-        spacingUnit: "4px",
-      },
-      rules: {
-        ".Input": {
-          border: theme === "dark" ? "1px solid #27272a" : "1px solid #e4e4e7",
-          boxShadow: "none",
-          padding: "12px",
-        },
-        ".Input:focus": {
-          border: "1px solid #6366f1",
-          boxShadow: "0 0 0 1px #6366f1",
-        },
-        ".Label": {
-          fontWeight: "500",
-          marginBottom: "8px",
-        },
-        ".Tab": {
-          border: theme === "dark" ? "1px solid #27272a" : "1px solid #e4e4e7",
-          borderRadius: "8px",
-        },
-        ".Tab--selected": {
-          border: "1px solid #6366f1",
-          backgroundColor: theme === "dark" ? "#1e1b4b" : "#eef2ff",
-        },
-      },
-    },
-  };
-
   return (
-    <Elements stripe={stripePromise} options={elementsOptions}>
+    <Elements stripe={stripePromise} options={elementsOptions} key={clientSecret}>
       <PaymentForm
         plan={plan}
         onSuccess={handleSuccess}
