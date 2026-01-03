@@ -84,6 +84,7 @@ export interface Workflow {
   name: string;
   description?: string;
   namespace_id: string;
+  parent_folder_id?: string | null;
   created_by_id: string;
   created_by?: CreatedByUser;
   created_at: string;
@@ -99,13 +100,42 @@ export interface WorkflowCreate {
   name: string;
   namespace_id: string;
   description?: string;
+  parent_folder_id?: string;
 }
 
 export interface WorkflowUpdate {
   name?: string;
   description?: string;
   namespace_id?: string;
+  parent_folder_id?: string | null;
   active?: boolean;
+}
+
+// Folder types
+export interface Folder {
+  id: string;
+  namespace_id: string;
+  name: string;
+  parent_folder_id: string | null;
+}
+
+export interface FolderCreate {
+  namespace_id: string;
+  name: string;
+  parent_folder_id?: string;
+}
+
+export interface FolderUpdate {
+  name?: string;
+  parent_folder_id?: string | null;
+}
+
+export interface FolderWithPath extends Folder {
+  path: Folder[];
+}
+
+export interface FoldersListResponse {
+  results: Folder[];
 }
 
 export interface Provider {
@@ -328,4 +358,44 @@ export interface SummaryResponse {
   total_completed: number;
   total_failed: number;
   period_days: number;
+}
+
+// Access Control types
+export enum AccessRole {
+  OWNER = "owner",
+  USER = "user",
+}
+
+export enum PrincipleType {
+  USER = "user",
+  WORKFLOW = "workflow",
+  FOLDER = "folder",
+}
+
+export enum ResourceType {
+  WORKFLOW = "workflow",
+  FOLDER = "folder",
+  PROVIDER = "provider",
+}
+
+export interface ProviderAccessEntry {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  user_first_name?: string;
+  user_last_name?: string;
+  role: AccessRole;
+}
+
+export interface ProviderAccessListResponse {
+  results: ProviderAccessEntry[];
+}
+
+export interface GrantUserProviderAccessRequest {
+  user_id: string;
+  role: AccessRole;
+}
+
+export interface UpdateAccessRoleRequest {
+  role: AccessRole;
 }

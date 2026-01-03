@@ -1,16 +1,32 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError, updateWorkflow } from "@/lib/api";
-import { Workflow, WorkflowCreate } from "@/types/api";
+import { Workflow, WorkflowCreate, Folder, FolderWithPath, FoldersListResponse } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Workflow as WorkflowIcon, MoreVertical, Trash2, Building2, Info, Upload, Loader2, Plus, Sparkles } from "lucide-react";
+import { FolderBreadcrumb } from "@/components/FolderBreadcrumb";
+import { 
+  Search, 
+  Workflow as WorkflowIcon, 
+  MoreVertical, 
+  Trash2, 
+  Building2, 
+  Info, 
+  Upload, 
+  Loader2, 
+  Plus, 
+  Sparkles, 
+  FolderIcon,
+  FolderPlus,
+  Pencil,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -25,6 +41,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface N8nImportResponse {
   workflow: Workflow;
@@ -59,19 +85,97 @@ const getProviderLogoUrl = (type: string): string | null => {
   return `https://cdn.simpleicons.org/${iconName}`;
 };
 
+interface WorkflowsSearchParams {
+  folder?: string;
+}
+
 export const Route = createFileRoute("/workflows/")({
   component: WorkflowsPage,
+  validateSearch: (search: Record<string, unknown>): WorkflowsSearchParams => {
+    return {
+      folder: typeof search.folder === 'string' ? search.folder : undefined,
+    };
+  },
 });
 
 function WorkflowsPage() {
-  console.log("WorkflowsPage loaded");
   const { currentNamespace } = useNamespaceStore();
+  const search = useSearch({ from: "/workflows/" });
+  const currentFolderId = search.folder || null;
+  const navigate = useNavigate();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [folderDialogMode, setFolderDialogMode] = useState<"create" | "rename">("create");
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  const [folderName, setFolderName] = useState("");
+  const [deleteFolderDialogOpen, setDeleteFolderDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+
+  // Navigate to a folder
+  const navigateToFolder = (folderId: string | null) => {
+    navigate({
+      to: "/workflows/",
+      search: folderId ? { folder: folderId } : {},
+    } as any);
+  };
+
+  // Fetch folder path for breadcrumb
+  const { data: folderPath } = useQuery({
+    queryKey: ['folder-path', currentFolderId],
+    queryFn: async () => {
+      if (!currentFolderId) return [];
+      const data = await api.get<FolderWithPath>(`/folders/${currentFolderId}/path`);
+      return data.path;
+    },
+    enabled: !!currentFolderId,
+  });
+
+  // Fetch folders in current location
+  const { data: foldersData, isLoading: foldersLoading } = useQuery({
+    queryKey: ['folders', currentNamespace?.id, currentFolderId],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (currentNamespace?.id) params.namespace_id = currentNamespace.id;
+      if (currentFolderId) params.parent_folder_id = currentFolderId;
+      const data = await api.get<FoldersListResponse>("/folders", { params });
+      return data.results || [];
+    },
+    enabled: !!currentNamespace?.id,
+  });
+
+  // Fetch workflows in current location
+  const { data: workflowsData, isLoading: workflowsLoading, error } = useQuery({
+    queryKey: ['workflows', currentNamespace?.id, currentFolderId],
+    queryFn: async () => {
+      const params: Record<string, string | boolean> = { root_only: true };
+      if (currentNamespace?.id) params.namespace_id = currentNamespace.id;
+      if (currentFolderId) {
+        params.parent_folder_id = currentFolderId;
+        delete params.root_only;
+      }
+      const data = await api.get<{ results: Workflow[] }>("/workflows", { params });
+      return Array.isArray(data?.results) ? data.results : [];
+    },
+    enabled: !!currentNamespace?.id,
+  });
+
+  const folders = foldersData || [];
+  const workflows = workflowsData || [];
+  const isLoading = foldersLoading || workflowsLoading;
+  const errorMessage = error ? handleApiError(error) : null;
+
+  // Filter by search term
+  const filteredFolders = folders.filter(folder =>
+    folder.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const filteredWorkflows = workflows.filter(workflow =>
+    workflow?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (workflow?.description && workflow.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   // Import mutation
   const importMutation = useMutation({
@@ -85,18 +189,15 @@ function WorkflowsPage() {
       });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['workflows', currentNamespace?.id] });
-      showSuccessNotification(
-        "Workflow imported",
-        data.message
-      );
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      showSuccessNotification("Workflow imported", data.message);
     },
     onError: (error) => {
       showErrorNotification("Import failed", handleApiError(error));
     },
   });
 
-  // Create workflow mutation for builder
+  // Create workflow mutation
   const createWorkflowMutation = useMutation({
     mutationFn: async () => {
       if (!currentNamespace?.id) {
@@ -106,12 +207,12 @@ function WorkflowsPage() {
         name: "New Workflow",
         namespace_id: currentNamespace.id,
         description: "Created with AI Builder",
+        parent_folder_id: currentFolderId || undefined,
       };
       return api.post<Workflow>("/workflows", data);
     },
     onSuccess: (workflow) => {
-      queryClient.invalidateQueries({ queryKey: ['workflows', currentNamespace?.id] });
-      // Navigate to the workflow with builder tab
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
       navigate({
         to: "/workflows/$workflowId/deployments",
         params: { workflowId: workflow.id },
@@ -123,12 +224,99 @@ function WorkflowsPage() {
     },
   });
 
+  // Create folder mutation
+  const createFolderMutation = useMutation({
+    mutationFn: async (name: string) => {
+      if (!currentNamespace?.id) {
+        throw new Error("No namespace selected");
+      }
+      return api.post<Folder>("/folders", {
+        namespace_id: currentNamespace.id,
+        name,
+        parent_folder_id: currentFolderId || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      setFolderDialogOpen(false);
+      setFolderName("");
+      showSuccessNotification("Folder created", "The folder has been created successfully.");
+    },
+    onError: (error) => {
+      showErrorNotification("Failed to create folder", handleApiError(error));
+    },
+  });
+
+  // Rename folder mutation
+  const renameFolderMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return api.patch<Folder>(`/folders/${id}`, { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['folder-path'] });
+      setFolderDialogOpen(false);
+      setFolderName("");
+      setSelectedFolder(null);
+      showSuccessNotification("Folder renamed", "The folder has been renamed successfully.");
+    },
+    onError: (error) => {
+      showErrorNotification("Failed to rename folder", handleApiError(error));
+    },
+  });
+
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/folders/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      setDeleteFolderDialogOpen(false);
+      setSelectedFolder(null);
+      showSuccessNotification("Folder deleted", "The folder and its contents have been deleted.");
+    },
+    onError: (error) => {
+      showErrorNotification("Failed to delete folder", handleApiError(error));
+    },
+  });
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleUseBuilder = () => {
     createWorkflowMutation.mutate();
+  };
+
+  const handleCreateFolder = () => {
+    setFolderDialogMode("create");
+    setFolderName("");
+    setSelectedFolder(null);
+    setFolderDialogOpen(true);
+  };
+
+  const handleRenameFolder = (folder: Folder) => {
+    setFolderDialogMode("rename");
+    setFolderName(folder.name);
+    setSelectedFolder(folder);
+    setFolderDialogOpen(true);
+  };
+
+  const handleDeleteFolder = (folder: Folder) => {
+    setSelectedFolder(folder);
+    setDeleteFolderDialogOpen(true);
+  };
+
+  const handleFolderDialogSubmit = () => {
+    if (!folderName.trim()) return;
+    
+    if (folderDialogMode === "create") {
+      createFolderMutation.mutate(folderName.trim());
+    } else if (selectedFolder) {
+      renameFolderMutation.mutate({ id: selectedFolder.id, name: folderName.trim() });
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,33 +331,10 @@ function WorkflowsPage() {
       showErrorNotification("Invalid file", "The selected file is not valid JSON");
     }
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
-
-  // Use TanStack Query to fetch workflows
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['workflows', currentNamespace?.id],
-    queryFn: async () => {
-      console.log("fetchWorkflows via useQuery");
-      const params = currentNamespace?.id ? { namespace_id: currentNamespace.id } : undefined;
-      console.log("params", params);
-      const data = await api.get<{ results: Workflow[] }>("/workflows", { params });
-      return Array.isArray(data?.results) ? data.results : [];
-    },
-  });
-
-  const workflows = data || [];
-  const errorMessage = error ? handleApiError(error) : null;
-
-  const filteredWorkflows = Array.isArray(workflows)
-    ? workflows.filter(workflow =>
-        workflow?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (workflow?.description && workflow.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : [];
 
   const handleDelete = (workflow: Workflow, e: React.MouseEvent) => {
     e.preventDefault();
@@ -185,6 +350,8 @@ function WorkflowsPage() {
     }
   };
 
+  const hasContent = filteredFolders.length > 0 || filteredWorkflows.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -194,13 +361,21 @@ function WorkflowsPage() {
         </div>
       </div>
 
-      {/* Search and Import */}
+      {/* Breadcrumb */}
+      {(currentFolderId || (folderPath && folderPath.length > 0)) && (
+        <FolderBreadcrumb
+          path={folderPath || []}
+          onNavigate={navigateToFolder}
+        />
+      )}
+
+      {/* Search and Actions */}
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <input
             type="text"
-            placeholder="Search workflows..."
+            placeholder="Search workflows and folders..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
@@ -216,13 +391,13 @@ function WorkflowsPage() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              disabled={importMutation.isPending || createWorkflowMutation.isPending || !currentNamespace}
+              disabled={importMutation.isPending || createWorkflowMutation.isPending || createFolderMutation.isPending || !currentNamespace}
               className="gap-2"
             >
-              {(importMutation.isPending || createWorkflowMutation.isPending) ? (
+              {(importMutation.isPending || createWorkflowMutation.isPending || createFolderMutation.isPending) ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {importMutation.isPending ? "Importing..." : "Creating..."}
+                  Creating...
                 </>
               ) : (
                 <>
@@ -241,6 +416,11 @@ function WorkflowsPage() {
               <Upload className="h-4 w-4 mr-2" />
               Import from n8n
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleCreateFolder}>
+              <FolderPlus className="h-4 w-4 mr-2" />
+              New folder
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -252,14 +432,20 @@ function WorkflowsPage() {
         </div>
       )}
 
-      {/* Workflows table */}
-      <Loader isLoading={isLoading} loadingMessage="Loading workflows...">
-        {filteredWorkflows.length === 0 ? (
+      {/* Content */}
+      <Loader isLoading={isLoading} loadingMessage="Loading...">
+        {!hasContent ? (
           <div className="text-center py-12">
             <WorkflowIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-2 text-sm font-medium text-foreground">No workflows</h3>
+            <h3 className="mt-2 text-sm font-medium text-foreground">
+              {searchTerm ? "No results" : "Empty folder"}
+            </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {searchTerm ? "No workflows match your search." : "No workflows found in this namespace."}
+              {searchTerm 
+                ? "No workflows or folders match your search." 
+                : currentFolderId 
+                  ? "This folder is empty."
+                  : "No workflows found in this namespace."}
             </p>
           </div>
         ) : (
@@ -276,6 +462,17 @@ function WorkflowsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Folders first */}
+                {filteredFolders.map((folder) => (
+                  <FolderRow
+                    key={folder.id}
+                    folder={folder}
+                    onNavigate={navigateToFolder}
+                    onRename={handleRenameFolder}
+                    onDelete={handleDeleteFolder}
+                  />
+                ))}
+                {/* Then workflows */}
                 {filteredWorkflows.map((workflow) => (
                   <WorkflowRow
                     key={workflow.id}
@@ -289,7 +486,7 @@ function WorkflowsPage() {
         )}
       </Loader>
 
-      {/* Delete Dialog */}
+      {/* Delete Workflow Dialog */}
       {currentNamespace && (
         <DeleteWorkflowDialog
           open={deleteDialogOpen}
@@ -298,7 +495,149 @@ function WorkflowsPage() {
           namespaceId={currentNamespace.id}
         />
       )}
+
+      {/* Create/Rename Folder Dialog */}
+      <Dialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {folderDialogMode === "create" ? "Create folder" : "Rename folder"}
+            </DialogTitle>
+            <DialogDescription>
+              {folderDialogMode === "create" 
+                ? "Enter a name for the new folder."
+                : "Enter a new name for this folder."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="folder-name">Name</Label>
+            <Input
+              id="folder-name"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              placeholder="Folder name"
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleFolderDialogSubmit();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFolderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleFolderDialogSubmit}
+              disabled={!folderName.trim() || createFolderMutation.isPending || renameFolderMutation.isPending}
+            >
+              {(createFolderMutation.isPending || renameFolderMutation.isPending) && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              {folderDialogMode === "create" ? "Create" : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Folder Dialog */}
+      <Dialog open={deleteFolderDialogOpen} onOpenChange={setDeleteFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete folder</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedFolder?.name}"? This will also delete all workflows and subfolders inside it. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteFolderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => selectedFolder && deleteFolderMutation.mutate(selectedFolder.id)}
+              disabled={deleteFolderMutation.isPending}
+            >
+              {deleteFolderMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+interface FolderRowProps {
+  folder: Folder;
+  onNavigate: (folderId: string) => void;
+  onRename: (folder: Folder) => void;
+  onDelete: (folder: Folder) => void;
+}
+
+function FolderRow({ folder, onNavigate, onRename, onDelete }: FolderRowProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  return (
+    <TableRow 
+      className="group cursor-pointer hover:bg-muted/50"
+      onClick={() => onNavigate(folder.id)}
+    >
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <FolderIcon className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium text-foreground">{folder.name}</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-muted-foreground">—</TableCell>
+      <TableCell className="text-muted-foreground">—</TableCell>
+      <TableCell className="text-muted-foreground">—</TableCell>
+      <TableCell className="text-center text-muted-foreground">—</TableCell>
+      <TableCell>
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdownOpen(false);
+                onRename(folder);
+              }}
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdownOpen(false);
+                onDelete(folder);
+              }}
+              className="text-red-600 dark:text-red-400"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -311,7 +650,6 @@ function WorkflowRow({ workflow, onDelete }: WorkflowRowProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
-  const { currentNamespace } = useNamespaceStore();
 
   // Extract unique provider types from last_deployment, filtering out "builtin"
   const providerTypes = workflow.last_deployment?.provider_definitions
@@ -363,7 +701,7 @@ function WorkflowRow({ workflow, onDelete }: WorkflowRowProps) {
       return await updateWorkflow(workflow.id, { active });
     },
     onSuccess: (_, active) => {
-      queryClient.invalidateQueries({ queryKey: ['workflows', currentNamespace?.id] });
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
       showSuccessNotification(
         `Workflow ${active ? 'activated' : 'deactivated'}`,
         `The workflow has been ${active ? 'activated' : 'deactivated'} successfully.`

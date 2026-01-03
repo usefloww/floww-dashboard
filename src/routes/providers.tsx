@@ -5,7 +5,7 @@ import { useNamespaceStore } from "@/stores/namespaceStore";
 import { api, handleApiError } from "@/lib/api";
 import { Provider } from "@/types/api";
 import { Loader } from "@/components/Loader";
-import { Search, Building2, CheckCircle, XCircle, Clock, MoreVertical, Settings, Trash2 } from "lucide-react";
+import { Search, Building2, CheckCircle, XCircle, Clock, MoreVertical, Settings, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProviderConfigModal } from "@/components/ProviderConfigModal";
 import { DeleteProviderDialog } from "@/components/DeleteProviderDialog";
+import { ProviderAccessManagement } from "@/components/ProviderAccessManagement";
 import {
   Table,
   TableBody,
@@ -61,6 +62,7 @@ function ProvidersPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
 
   // Use TanStack Query to fetch providers
@@ -91,6 +93,18 @@ function ProvidersPage() {
   const handleDelete = (provider: Provider) => {
     setSelectedProvider(provider);
     setDeleteDialogOpen(true);
+  };
+
+  const handleManageAccess = (provider: Provider) => {
+    setSelectedProvider(provider);
+    setAccessModalOpen(true);
+  };
+
+  const handleAccessModalClose = (open: boolean) => {
+    setAccessModalOpen(open);
+    if (!open) {
+      setSelectedProvider(null);
+    }
   };
 
   const handleCreateClick = () => {
@@ -181,6 +195,7 @@ function ProvidersPage() {
                     provider={provider}
                     onConfigure={() => handleConfigure(provider)}
                     onDelete={() => handleDelete(provider)}
+                    onManageAccess={() => handleManageAccess(provider)}
                   />
                 ))}
               </TableBody>
@@ -209,6 +224,15 @@ function ProvidersPage() {
             provider={selectedProvider}
             namespaceId={currentNamespace.id}
           />
+          {selectedProvider && currentNamespace.organization && (
+            <ProviderAccessManagement
+              open={accessModalOpen}
+              onOpenChange={handleAccessModalClose}
+              providerId={selectedProvider.id}
+              providerName={selectedProvider.alias || selectedProvider.type}
+              organizationId={currentNamespace.organization.id}
+            />
+          )}
         </>
       )}
     </div>
@@ -219,9 +243,10 @@ interface ProviderRowProps {
   provider: Provider;
   onConfigure: () => void;
   onDelete: () => void;
+  onManageAccess: () => void;
 }
 
-function ProviderRow({ provider, onConfigure, onDelete }: ProviderRowProps) {
+function ProviderRow({ provider, onConfigure, onDelete, onManageAccess }: ProviderRowProps) {
   const providerName = provider.alias || provider.name || 'Unnamed Provider';
   const formattedDate = provider.created_at 
     ? new Date(provider.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
@@ -335,6 +360,15 @@ function ProviderRow({ provider, onConfigure, onDelete }: ProviderRowProps) {
             >
               <Settings className="h-4 w-4 mr-2" />
               Configure
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setDropdownOpen(false);
+                onManageAccess();
+              }}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Manage Access
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
