@@ -195,6 +195,9 @@ class ApiClient {
 // Create default API client instance
 export const api = new ApiClient();
 
+// Create root-level API client for OAuth routes (not under /api)
+const rootApi = new ApiClient('');
+
 // Helper function to handle API errors in components
 export const handleApiError = (error: unknown): string => {
   if (error instanceof ApiError) {
@@ -234,4 +237,16 @@ export async function updateWorkflow(workflowId: string, data: WorkflowUpdate) {
 
 export async function deleteWorkflow(workflowId: string) {
   return api.delete<void>(`/workflows/${workflowId}`);
+}
+
+// OAuth API methods
+// Note: OAuth routes are at root level, not under /api
+export interface OAuthAuthorizeResponse {
+  auth_url: string;
+}
+
+export async function getOAuthAuthorizeUrl(providerName: string, providerId: string): Promise<OAuthAuthorizeResponse> {
+  return rootApi.get<OAuthAuthorizeResponse>(`/oauth/${providerName}/authorize`, {
+    params: { provider_id: providerId },
+  });
 }

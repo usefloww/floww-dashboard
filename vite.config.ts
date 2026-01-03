@@ -40,6 +40,11 @@ export default defineConfig({
         changeOrigin: false,
         secure: false,
       },
+      "/oauth": {
+        target: "http://localhost:8000",
+        changeOrigin: false,
+        secure: false,
+      },
     },
   },
 

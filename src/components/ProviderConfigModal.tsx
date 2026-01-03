@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { handleApiError, getProviderType, createProvider, updateProvider } from "@/lib/api";
+import { handleApiError, getProviderType, createProvider, updateProvider, getOAuthAuthorizeUrl } from "@/lib/api";
 import { Provider, ProviderType, ProviderSetupStep } from "@/types/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccessNotification, showErrorNotification } from "@/stores/notificationStore";
 import { Loader } from "@/components/Loader";
+import { CheckCircle2, Link2 } from "lucide-react";
 
 interface ProviderConfigModalProps {
   open: boolean;
@@ -32,7 +33,33 @@ export function ProviderConfigModal({
   const [alias, setAlias] = useState(provider?.alias || "");
   const [config, setConfig] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [oauthConnected, setOauthConnected] = useState<Record<string, boolean>>({});
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Handle OAuth callback messages from popup
+  const handleOAuthMessage = useCallback((event: MessageEvent) => {
+    if (event.data?.type === 'oauth_callback') {
+      if (event.data.success) {
+        // Mark OAuth as connected for the current step
+        if (oauthLoading) {
+          setOauthConnected(prev => ({ ...prev, [oauthLoading]: true }));
+          showSuccessNotification("Connected", "OAuth connection successful.");
+          // Refresh provider data
+          queryClient.invalidateQueries({ queryKey: ["providers", namespaceId] });
+        }
+      } else {
+        showErrorNotification("OAuth Failed", event.data.error || "Failed to connect.");
+      }
+      setOauthLoading(null);
+    }
+  }, [oauthLoading, queryClient, namespaceId]);
+
+  // Set up OAuth message listener
+  useEffect(() => {
+    window.addEventListener('message', handleOAuthMessage);
+    return () => window.removeEventListener('message', handleOAuthMessage);
+  }, [handleOAuthMessage]);
 
   // Fetch provider type schema when provider type is selected
   const { data: providerTypeData, isLoading: isLoadingType } = useQuery<ProviderType | null>({
@@ -44,6 +71,20 @@ export function ProviderConfigModal({
     },
     enabled: !!selectedProviderType && open,
   });
+
+  // Check if OAuth is already connected based on provider config
+  useEffect(() => {
+    if (isEditMode && provider && providerTypeData) {
+      const connected: Record<string, boolean> = {};
+      providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+        if (step.type === "oauth") {
+          // Check if we have OAuth tokens in the config
+          connected[step.alias] = !!(provider.config?.access_token);
+        }
+      });
+      setOauthConnected(connected);
+    }
+  }, [isEditMode, provider, providerTypeData]);
 
   // Initialize form when provider changes or modal opens
   useEffect(() => {
@@ -286,12 +327,79 @@ export function ProviderConfigModal({
     }
 
     if (step.type === "oauth") {
+      const isConnected = oauthConnected[step.alias] || false;
+      const isLoading = oauthLoading === step.alias;
+
+      const handleOAuthConnect = async () => {
+        if (!provider?.id) {
+          showErrorNotification("Error", "Please save the provider first before connecting OAuth.");
+          return;
+        }
+
+        setOauthLoading(step.alias);
+
+        try {
+          const { auth_url } = await getOAuthAuthorizeUrl(step.provider_name!, provider.id);
+
+          // Open popup for OAuth flow
+          const width = 600;
+          const height = 700;
+          const left = window.screenX + (window.outerWidth - width) / 2;
+          const top = window.screenY + (window.outerHeight - height) / 2;
+
+          window.open(
+            auth_url,
+            'oauth_popup',
+            `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+          );
+        } catch (error) {
+          showErrorNotification("OAuth Error", handleApiError(error));
+          setOauthLoading(null);
+        }
+      };
+
       return (
-        <div key={step.alias} className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-4">
-          <h4 className="font-medium text-yellow-900 dark:text-yellow-200 mb-1">{step.title}</h4>
-          <p className="text-sm text-yellow-700 dark:text-yellow-300">
-            OAuth configuration is not yet supported in the UI. Please use the CLI to configure OAuth providers.
-          </p>
+        <div key={step.alias} className="border rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium mb-1">{step.title}</h4>
+              {step.scopes && step.scopes.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Scopes: {step.scopes.join(", ")}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="text-sm font-medium">Connected</span>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOAuthConnect}
+                  disabled={isLoading || !isEditMode}
+                >
+                  {isLoading ? (
+                    "Connecting..."
+                  ) : (
+                    <>
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Connect
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+          {!isEditMode && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Save the provider first, then return to connect your account.
+            </p>
+          )}
         </div>
       );
     }
@@ -407,6 +515,7 @@ export function ProviderConfigModal({
                   <SelectItem value="discord">Discord</SelectItem>
                   <SelectItem value="jira">Jira</SelectItem>
                   <SelectItem value="todoist">Todoist</SelectItem>
+                  <SelectItem value="google_calendar">Google Calendar</SelectItem>
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="google">Google AI</SelectItem>
