@@ -73,7 +73,14 @@ interface BuilderChatResponse {
 
 function getMessageText(message: Message): string {
   const textParts = getParts(message, "text");
-  return textParts.map((p) => p.text).join("");
+  const questionParts = getParts(message, "data-question");
+
+  const texts = textParts.map((p) => p.text).filter(Boolean);
+  const questions = questionParts
+    .map((p: any) => p.data?.question)
+    .filter(Boolean);
+
+  return [...texts, ...questions].join("\n\n");
 }
 
 const EXAMPLE_PROMPTS = [
@@ -114,6 +121,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   const { currentNamespace } = useNamespaceStore();
   const [providerModalOpen, setProviderModalOpen] = useState(false);
   const [selectedProviderType, setSelectedProviderType] = useState<string | undefined>(undefined);
+  const [pendingProviderType, setPendingProviderType] = useState<string | undefined>(undefined);
 
   const queryClient = useQueryClient();
 
@@ -130,6 +138,27 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   });
 
   const providers: Provider[] = providersData || [];
+
+  // Auto-continue conversation after provider is configured
+  useEffect(() => {
+    if (!pendingProviderType) return;
+
+    const providerConfigured = providers.some(
+      p => p.type.toLowerCase() === pendingProviderType.toLowerCase()
+    );
+
+    if (providerConfigured && status === "ready") {
+      setPendingProviderType(undefined);
+
+      const continuationMsg: Message = {
+        id: `provider-configured-${Date.now()}`,
+        role: "user",
+        parts: [{ type: "text", text: `I've configured ${pendingProviderType}. Please continue.` }],
+      };
+
+      sendMessage(continuationMsg);
+    }
+  }, [providers, pendingProviderType, status]);
 
   // Fetch existing deployments to get a runtime_id
   const { data: deploymentsData } = useQuery<WorkflowDeployment[]>({
@@ -198,7 +227,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           namespace_id: currentNamespace?.id,
         },
         {
-          timeout: 30000,
+          timeout: 90000, // 90 seconds for code generation
         }
       );
 
@@ -227,6 +256,14 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             data: {
               message: part.data.message,
               provider_type: part.data.provider_type,
+            },
+          });
+        } else if (part.type === "data-secret-setup" && part.data) {
+          processedParts.push({
+            type: "data-secret-setup",
+            data: {
+              message: part.data.message,
+              secret_name: part.data.secret_name,
             },
           });
         } else if (part.type === "data-code" && part.data?.code) {
@@ -272,22 +309,22 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   const handleSelectionConfirm = async (selectedOptions: QuestionOption[], answerText?: string) => {
     // Use provided answerText if available, otherwise convert options to string
     const labelString = answerText || selectedOptions.map(o => o.label).join(", ");
-    
+
     // Create user message with the answer
     const userMsg: Message = {
       id: `answer-${Date.now()}`,
       role: "user",
       parts: [{ type: "text", text: labelString }],
     };
-    
+
     // Add user message to conversation
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setStatus("submitted");
 
     try {
-      // Include the user's answer in the conversation history
-      const simpleMessages = newMessages.map((m) => ({
+      // Send conversation history WITHOUT current message (sent separately as user_message)
+      const simpleMessages = messages.map((m) => ({
         role: m.role,
         content: getMessageText(m),
       }));
@@ -301,7 +338,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           namespace_id: currentNamespace?.id,
         },
         {
-          timeout: 30000,
+          timeout: 90000, // 90 seconds for code generation
         }
       );
 
@@ -330,6 +367,14 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             data: {
               message: part.data.message,
               provider_type: part.data.provider_type,
+            },
+          });
+        } else if (part.type === "data-secret-setup" && part.data) {
+          processedParts.push({
+            type: "data-secret-setup",
+            data: {
+              message: part.data.message,
+              secret_name: part.data.secret_name,
             },
           });
         } else if (part.type === "data-code" && part.data?.code) {
@@ -576,12 +621,13 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             
             {/* Messages Area - flex-1 allows it to fill space and scroll */}
             <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
-                <CustomChatMessages 
-                    status={status} 
+                <CustomChatMessages
+                    status={status}
                     onConfirm={handleSelectionConfirm}
                     providers={providers}
                     onOpenProviderModal={(providerType) => {
                       setSelectedProviderType(providerType);
+                      setPendingProviderType(providerType);
                       setProviderModalOpen(true);
                     }}
                     onExampleClick={handleExampleClick}
@@ -666,6 +712,17 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             setProviderModalOpen(open);
             if (!open) {
               setSelectedProviderType(undefined);
+              // Clear pendingProviderType after a delay if provider wasn't configured
+              // The useEffect will handle the success case faster than this timeout
+              setTimeout(() => {
+                setPendingProviderType(prev => {
+                  // Only clear if provider still isn't configured
+                  const configured = providers.some(
+                    p => prev && p.type.toLowerCase() === prev.toLowerCase()
+                  );
+                  return configured ? prev : undefined;
+                });
+              }, 1000);
             }
           }}
           namespaceId={currentNamespace.id}
@@ -716,6 +773,7 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
           const exampleParts = getParts(message, "data-examples");
           const notSupportedParts = getParts(message, "data-not-supported");
           const providerSetupParts = getParts(message, "data-provider-setup");
+          const secretSetupParts = getParts(message, "data-secret-setup");
           const codeParts = getParts(message, "data-code");
 
           return (
@@ -872,7 +930,31 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                         </div>
                     )}
 
-                    {/* 4. Warnings */}
+                    {/* 4. Secret Setup Prompts */}
+                    {isAssistant && secretSetupParts.length > 0 && (
+                        <div className="mt-2 w-full max-w-md">
+                        {secretSetupParts.map((part: any, partIndex) => {
+                            const secretName = part.data?.secret_name;
+
+                            return (
+                            <div
+                                key={partIndex}
+                                className="bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900 rounded-xl p-4 transition-all"
+                            >
+                                <p className="text-sm text-purple-800 dark:text-purple-200 mb-2 font-medium">
+                                    {part.data?.message}
+                                </p>
+                                <p className="text-xs text-purple-700 dark:text-purple-300">
+                                    This secret will be stored securely and used in your workflow.
+                                    Check the generated code for the required fields.
+                                </p>
+                            </div>
+                            );
+                        })}
+                        </div>
+                    )}
+
+                    {/* 5. Warnings */}
                     {isAssistant && notSupportedParts.length > 0 && (
                         <div className="mt-2 w-full max-w-md">
                         {notSupportedParts.map((part: any, partIndex) => (
@@ -889,7 +971,7 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                         </div>
                     )}
 
-                    {/* 5. Code Snippets (if sent in message) */}
+                    {/* 6. Code Snippets (if sent in message) */}
                     {isAssistant && codeParts.length > 0 && (
                         <div className="mt-2 w-full max-w-lg">
                         {codeParts.map((part: any, partIndex) => (
@@ -948,6 +1030,31 @@ interface MultiQuestionContainerProps {
 function MultiQuestionContainer({ questions, isActive, onConfirm }: MultiQuestionContainerProps) {
     // Track selections for each question by index
     const [selections, setSelections] = useState<Record<number, Set<string>>>({});
+    // Track custom text input for each question
+    const [customInputs, setCustomInputs] = useState<Record<number, string>>({});
+
+    // Detect if a question should be text-input-only (no option buttons needed)
+    const isTextInputOnly = (questionData?: QuestionData): boolean => {
+        const options = questionData?.options || [];
+
+        // If only 1 option and it contains hints about specifying custom input
+        if (options.length === 1) {
+            const option = options[0];
+            const text = `${option.label} ${option.description || ""}`.toLowerCase();
+            const textInputIndicators = [
+                "specify in response",
+                "type your own",
+                "enter",
+                "provide",
+                "custom",
+                "(specify",
+                "your own"
+            ];
+            return textInputIndicators.some(indicator => text.includes(indicator));
+        }
+
+        return false;
+    };
 
     const toggleOption = (questionIndex: number, optionId: string, allowMultiple: boolean) => {
         if (!isActive) return;
@@ -955,22 +1062,40 @@ function MultiQuestionContainer({ questions, isActive, onConfirm }: MultiQuestio
         setSelections(prev => {
             const currentSet = prev[questionIndex] || new Set<string>();
             const newSet = new Set(allowMultiple ? currentSet : []);
-            
+
             if (newSet.has(optionId)) {
                 newSet.delete(optionId);
             } else {
                 if (!allowMultiple) newSet.clear();
                 newSet.add(optionId);
             }
-            
+
             return { ...prev, [questionIndex]: newSet };
         });
     };
 
-    // Check if all questions have at least one selection
-    const allQuestionsAnswered = questions.every((_, index) => {
-        const selected = selections[index];
-        return selected && selected.size > 0;
+    const handleCustomInputChange = (questionIndex: number, value: string) => {
+        setCustomInputs(prev => ({
+            ...prev,
+            [questionIndex]: value
+        }));
+    };
+
+    // Check if all questions have at least one selection OR custom input
+    const allQuestionsAnswered = questions.every((part, index) => {
+        const questionData = part.data;
+        const textOnly = isTextInputOnly(questionData);
+
+        if (textOnly) {
+            // For text-input-only questions, custom input is required
+            return customInputs[index]?.trim().length > 0;
+        } else {
+            // For regular questions, either selection or custom input works
+            const selected = selections[index];
+            const hasSelection = selected && selected.size > 0;
+            const hasCustomInput = customInputs[index]?.trim().length > 0;
+            return hasSelection || hasCustomInput;
+        }
     });
 
     // Build combined answer text
@@ -979,23 +1104,35 @@ function MultiQuestionContainer({ questions, isActive, onConfirm }: MultiQuestio
         const allSelectedOptions: QuestionOption[] = [];
 
         questions.forEach((part, index) => {
-            const selectedIds = selections[index] || new Set<string>();
-            const options = part.data?.options || [];
-            const selectedOptions = options.filter(o => selectedIds.has(o.id));
-            
-            allSelectedOptions.push(...selectedOptions);
-            
-            if (selectedOptions.length > 0) {
-                const answerLabels = selectedOptions.map(o => o.label).join(", ");
+            const customInput = customInputs[index]?.trim();
+
+            // Prefer custom input if provided
+            if (customInput) {
                 if (part.data?.question) {
-                    answers.push(`${part.data.question}: ${answerLabels}`);
+                    answers.push(`${part.data.question}: ${customInput}`);
                 } else {
-                    answers.push(answerLabels);
+                    answers.push(customInput);
+                }
+            } else {
+                // Fall back to selected options
+                const selectedIds = selections[index] || new Set<string>();
+                const options = part.data?.options || [];
+                const selectedOptions = options.filter(o => selectedIds.has(o.id));
+
+                allSelectedOptions.push(...selectedOptions);
+
+                if (selectedOptions.length > 0) {
+                    const answerLabels = selectedOptions.map(o => o.label).join(", ");
+                    if (part.data?.question) {
+                        answers.push(`${part.data.question}: ${answerLabels}`);
+                    } else {
+                        answers.push(answerLabels);
+                    }
                 }
             }
         });
 
-        const combinedAnswerText = answers.join("\n");
+        const combinedAnswerText = answers.join("\n\n");
         onConfirm(allSelectedOptions, combinedAnswerText);
     };
 
@@ -1006,6 +1143,12 @@ function MultiQuestionContainer({ questions, isActive, onConfirm }: MultiQuestio
                 const options = questionData?.options || [];
                 const allowMultiple = questionData?.allow_multiple ?? false;
                 const selectedIds = selections[questionIndex] || new Set<string>();
+                const textOnly = isTextInputOnly(questionData);
+
+                // Extract placeholder and description for text-input-only mode
+                const textOnlyPlaceholder = textOnly && options[0]?.description
+                    ? options[0].description
+                    : "Type your answer...";
 
                 return (
                     <div key={questionIndex} className="space-y-2">
@@ -1014,53 +1157,75 @@ function MultiQuestionContainer({ questions, isActive, onConfirm }: MultiQuestio
                                 {questionData.question}
                             </div>
                         )}
-                        <div className="grid grid-cols-1 gap-2">
-                            {options.map((option) => {
-                                const isSelected = selectedIds.has(option.id);
-                                return (
-                                    <div
-                                        key={option.id}
-                                        onClick={() => toggleOption(questionIndex, option.id, allowMultiple)}
-                                        className={cn(
-                                            "group relative flex items-start gap-3 rounded-xl border p-3 text-left transition-all duration-200",
-                                            isActive 
-                                                ? "cursor-pointer hover:border-primary/40 hover:bg-muted/40" 
-                                                : "opacity-60 pointer-events-none grayscale-[0.5]",
-                                            isSelected 
-                                                ? "border-primary bg-primary/5" 
-                                                : "border-border bg-card"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all duration-200",
-                                            isSelected 
-                                                ? "border-primary bg-primary text-primary-foreground" 
-                                                : "border-muted-foreground/30 bg-background group-hover:border-primary/50",
-                                            !allowMultiple && "rounded-full" 
-                                        )}>
-                                            <Check className={cn(
-                                                "h-3.5 w-3.5 transition-transform duration-200", 
-                                                isSelected ? "scale-100" : "scale-0"
-                                            )} />
-                                        </div>
-                                        
-                                        <div className="flex-1 space-y-0.5">
-                                            <div className={cn("text-sm font-medium transition-colors", isSelected ? "text-primary" : "text-foreground")}>
-                                                {option.label}
-                                            </div>
-                                            {option.description && (
-                                                <div className="text-xs text-muted-foreground leading-relaxed">
-                                                    {option.description}
-                                                </div>
+
+                        {/* Show option buttons only if NOT text-input-only */}
+                        {!textOnly && (
+                            <div className="grid grid-cols-1 gap-2">
+                                {options.map((option) => {
+                                    const isSelected = selectedIds.has(option.id);
+                                    return (
+                                        <div
+                                            key={option.id}
+                                            onClick={() => toggleOption(questionIndex, option.id, allowMultiple)}
+                                            className={cn(
+                                                "group relative flex items-start gap-3 rounded-xl border p-3 text-left transition-all duration-200",
+                                                isActive
+                                                    ? "cursor-pointer hover:border-primary/40 hover:bg-muted/40"
+                                                    : "opacity-60 pointer-events-none grayscale-[0.5]",
+                                                isSelected
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-border bg-card"
                                             )}
+                                        >
+                                            <div className={cn(
+                                                "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all duration-200",
+                                                isSelected
+                                                    ? "border-primary bg-primary text-primary-foreground"
+                                                    : "border-muted-foreground/30 bg-background group-hover:border-primary/50",
+                                                !allowMultiple && "rounded-full"
+                                            )}>
+                                                <Check className={cn(
+                                                    "h-3.5 w-3.5 transition-transform duration-200",
+                                                    isSelected ? "scale-100" : "scale-0"
+                                                )} />
+                                            </div>
+
+                                            <div className="flex-1 space-y-0.5">
+                                                <div className={cn("text-sm font-medium transition-colors", isSelected ? "text-primary" : "text-foreground")}>
+                                                    {option.label}
+                                                </div>
+                                                {option.description && (
+                                                    <div className="text-xs text-muted-foreground leading-relaxed">
+                                                        {option.description}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        {/* Show hint for current question */}
-                        <div className="text-xs text-muted-foreground pl-1">
-                            {allowMultiple ? "Select all that apply" : "Select one option"}
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Custom text input */}
+                        <div className="space-y-2">
+                            {!textOnly && (
+                                <div className="text-xs text-muted-foreground pl-1">
+                                    {allowMultiple ? "Select all that apply" : "Select one option"}, or provide your own:
+                                </div>
+                            )}
+                            <input
+                                type="text"
+                                value={customInputs[questionIndex] || ""}
+                                onChange={(e) => handleCustomInputChange(questionIndex, e.target.value)}
+                                placeholder={textOnly ? textOnlyPlaceholder : "Or type your own answer..."}
+                                disabled={!isActive}
+                                className={cn(
+                                    "w-full px-3 py-2 text-sm rounded-lg border transition-all",
+                                    "bg-background text-foreground placeholder:text-muted-foreground/60",
+                                    "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
+                                    !isActive && "opacity-60 cursor-not-allowed"
+                                )}
+                            />
                         </div>
                     </div>
                 );
