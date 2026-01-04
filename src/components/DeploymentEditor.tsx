@@ -7,6 +7,7 @@ import { Save, X, Loader2 } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { showSuccessNotification, showErrorNotification } from "@/stores/notificationStore";
 import { useMonacoTheme } from "@/hooks/useMonacoTheme";
+import { useMonacoTypes } from "@/hooks/useMonacoTypes";
 
 interface DeploymentEditorProps {
   workflowId: string;
@@ -24,6 +25,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
   const [currentFile, setCurrentFile] = useState<string>("");
   const [selectedDeploymentId, setSelectedDeploymentId] = useState<string | null>(deploymentId || null);
   const monacoTheme = useMonacoTheme();
+  const { beforeMount: beforeMonacoMount, onMount: onMonacoMount } = useMonacoTypes();
 
   // Fetch all deployments
   const { data: allDeployments = [], isLoading: isLoadingDeployments } = useQuery({
@@ -275,6 +277,8 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
             });
           }}
           theme={monacoTheme}
+          beforeMount={beforeMonacoMount}
+          onMount={onMonacoMount}
           options={{
             minimap: { enabled: true },
             fontSize: 14,

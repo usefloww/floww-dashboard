@@ -7,6 +7,7 @@ import { Loader } from "@/components/Loader";
 import { ArrowLeft, Save, X } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { useMonacoTheme } from "@/hooks/useMonacoTheme";
+import { useMonacoTypes } from "@/hooks/useMonacoTypes";
 
 export const Route = createFileRoute("/workflows/$workflowId/deployments/$deploymentId/edit")({
   component: EditDeploymentPage,
@@ -21,6 +22,7 @@ function EditDeploymentPage() {
   const [entrypoint, setEntrypoint] = useState<string>("");
   const [currentFile, setCurrentFile] = useState<string>("");
   const monacoTheme = useMonacoTheme();
+  const { beforeMount: beforeMonacoMount, onMount: onMonacoMount } = useMonacoTypes();
 
   // Use TanStack Query to fetch deployment
   const { data: deployment, isLoading } = useQuery({
@@ -225,6 +227,8 @@ function EditDeploymentPage() {
                   });
                 }}
                 theme={monacoTheme}
+                beforeMount={beforeMonacoMount}
+                onMount={onMonacoMount}
                 options={{
                   minimap: { enabled: true },
                   fontSize: 14,

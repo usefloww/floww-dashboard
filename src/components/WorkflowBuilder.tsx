@@ -15,6 +15,7 @@ import Markdown from "react-markdown";
 import Editor from "@monaco-editor/react";
 import { api, handleApiError } from "@/lib/api";
 import { useMonacoTheme } from "@/hooks/useMonacoTheme";
+import { useMonacoTypes } from "@/hooks/useMonacoTypes";
 import { 
   AlertTriangle, 
   Loader2, 
@@ -55,7 +56,8 @@ interface MessagePart {
     options?: QuestionOption[];
     provider_type?: string;
     code?: string;
-    allow_multiple?: boolean; 
+    allow_multiple?: boolean;
+    secret_name?: string;
   };
 }
 
@@ -117,6 +119,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
 // Describe what you want and I'll help you build it!
 `);
   const monacoTheme = useMonacoTheme();
+  const { beforeMount: beforeMonacoMount, onMount: onMonacoMount } = useMonacoTypes();
   const formRef = useRef<HTMLDivElement>(null);
   const { currentNamespace } = useNamespaceStore();
   const [providerModalOpen, setProviderModalOpen] = useState(false);
@@ -599,6 +602,8 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             value={code}
             onChange={(value) => setCode(value || "")}
             theme={monacoTheme}
+            beforeMount={beforeMonacoMount}
+            onMount={onMonacoMount}
             options={{
                 minimap: { enabled: false },
                 fontSize: 13,
@@ -934,8 +939,6 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                     {isAssistant && secretSetupParts.length > 0 && (
                         <div className="mt-2 w-full max-w-md">
                         {secretSetupParts.map((part: any, partIndex) => {
-                            const secretName = part.data?.secret_name;
-
                             return (
                             <div
                                 key={partIndex}
