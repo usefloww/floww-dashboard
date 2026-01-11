@@ -112,7 +112,7 @@ export function ProviderConfigModal({
         setConfig(initialConfig);
       } else {
         // Create mode
-        setAlias("");
+        setAlias("default");
         setConfig({});
         if (initialProviderType) {
           setSelectedProviderType(initialProviderType);
@@ -136,6 +136,29 @@ export function ProviderConfigModal({
       setConfig(updatedConfig);
     }
   }, [providerTypeData, isEditMode, provider]);
+
+  // Initialize config with defaults when provider type data loads in create mode
+  useEffect(() => {
+    if (!isEditMode && providerTypeData && open) {
+      setConfig((prev) => {
+        const updatedConfig = { ...prev };
+        let hasChanges = false;
+        
+        providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+          // Only set defaults for non-secret fields that don't have values yet
+          if (step.type !== "secret" && step.type !== "info" && step.type !== "oauth" && step.type !== "webhook") {
+            // Only set default if field doesn't exist or is empty
+            if (step.default && (!prev[step.alias] || prev[step.alias] === "")) {
+              updatedConfig[step.alias] = step.default;
+              hasChanges = true;
+            }
+          }
+        });
+        
+        return hasChanges ? updatedConfig : prev;
+      });
+    }
+  }, [providerTypeData, isEditMode, open]);
 
   const createMutation = useMutation({
     mutationFn: async (data: { namespace_id: string; type: string; alias: string; config: Record<string, any> }) => {
@@ -225,9 +248,18 @@ export function ProviderConfigModal({
             // Don't include - existing value will be preserved
             return;
           }
-          // Include non-empty values
-          if (value !== undefined && value !== "" && value !== "••••••••") {
-            configToSend[step.alias] = value;
+          
+          // For non-secret fields, use default if value is empty
+          if (step.type !== "secret") {
+            const finalValue = value && value.trim() !== "" ? value : (step.default || "");
+            if (finalValue !== "") {
+              configToSend[step.alias] = finalValue;
+            }
+          } else {
+            // For secret fields, only include non-empty values (no defaults)
+            if (value !== undefined && value !== "" && value !== "••••••••") {
+              configToSend[step.alias] = value;
+            }
           }
         }
       });

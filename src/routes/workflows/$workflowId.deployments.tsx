@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Code, Package, Activity, Settings, FileText, Sparkles } from "lucide-react";
+import { ArrowLeft, Code, Package, Activity, Settings, FileText, Sparkles, PlayCircle } from "lucide-react";
 import { api, handleApiError } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Loader } from "@/components/Loader";
@@ -11,9 +11,10 @@ import { ExecutionHistory } from "@/components/ExecutionHistory";
 import { WorkflowConfiguration } from "@/components/WorkflowConfiguration";
 import { WorkflowLogs } from "@/components/WorkflowLogs";
 import { WorkflowBuilder } from "@/components/WorkflowBuilder";
+import { ManualTriggersSection } from "@/components/ManualTriggersSection";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 
-type TabType = "edit" | "deployments" | "executions" | "logs" | "config" | "builder";
+type TabType = "edit" | "deployments" | "executions" | "logs" | "config" | "builder" | "triggers";
 
 export const Route = createFileRoute("/workflows/$workflowId/deployments")({
   component: DeploymentsPage,
@@ -202,6 +203,24 @@ function DeploymentsPage() {
               <span>Builder</span>
             </div>
           </Link>
+          <Link
+            {...({
+              to: "/workflows/$workflowId/deployments",
+              params: { workflowId },
+              search: { tab: "triggers" },
+              className: `py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "triggers"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`
+            } as any)}
+            onClick={() => setActiveTab("triggers")}
+          >
+            <div className="flex items-center space-x-2">
+              <PlayCircle className="h-4 w-4" />
+              <span>Manual Triggers</span>
+            </div>
+          </Link>
         </nav>
       </div>
 
@@ -235,6 +254,8 @@ function DeploymentsPage() {
           ) : null
         ) : activeTab === "builder" ? (
           <WorkflowBuilder workflowId={workflowId} />
+        ) : activeTab === "triggers" ? (
+          <ManualTriggersSection workflowId={workflowId} />
         ) : null}
       </div>
 

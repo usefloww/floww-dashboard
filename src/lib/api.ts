@@ -239,6 +239,41 @@ export async function deleteWorkflow(workflowId: string) {
   return api.delete<void>(`/workflows/${workflowId}`);
 }
 
+// Manual Trigger API methods
+export interface ManualTriggerInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  input_schema: Record<string, any> | null;
+  execution_count: number;
+}
+
+export interface ManualTriggersListResponse {
+  triggers: ManualTriggerInfo[];
+}
+
+export interface ManualTriggerInvokeRequest {
+  input_data: Record<string, any>;
+}
+
+export interface ManualTriggerInvokeResponse {
+  execution_id: string;
+  status: string;
+}
+
+export async function getManualTriggers(workflowId: string): Promise<ManualTriggersListResponse> {
+  return api.get<ManualTriggersListResponse>(`/triggers/workflows/${workflowId}/manual`);
+}
+
+export async function invokeManualTrigger(
+  triggerId: string,
+  inputData: Record<string, any> = {}
+): Promise<ManualTriggerInvokeResponse> {
+  return api.post<ManualTriggerInvokeResponse>(`/triggers/${triggerId}/invoke`, {
+    input_data: inputData,
+  });
+}
+
 // OAuth API methods
 // Note: OAuth routes are at root level, not under /api
 export interface OAuthAuthorizeResponse {
