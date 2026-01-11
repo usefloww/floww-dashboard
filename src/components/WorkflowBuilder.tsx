@@ -16,14 +16,19 @@ import Editor from "@monaco-editor/react";
 import { api, handleApiError } from "@/lib/api";
 import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import { useMonacoTypes } from "@/hooks/useMonacoTypes";
-import { 
-  AlertTriangle, 
-  Loader2, 
-  Check, 
+ import { 
+   AlertTriangle, 
+   Loader2, 
+   Check, 
   ArrowRight,
   Sparkles,
   Settings,
-  Rocket
+  Rocket,
+  FileCheck,
+  Zap,
+  Workflow,
+  Key,
+  RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils"; 
@@ -58,6 +63,8 @@ interface MessagePart {
     code?: string;
     allow_multiple?: boolean;
     secret_name?: string;
+    plan?: any;
+    awaiting_approval?: boolean;
   };
 }
 
@@ -67,6 +74,7 @@ interface BuilderChatResponse {
     parts: MessagePart[];
   };
   code?: string;
+  plan?: any;
 }
 
 // ------------------------------------------------------------------
@@ -113,14 +121,59 @@ const WELCOME_MESSAGE: Message = {
 // ------------------------------------------------------------------
 
 export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  // Persist messages in sessionStorage to survive component remounts and page reloads
+  const [messages, setMessagesState] = useState<Message[]>(() => {
+    const stored = sessionStorage.getItem(`workflow-messages-${workflowId}`);
+    return stored ? JSON.parse(stored) : [WELCOME_MESSAGE];
+  });
+
+  const setMessages = (newMessages: Message[]) => {
+    setMessagesState(newMessages);
+    sessionStorage.setItem(`workflow-messages-${workflowId}`, JSON.stringify(newMessages));
+  };
+
   const [status, setStatus] = useState<"submitted" | "streaming" | "ready" | "error">("ready");
+
+  // Persist plan in sessionStorage to survive component remounts
+  const [plan, setPlanState] = useState<any>(() => {
+    const stored = sessionStorage.getItem(`workflow-plan-${workflowId}`);
+    return stored ? JSON.parse(stored) : null;
+  });
+
+  const setPlan = (newPlan: any) => {
+    setPlanState(newPlan);
+    if (newPlan) {
+      sessionStorage.setItem(`workflow-plan-${workflowId}`, JSON.stringify(newPlan));
+    } else {
+      sessionStorage.removeItem(`workflow-plan-${workflowId}`);
+    }
+  };
+
+  // Clear conversation helper
+  const clearConversation = () => {
+    setMessages([WELCOME_MESSAGE]);
+    setPlan(null);
+    sessionStorage.removeItem(`workflow-messages-${workflowId}`);
+    sessionStorage.removeItem(`workflow-plan-${workflowId}`);
+  };
+
+  // Debug plan state changes
+  useEffect(() => {
+    console.log("[WorkflowBuilder] Plan state changed:", plan?.summary || null);
+  }, [plan]);
+
   const [code, setCode] = useState<string>(`// Your workflow code will appear here as we build it together
 // Describe what you want and I'll help you build it!
 `);
   const monacoTheme = useMonacoTheme();
   const { beforeMount: beforeMonacoMount, onMount: onMonacoMount } = useMonacoTypes();
   const formRef = useRef<HTMLDivElement>(null);
+  const planRef = useRef<any>(null);
+
+  // Keep planRef in sync with plan state
+  useEffect(() => {
+    planRef.current = plan;
+  }, [plan]);
   const { currentNamespace } = useNamespaceStore();
   const [providerModalOpen, setProviderModalOpen] = useState(false);
   const [selectedProviderType, setSelectedProviderType] = useState<string | undefined>(undefined);
@@ -221,6 +274,16 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
         content: getMessageText(m),
       }));
 
+      // Use planRef to get the latest plan value even if state hasn't updated yet
+      const currentPlan = planRef.current;
+
+      console.log("[WorkflowBuilder] Sending message:", {
+        user_message: userContent,
+        has_plan: !!currentPlan,
+        plan_summary: currentPlan?.summary,
+        plan_from_state: plan?.summary,
+      });
+
       const resp = await api.post<BuilderChatResponse>(
         `/workflows/${workflowId}/builder/chat`,
         {
@@ -228,11 +291,18 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           user_message: userContent,
           current_code: code,
           namespace_id: currentNamespace?.id,
+          plan: currentPlan,
         },
         {
           timeout: 90000, // 90 seconds for code generation
         }
       );
+
+      console.log("[WorkflowBuilder] Received response:", {
+        has_code: !!resp.code,
+        has_plan: !!resp.plan,
+        plan_summary: resp.plan?.summary,
+      });
 
       const processedParts: any[] = [];
       
@@ -274,6 +344,14 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             type: "data-code",
             data: { code: part.data.code },
           });
+        } else if (part.type === "data-plan-confirmation" && part.data) {
+          processedParts.push({
+            type: "data-plan-confirmation",
+            data: {
+              plan: part.data.plan,
+              awaiting_approval: part.data.awaiting_approval,
+            },
+          });
         }
       }
 
@@ -284,11 +362,30 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
       };
 
       setMessages([...newMessages, assistantMsg]);
-      
+
       if (resp.code) {
         setCode(resp.code);
       }
-      
+
+      // Update plan if present in response OR extract from message parts
+      if (resp.plan) {
+        console.log("[WorkflowBuilder] Setting plan from response:", resp.plan);
+        setPlan(resp.plan);
+      } else {
+        // Check if there's a plan in the message parts
+        const planPart = resp.message.parts.find(p => p.type === "data-plan-confirmation");
+        if (planPart?.data?.plan) {
+          console.log("[WorkflowBuilder] Setting plan from message parts:", planPart.data.plan);
+          setPlan(planPart.data.plan);
+        }
+      }
+
+      // Clear plan if code was generated (approval completed)
+      if (resp.code && resp.code !== code) {
+        console.log("[WorkflowBuilder] Code generated, clearing plan");
+        setPlan(null);
+      }
+
       setStatus("ready");
     } catch (error) {
       setStatus("error");
@@ -313,6 +410,12 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
     // Use provided answerText if available, otherwise convert options to string
     const labelString = answerText || selectedOptions.map(o => o.label).join(", ");
 
+    console.log("[WorkflowBuilder] handleSelectionConfirm called:", {
+      answerText,
+      labelString,
+      current_plan: plan?.summary,
+    });
+
     // Create user message with the answer
     const userMsg: Message = {
       id: `answer-${Date.now()}`,
@@ -332,6 +435,15 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
         content: getMessageText(m),
       }));
 
+      // Use planRef to get the latest plan value
+      const currentPlan = planRef.current;
+
+      console.log("[WorkflowBuilder] Sending message (handleSelectionConfirm):", {
+        user_message: labelString,
+        has_plan: !!currentPlan,
+        plan_summary: currentPlan?.summary,
+      });
+
       const resp = await api.post<BuilderChatResponse>(
         `/workflows/${workflowId}/builder/chat`,
         {
@@ -339,6 +451,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           user_message: labelString,
           current_code: code,
           namespace_id: currentNamespace?.id,
+          plan: currentPlan,
         },
         {
           timeout: 90000, // 90 seconds for code generation
@@ -385,6 +498,14 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             type: "data-code",
             data: { code: part.data.code },
           });
+        } else if (part.type === "data-plan-confirmation" && part.data) {
+          processedParts.push({
+            type: "data-plan-confirmation",
+            data: {
+              plan: part.data.plan,
+              awaiting_approval: part.data.awaiting_approval,
+            },
+          });
         }
       }
 
@@ -395,11 +516,30 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
       };
 
       setMessages([...newMessages, assistantMsg]);
-      
+
       if (resp.code) {
         setCode(resp.code);
       }
-      
+
+      // Update plan if present in response OR extract from message parts
+      if (resp.plan) {
+        console.log("[WorkflowBuilder] Setting plan from response:", resp.plan);
+        setPlan(resp.plan);
+      } else {
+        // Check if there's a plan in the message parts
+        const planPart = resp.message.parts.find(p => p.type === "data-plan-confirmation");
+        if (planPart?.data?.plan) {
+          console.log("[WorkflowBuilder] Setting plan from message parts:", planPart.data.plan);
+          setPlan(planPart.data.plan);
+        }
+      }
+
+      // Clear plan if code was generated (approval completed)
+      if (resp.code && resp.code !== code) {
+        console.log("[WorkflowBuilder] Code generated, clearing plan");
+        setPlan(null);
+      }
+
       setStatus("ready");
     } catch (error) {
       setStatus("error");
@@ -621,8 +761,22 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
       <div className="w-1/2 flex flex-col">
         {/* Unified container for history + input */}
         <div className="flex-1 border border-border rounded-2xl bg-background shadow-sm overflow-hidden flex flex-col relative transition-all">
-            
-          <ChatSection handler={handler} className="h-full flex flex-col">
+
+          {/* Chat header with clear button */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 shrink-0">
+            <div className="text-sm font-semibold text-foreground">Workflow Chat</div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearConversation}
+              className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          </div>
+
+          <ChatSection handler={handler} className="flex-1 flex flex-col min-h-0">
             
             {/* Messages Area - flex-1 allows it to fill space and scroll */}
             <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
@@ -780,6 +934,7 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
           const providerSetupParts = getParts(message, "data-provider-setup");
           const secretSetupParts = getParts(message, "data-secret-setup");
           const codeParts = getParts(message, "data-code");
+          const planConfirmationParts = getParts(message, "data-plan-confirmation");
 
           return (
             <div key={message.id || index} className="group animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards">
@@ -900,7 +1055,179 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                         />
                     )}
 
-                    {/* 3. Provider Setup Prompts */}
+                    {/* 3. Plan Confirmation */}
+                    {isAssistant && planConfirmationParts.length > 0 && (
+                        <div className="mt-3 w-full max-w-2xl">
+                        {planConfirmationParts.map((part: any, partIndex) => {
+                            const plan = part.data?.plan;
+
+                            if (!plan) {
+                                return (
+                                    <div key={partIndex} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl p-4">
+                                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                                            Plan data is missing or malformed. Please try again.
+                                        </p>
+                                        <pre className="text-xs mt-2 overflow-auto">{JSON.stringify(part, null, 2)}</pre>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                            <div
+                                key={partIndex}
+                                className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-2 border-emerald-200 dark:border-emerald-800 rounded-xl p-5 shadow-sm"
+                            >
+                                {/* Header */}
+                                <div className="flex items-start gap-3 mb-4">
+                                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
+                                        <FileCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="text-base font-semibold text-emerald-900 dark:text-emerald-100 mb-1">
+                                            Workflow Plan
+                                        </h4>
+                                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                                            {plan?.summary || plan?.description || "Workflow automation"}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Trigger Section */}
+                                {plan?.trigger && (
+                                    <div className="mb-4 pb-4 border-b border-emerald-200 dark:border-emerald-800/50">
+                                        <div className="flex items-start gap-2 mb-2">
+                                            <Zap className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-100 uppercase tracking-wide mb-1">
+                                                    Trigger
+                                                </div>
+                                                {typeof plan.trigger === 'string' ? (
+                                                    <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                                                        {plan.trigger}
+                                                    </p>
+                                                ) : (
+                                                    <>
+                                                        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                                                            {plan.trigger.type || 'Event'}
+                                                            {plan.trigger.source && (
+                                                                <span className="text-emerald-600 dark:text-emerald-400 ml-1">
+                                                                    from {plan.trigger.source}
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                        {plan.trigger.details && (
+                                                            <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
+                                                                {plan.trigger.details}
+                                                            </p>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Actions Section */}
+                                {plan?.actions && plan.actions.length > 0 && (
+                                    <div className="mb-4">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Workflow className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                            <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-100 uppercase tracking-wide">
+                                                Actions
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {plan.actions.map((action: any, idx: number) => {
+                                                const actionDesc = typeof action === 'string'
+                                                    ? action
+                                                    : (action.description || action.action || String(action));
+                                                const provider = typeof action === 'object' ? action.provider : null;
+
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className="flex items-start gap-3 bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-emerald-100 dark:border-emerald-900/50"
+                                                    >
+                                                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex-shrink-0">
+                                                            {idx + 1}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            {provider && (
+                                                                <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded text-xs font-medium mb-1">
+                                                                    {provider}
+                                                                </div>
+                                                            )}
+                                                            <p className="text-sm text-emerald-900 dark:text-emerald-100">
+                                                                {actionDesc}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Required Providers/Secrets */}
+                                {(plan?.required_providers?.length > 0 || plan?.required_secrets?.length > 0) && (
+                                    <div className="flex flex-wrap gap-4 pt-3 border-t border-emerald-200 dark:border-emerald-800/50">
+                                        {plan.required_providers?.length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                <Settings className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                <span className="text-xs text-emerald-700 dark:text-emerald-300">
+                                                    <span className="font-medium">Providers:</span> {plan.required_providers.join(', ')}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {plan.required_secrets?.length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                <Key className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                <span className="text-xs text-emerald-700 dark:text-emerald-300">
+                                                    <span className="font-medium">Secrets:</span> {plan.required_secrets.join(', ')}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Approval Actions */}
+                                {part.data?.awaiting_approval && isInteractionActive && (
+                                    <div className="mt-5 pt-5 border-t border-emerald-200 dark:border-emerald-800/50">
+                                        <div className="flex items-center gap-3">
+                                            <Button
+                                                onClick={() => onConfirm([], "Yes, generate this workflow")}
+                                                disabled={isLoading}
+                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                                            >
+                                                <Check className="h-4 w-4 mr-2" />
+                                                Approve & Generate Code
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const textarea = document.querySelector('textarea[placeholder*="Message"]') as HTMLTextAreaElement;
+                                                    if (textarea) {
+                                                        textarea.focus();
+                                                    }
+                                                }}
+                                                disabled={isLoading}
+                                                variant="outline"
+                                                className="px-4 py-3 border-2 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-all disabled:opacity-50"
+                                            >
+                                                Request Changes
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-3 text-center">
+                                            Review the plan above, then approve to generate the workflow code
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                            );
+                        })}
+                        </div>
+                    )}
+
+                    {/* 4. Provider Setup Prompts */}
                     {isAssistant && providerSetupParts.length > 0 && (
                         <div className="mt-2 w-full max-w-md">
                         {providerSetupParts.map((part: any, partIndex) => {
@@ -935,7 +1262,7 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                         </div>
                     )}
 
-                    {/* 4. Secret Setup Prompts */}
+                    {/* 5. Secret Setup Prompts */}
                     {isAssistant && secretSetupParts.length > 0 && (
                         <div className="mt-2 w-full max-w-md">
                         {secretSetupParts.map((part: any, partIndex) => {
@@ -957,7 +1284,7 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                         </div>
                     )}
 
-                    {/* 5. Warnings */}
+                    {/* 6. Warnings */}
                     {isAssistant && notSupportedParts.length > 0 && (
                         <div className="mt-2 w-full max-w-md">
                         {notSupportedParts.map((part: any, partIndex) => (
@@ -974,7 +1301,7 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                         </div>
                     )}
 
-                    {/* 6. Code Snippets (if sent in message) */}
+                    {/* 7. Code Snippets (if sent in message) */}
                     {isAssistant && codeParts.length > 0 && (
                         <div className="mt-2 w-full max-w-lg">
                         {codeParts.map((part: any, partIndex) => (
