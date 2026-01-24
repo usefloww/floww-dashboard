@@ -52,7 +52,7 @@ export function CreateServiceAccountModal({
 
     createMutation.mutate({
       name: name.trim(),
-      organization_id: organizationId,
+      organizationId: organizationId,
     });
   };
 

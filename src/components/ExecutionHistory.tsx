@@ -67,13 +67,13 @@ export function ExecutionHistory({ workflowId }: ExecutionHistoryProps) {
   };
 
   const formatTrigger = (execution: ExecutionHistoryType) => {
-    if (!execution.trigger_type) return "—";
+    if (!execution.triggerType) return "—";
 
-    if (execution.webhook_path && execution.webhook_method) {
-      return `${execution.webhook_method} ${execution.webhook_path}`;
+    if (execution.webhookPath && execution.webhookMethod) {
+      return `${execution.webhookMethod} ${execution.webhookPath}`;
     }
 
-    return execution.trigger_type;
+    return execution.triggerType;
   };
 
   const handleRowClick = (executionId: string) => {
@@ -119,16 +119,16 @@ export function ExecutionHistory({ workflowId }: ExecutionHistoryProps) {
                 >
                   <TableCell>{getStatusBadge(execution.status)}</TableCell>
                   <TableCell className="font-mono text-xs">
-                    {formatTimestamp(execution.received_at)}
+                    {formatTimestamp(execution.receivedAt)}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {formatDuration(execution.duration_ms)}
+                    {formatDuration(execution.durationMs)}
                   </TableCell>
                   <TableCell className="text-sm">
                     {formatTrigger(execution)}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {execution.deployment_id ? execution.deployment_id.substring(0, 8) : "—"}
+                    {execution.deploymentId ? execution.deploymentId.substring(0, 8) : "—"}
                   </TableCell>
                 </TableRow>
               ))}

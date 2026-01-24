@@ -139,8 +139,8 @@ function WorkflowsPage() {
     queryKey: ['folders', currentNamespace?.id, currentFolderId],
     queryFn: async () => {
       const params: Record<string, string> = {};
-      if (currentNamespace?.id) params.namespace_id = currentNamespace.id;
-      if (currentFolderId) params.parent_folder_id = currentFolderId;
+      if (currentNamespace?.id) params.namespaceId = currentNamespace.id;
+      if (currentFolderId) params.parentFolderId = currentFolderId;
       const data = await api.get<FoldersListResponse>("/folders", { params });
       return data.results || [];
     },
@@ -151,11 +151,11 @@ function WorkflowsPage() {
   const { data: workflowsData, isLoading: workflowsLoading, error } = useQuery({
     queryKey: ['workflows', currentNamespace?.id, currentFolderId],
     queryFn: async () => {
-      const params: Record<string, string | boolean> = { root_only: true };
-      if (currentNamespace?.id) params.namespace_id = currentNamespace.id;
+      const params: Record<string, string | boolean> = { rootOnly: true };
+      if (currentNamespace?.id) params.namespaceId = currentNamespace.id;
       if (currentFolderId) {
-        params.parent_folder_id = currentFolderId;
-        delete params.root_only;
+        params.parentFolderId = currentFolderId;
+        delete params.rootOnly;
       }
       const data = await api.get<{ results: Workflow[] }>("/workflows", { params });
       return Array.isArray(data?.results) ? data.results : [];
@@ -184,8 +184,8 @@ function WorkflowsPage() {
         throw new Error("No namespace selected");
       }
       return api.post<N8nImportResponse>("/workflows/import/n8n", {
-        namespace_id: currentNamespace.id,
-        n8n_json: n8nJson,
+        namespaceId: currentNamespace.id,
+        n8nJson: n8nJson,
       });
     },
     onSuccess: (data) => {
@@ -205,9 +205,9 @@ function WorkflowsPage() {
       }
       const data: WorkflowCreate = {
         name: "New Workflow",
-        namespace_id: currentNamespace.id,
+        namespaceId: currentNamespace.id,
         description: "Created with AI Builder",
-        parent_folder_id: currentFolderId || undefined,
+        parentFolderId: currentFolderId || undefined,
       };
       return api.post<Workflow>("/workflows", data);
     },
@@ -231,9 +231,9 @@ function WorkflowsPage() {
         throw new Error("No namespace selected");
       }
       return api.post<Folder>("/folders", {
-        namespace_id: currentNamespace.id,
+        namespaceId: currentNamespace.id,
         name,
-        parent_folder_id: currentFolderId || undefined,
+        parentFolderId: currentFolderId || undefined,
       });
     },
     onSuccess: () => {
@@ -651,13 +651,13 @@ function WorkflowRow({ workflow, onDelete }: WorkflowRowProps) {
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
-  // Extract unique provider types from last_deployment, filtering out "builtin"
-  const providerTypes = workflow.last_deployment?.provider_definitions
+  // Extract unique provider types from lastDeployment, filtering out "builtin"
+  const providerTypes = workflow.lastDeployment?.providerDefinitions
     ? Array.from(
         new Set(
-          workflow.last_deployment.provider_definitions
-            .map((p) => p.type)
-            .filter((type) => type.toLowerCase() !== "builtin")
+          workflow.lastDeployment.providerDefinitions
+            .map((p: { type: string }) => p.type)
+            .filter((type: string) => type.toLowerCase() !== "builtin")
         )
       )
     : [];
@@ -691,10 +691,10 @@ function WorkflowRow({ workflow, onDelete }: WorkflowRowProps) {
     });
   };
 
-  const lastDeployedRelative = workflow.last_deployment?.deployed_at
-    ? formatRelativeTime(new Date(workflow.last_deployment.deployed_at))
+  const lastDeployedRelative = workflow.lastDeployment?.deployedAt
+    ? formatRelativeTime(new Date(workflow.lastDeployment.deployedAt))
     : "—";
-  const createdDate = formatDate(workflow.created_at);
+  const createdDate = formatDate(workflow.createdAt);
 
   const toggleMutation = useMutation({
     mutationFn: async (active: boolean) => {
@@ -790,7 +790,7 @@ function WorkflowRow({ workflow, onDelete }: WorkflowRowProps) {
 
       {/* Active Toggle */}
       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-        {!workflow.last_deployment ? (
+        {!workflow.lastDeployment ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="inline-flex">

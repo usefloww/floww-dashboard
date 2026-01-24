@@ -3,6 +3,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from '@tailwindcss/vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from "@vitejs/plugin-react";
+import path from 'path';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,35 +20,10 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      '@': '/src'
+      '@': path.resolve(__dirname, 'src'),
+      '~': path.resolve(__dirname)
     }
   },
-
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:8000",
-        changeOrigin: false,
-        secure: false,
-      },
-      "/auth": {
-        target: "http://localhost:8000",
-        changeOrigin: false,
-        secure: false,
-      },
-      "/admin": {
-        target: "http://localhost:8000",
-        changeOrigin: false,
-        secure: false,
-      },
-      "/oauth": {
-        target: "http://localhost:8000",
-        changeOrigin: false,
-        secure: false,
-      },
-    },
-  },
-
   build: {
     sourcemap: true
   }

@@ -37,7 +37,7 @@ function EditDeploymentPage() {
     if (!deployment) return;
 
     // Filter to only TypeScript/JavaScript files
-    const allFiles = deployment.user_code?.files || {};
+    const allFiles = deployment.userCode?.files || {};
     const tsFiles: Record<string, string> = {};
     Object.keys(allFiles).forEach((fileName) => {
       if (
@@ -51,7 +51,7 @@ function EditDeploymentPage() {
     });
 
     setCode(tsFiles);
-    const initialEntrypoint = deployment.user_code?.entrypoint || "";
+    const initialEntrypoint = deployment.userCode?.entrypoint || "";
 
     // Find the initial file to display (entrypoint if it's a TS file, or first TS file)
     const initialFile =
@@ -71,7 +71,7 @@ function EditDeploymentPage() {
       setError(null);
       
       // Merge TS files back with original files to preserve non-TS files
-      const allFiles = deployment.user_code?.files || {};
+      const allFiles = deployment.userCode?.files || {};
       const updatedFiles = { ...allFiles, ...code };
       
       await api.patch(`/workflow_deployments/${deploymentId}`, {

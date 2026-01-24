@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.env.docker
 
 # Editor directories and files
 .idea
@@ -23,3 +24,7 @@ dist-ssr
 graphql-cache.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
+
+
+coverage
+.adminjs

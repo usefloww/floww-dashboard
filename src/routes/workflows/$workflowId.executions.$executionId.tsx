@@ -106,19 +106,19 @@ function ExecutionDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Received At</h3>
                 <p className="font-mono text-sm text-foreground">
-                  {formatTimestamp(execution.received_at)}
+                  {formatTimestamp(execution.receivedAt)}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Started At</h3>
                 <p className="font-mono text-sm text-foreground">
-                  {formatTimestamp(execution.started_at)}
+                  {formatTimestamp(execution.startedAt)}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Completed At</h3>
                 <p className="font-mono text-sm text-foreground">
-                  {formatTimestamp(execution.completed_at)}
+                  {formatTimestamp(execution.completedAt)}
                 </p>
               </div>
             </div>
@@ -127,7 +127,7 @@ function ExecutionDetailPage() {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Duration</h3>
               <p className="font-mono text-sm text-foreground">
-                {formatDuration(execution.duration_ms)}
+                {formatDuration(execution.durationMs)}
               </p>
             </div>
 
@@ -136,30 +136,30 @@ function ExecutionDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Trigger Type</h3>
                 <p className="font-mono text-sm text-foreground">
-                  {execution.trigger_type || "—"}
+                  {execution.triggerType || "—"}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Trigger ID</h3>
                 <p className="font-mono text-sm text-foreground">
-                  {execution.trigger_id || "—"}
+                  {execution.triggerId || "—"}
                 </p>
               </div>
             </div>
 
             {/* Webhook Information */}
-            {(execution.webhook_path || execution.webhook_method) && (
+            {(execution.webhookPath || execution.webhookMethod) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Webhook Method</h3>
                   <p className="font-mono text-sm text-foreground">
-                    {execution.webhook_method || "—"}
+                    {execution.webhookMethod || "—"}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Webhook Path</h3>
                   <p className="font-mono text-sm text-foreground">
-                    {execution.webhook_path || "—"}
+                    {execution.webhookPath || "—"}
                   </p>
                 </div>
               </div>
@@ -169,17 +169,17 @@ function ExecutionDetailPage() {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Deployment ID</h3>
               <p className="font-mono text-sm text-foreground">
-                {execution.deployment_id || "—"}
+                {execution.deploymentId || "—"}
               </p>
             </div>
 
             {/* Error Message */}
-            {execution.error_message && (
+            {execution.errorMessage && (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Error Message</h3>
                 <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg p-4">
                   <pre className="text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap font-mono">
-                    {execution.error_message}
+                    {execution.errorMessage}
                   </pre>
                 </div>
               </div>
@@ -188,10 +188,10 @@ function ExecutionDetailPage() {
             {/* Logs */}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Logs</h3>
-              {execution.log_entries && execution.log_entries.length > 0 ? (
+              {execution.logEntries && execution.logEntries.length > 0 ? (
                 <div className="bg-zinc-900 dark:bg-zinc-950 border border-zinc-700 dark:border-zinc-800 rounded-lg overflow-hidden max-h-96 overflow-auto">
                   <div className="divide-y divide-zinc-700/50">
-                    {execution.log_entries.map((log) => (
+                    {execution.logEntries.map((log: { id: string; timestamp: string; level: string; message: string }) => (
                       <div
                         key={log.id}
                         className="px-4 py-2 flex items-start gap-3"

@@ -1032,16 +1032,16 @@ function OtherTab({
 
   const updateMutation = useMutation({
     mutationFn: async (displayName: string) => {
-      return api.patch<{ display_name: string }>(
+      return api.patch<{ displayName: string }>(
         `/organizations/${organizationId}`,
-        { display_name: displayName }
+        { displayName: displayName }
       );
     },
     onSuccess: (data) => {
       setIsEditing(false);
       setUpdateError(null);
-      if (onNameUpdated && data.display_name) {
-        onNameUpdated(data.display_name);
+      if (onNameUpdated && data.displayName) {
+        onNameUpdated(data.displayName);
       }
     },
     onError: (error) => {
@@ -1200,7 +1200,7 @@ function OrganizationSettings() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">
-          {organization.display_name}
+          {organization.displayName}
         </h1>
         <p className="text-muted-foreground mt-1">
           Manage your organization settings
@@ -1241,7 +1241,7 @@ function OrganizationSettings() {
         ) : activeTab === "other" ? (
           <OtherTab
             organizationId={organization.id}
-            organizationName={organization.display_name}
+            organizationName={organization.displayName}
             onNameUpdated={handleNameUpdated}
           />
         ) : null}

@@ -31,8 +31,9 @@ export const Route = createRootRoute({
   }),
   component: RootComponent,
     beforeLoad: async ({ location }) => {
-    // Skip authentication for health check endpoint
-    if (location.pathname === '/health') {
+    // Skip authentication for public endpoints
+    const publicPaths = ['/health', '/auth/login', '/auth/callback', '/auth/logout']
+    if (publicPaths.some(path => location.pathname.startsWith(path))) {
       return {}
     }
 

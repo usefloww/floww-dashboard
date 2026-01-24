@@ -25,7 +25,7 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
     queryKey: ['service-accounts', organizationId],
     queryFn: async () => {
       const data = await api.get<ServiceAccountsListResponse>("/service_accounts", {
-        params: { organization_id: organizationId },
+        params: { organizationId: organizationId },
       });
       return data.results || [];
     },
@@ -63,7 +63,7 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
   const errorMessage = error ? handleApiError(error) : null;
 
   const isApiKeyRevoked = (apiKey: ApiKey) => {
-    return apiKey.revoked_at !== null && apiKey.revoked_at !== undefined;
+    return apiKey.revokedAt !== null && apiKey.revokedAt !== undefined;
   };
 
   const handleRevokeApiKey = (serviceAccountId: string, apiKeyId: string) => {
@@ -127,7 +127,7 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
                           {serviceAccount.name}
                         </h3>
                         <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                          {serviceAccount.api_keys.length} key{serviceAccount.api_keys.length !== 1 ? 's' : ''}
+                          {serviceAccount.apiKeys.length} key{serviceAccount.apiKeys.length !== 1 ? 's' : ''}
                         </span>
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -159,14 +159,14 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
                     </div>
                   </div>
 
-                  {serviceAccount.api_keys.length === 0 ? (
+                  {serviceAccount.apiKeys.length === 0 ? (
                     <div className="text-sm text-muted-foreground py-2">
                       No API keys created yet.
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <div className="text-sm font-medium text-foreground mb-2">API Keys:</div>
-                      {serviceAccount.api_keys.map((apiKey) => (
+                      {serviceAccount.apiKeys.map((apiKey) => (
                         <div
                           key={apiKey.id}
                           className={`flex items-center justify-between p-3 rounded-lg border ${
@@ -191,12 +191,12 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>
-                                  Created {new Date(apiKey.created_at).toLocaleDateString()}
+                                  Created {new Date(apiKey.createdAt).toLocaleDateString()}
                                 </span>
                               </div>
-                              {apiKey.last_used_at && (
+                              {apiKey.lastUsedAt && (
                                 <span>
-                                  Last used {new Date(apiKey.last_used_at).toLocaleDateString()}
+                                  Last used {new Date(apiKey.lastUsedAt).toLocaleDateString()}
                                 </span>
                               )}
                             </div>

@@ -114,7 +114,7 @@ export function OrganizationUserManagement({
 
   const handleRemoveMember = () => {
     if (memberToRemove) {
-      removeMemberMutation.mutate(memberToRemove.user_id);
+      removeMemberMutation.mutate(memberToRemove.userId);
     }
   };
 
@@ -145,19 +145,19 @@ export function OrganizationUserManagement({
   };
 
   const getUserInitials = (user: OrganizationUser) => {
-    if (user.first_name && user.last_name) {
-      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
     }
-    if (user.first_name) {
-      return user.first_name.substring(0, 2).toUpperCase();
+    if (user.firstName) {
+      return user.firstName.substring(0, 2).toUpperCase();
     }
-    if (user.last_name) {
-      return user.last_name.substring(0, 2).toUpperCase();
+    if (user.lastName) {
+      return user.lastName.substring(0, 2).toUpperCase();
     }
     if (user.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
-    return (user.workos_user_id || user.id).substring(0, 2).toUpperCase();
+    return (user.workosUserId || user.id).substring(0, 2).toUpperCase();
   };
 
   const getEmailInitials = (email: string) => {
@@ -219,7 +219,7 @@ export function OrganizationUserManagement({
                       <div className="text-sm font-medium text-foreground">{invitation.email}</div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                        Expires {new Date(invitation.expiresAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
@@ -282,13 +282,13 @@ export function OrganizationUserManagement({
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-foreground">
-                                {member.user.first_name && member.user.last_name
-                                  ? `${member.user.first_name} ${member.user.last_name}`
-                                  : member.user.email || member.user.workos_user_id
+                                {member.user.firstName && member.user.lastName
+                                  ? `${member.user.firstName} ${member.user.lastName}`
+                                  : member.user.email || member.user.workosUserId
                                 }
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {member.user.email && (member.user.first_name || member.user.last_name) && (
+                                {member.user.email && (member.user.firstName || member.user.lastName) && (
                                   <div>{member.user.email}</div>
                                 )}
                               </div>
@@ -308,21 +308,21 @@ export function OrganizationUserManagement({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                               <DropdownMenuItem
-                                onClick={() => updateRoleMutation.mutate({ userId: member.user_id, role: OrganizationRole.OWNER })}
+                                onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: OrganizationRole.OWNER })}
                                 disabled={member.role === OrganizationRole.OWNER}
                               >
                                 <Crown className="h-4 w-4 mr-2 text-yellow-600" />
                                 Owner
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => updateRoleMutation.mutate({ userId: member.user_id, role: OrganizationRole.ADMIN })}
+                                onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: OrganizationRole.ADMIN })}
                                 disabled={member.role === OrganizationRole.ADMIN}
                               >
                                 <Shield className="h-4 w-4 mr-2 text-blue-600" />
                                 Admin
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => updateRoleMutation.mutate({ userId: member.user_id, role: OrganizationRole.MEMBER })}
+                                onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: OrganizationRole.MEMBER })}
                                 disabled={member.role === OrganizationRole.MEMBER}
                               >
                                 <User className="h-4 w-4 mr-2" />
@@ -334,7 +334,7 @@ export function OrganizationUserManagement({
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <Calendar className="h-3 w-3" />
-                            <span>{new Date(member.created_at).toLocaleDateString()}</span>
+                            <span>{new Date(member.createdAt).toLocaleDateString()}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -367,13 +367,13 @@ export function OrganizationUserManagement({
                       </div>
                       <div>
                         <div className="font-medium text-foreground">
-                          {member.user.first_name && member.user.last_name
-                            ? `${member.user.first_name} ${member.user.last_name}`
-                            : member.user.email || member.user.workos_user_id
+                          {member.user.firstName && member.user.lastName
+                            ? `${member.user.firstName} ${member.user.lastName}`
+                            : member.user.email || member.user.workosUserId
                           }
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {member.user.email && (member.user.first_name || member.user.last_name) && (
+                          {member.user.email && (member.user.firstName || member.user.lastName) && (
                             <div>{member.user.email}</div>
                           )}
                         </div>
@@ -397,7 +397,7 @@ export function OrganizationUserManagement({
                     </div>
                     <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      <span>{new Date(member.created_at).toLocaleDateString()}</span>
+                      <span>{new Date(member.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -461,8 +461,8 @@ export function OrganizationUserManagement({
               <DialogDescription>
                 Are you sure you want to remove{" "}
                 <strong>
-                  {memberToRemove?.user.first_name && memberToRemove?.user.last_name
-                    ? `${memberToRemove.user.first_name} ${memberToRemove.user.last_name}`
+                  {memberToRemove?.user.firstName && memberToRemove?.user.lastName
+                    ? `${memberToRemove.user.firstName} ${memberToRemove.user.lastName}`
                     : memberToRemove?.user.email || "this member"}
                 </strong>{" "}
                 from the organization?

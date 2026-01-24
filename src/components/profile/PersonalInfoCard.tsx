@@ -9,16 +9,16 @@ interface PersonalInfoCardProps {
 
 export function PersonalInfoCard({ user }: PersonalInfoCardProps) {
   const getInitials = () => {
-    const first = user.first_name?.[0] || '';
-    const last = user.last_name?.[0] || '';
+    const first = user.firstName?.[0] || '';
+    const last = user.lastName?.[0] || '';
     return `${first}${last}`.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U';
   };
 
   const getFullName = () => {
-    if (user.first_name && user.last_name) {
-      return `${user.first_name} ${user.last_name}`;
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
     }
-    return user.first_name || user.last_name || 'User';
+    return user.firstName || user.lastName || 'User';
   };
 
   const formatDate = (dateString: string | null) => {
@@ -63,7 +63,7 @@ export function PersonalInfoCard({ user }: PersonalInfoCardProps) {
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Member since</p>
-                <p className="font-medium">{formatDate(user.created_at)}</p>
+                <p className="font-medium">{formatDate(user.createdAt)}</p>
               </div>
             </div>
           </div>

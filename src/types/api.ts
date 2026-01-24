@@ -2,17 +2,17 @@
 
 export interface Organization {
   id: string;
-  display_name: string;
-  created_at: string;
-  updated_at: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface OrganizationCreate {
-  display_name: string;
+  displayName: string;
 }
 
 export interface OrganizationUpdate {
-  display_name?: string;
+  displayName?: string;
 }
 
 export enum OrganizationRole {
@@ -23,23 +23,23 @@ export enum OrganizationRole {
 
 export interface OrganizationUser {
   id: string;
-  workos_user_id: string | null;
+  workosUserId: string | null;
   email?: string;
-  first_name?: string;
-  last_name?: string;
-  created_at: string;
+  firstName?: string;
+  lastName?: string;
+  createdAt: string;
 }
 
 export interface OrganizationMember {
   id: string;
-  user_id: string;
+  userId: string;
   role: OrganizationRole;
-  created_at: string;
+  createdAt: string;
   user: OrganizationUser;
 }
 
 export interface OrganizationMemberCreate {
-  user_id: string;
+  userId: string;
   role: OrganizationRole;
 }
 
@@ -52,82 +52,82 @@ export interface Invitation {
   id: string;
   email: string;
   state: string;
-  created_at: string;
-  expires_at: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export interface InvitationCreate {
   email: string;
   role?: string;
-  expires_in_days?: number;
+  expiresInDays?: number;
 }
 
 // SSO types
 export interface SSOSetupRequest {
-  return_url?: string;
-  success_url?: string;
+  returnUrl?: string;
+  successUrl?: string;
 }
 
 export interface SSOSetupResponse {
-  admin_portal_link: string;
+  adminPortalLink: string;
 }
 
 export interface CreatedByUser {
   id: string;
   email?: string;
-  first_name?: string;
-  last_name?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface Workflow {
   id: string;
   name: string;
   description?: string;
-  namespace_id: string;
-  parent_folder_id?: string | null;
-  created_by_id: string;
-  created_by?: CreatedByUser;
-  created_at: string;
-  updated_at: string;
+  namespaceId: string;
+  parentFolderId?: string | null;
+  createdById: string;
+  createdBy?: CreatedByUser;
+  createdAt: string;
+  updatedAt: string;
   active?: boolean | null;
-  last_deployment?: {
-    deployed_at: string;
-    provider_definitions?: Array<{ type: string; alias: string }>;
+  lastDeployment?: {
+    deployedAt: string;
+    providerDefinitions?: { type: string; alias: string }[];
   } | null;
 }
 
 export interface WorkflowCreate {
   name: string;
-  namespace_id: string;
+  namespaceId: string;
   description?: string;
-  parent_folder_id?: string;
+  parentFolderId?: string;
 }
 
 export interface WorkflowUpdate {
   name?: string;
   description?: string;
-  namespace_id?: string;
-  parent_folder_id?: string | null;
+  namespaceId?: string;
+  parentFolderId?: string | null;
   active?: boolean;
 }
 
 // Folder types
 export interface Folder {
   id: string;
-  namespace_id: string;
+  namespaceId: string;
   name: string;
-  parent_folder_id: string | null;
+  parentFolderId: string | null;
 }
 
 export interface FolderCreate {
-  namespace_id: string;
+  namespaceId: string;
   name: string;
-  parent_folder_id?: string;
+  parentFolderId?: string;
 }
 
 export interface FolderUpdate {
   name?: string;
-  parent_folder_id?: string | null;
+  parentFolderId?: string | null;
 }
 
 export interface FolderWithPath extends Folder {
@@ -142,20 +142,20 @@ export interface Provider {
   id: string;
   alias: string;
   type: string;
-  namespace_id: string;
+  namespaceId: string;
   config: Record<string, any>;
   // Optional fields that may not be present in backend response
   status?: 'connected' | 'disconnected' | 'pending';
-  created_at?: string;
-  updated_at?: string;
-  last_used_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastUsedAt?: string;
   // Legacy field name for compatibility
   name?: string;
   configuration?: Record<string, string | number | boolean>;
 }
 
 export interface ProviderCreate {
-  namespace_id: string;
+  namespaceId: string;
   type: string;
   alias: string;
   config: Record<string, any>;
@@ -178,18 +178,18 @@ export interface ProviderSetupStep {
   // For choice type
   options?: string[];
   // For oauth type
-  provider_name?: string;
+  providerName?: string;
   scopes?: string[];
-  redirect_uri?: string;
+  redirectUri?: string;
   // For info type
   message?: string;
-  action_text?: string;
-  action_url?: string;
+  actionText?: string;
+  actionUrl?: string;
 }
 
 export interface ProviderType {
-  provider_type: string;
-  setup_steps: ProviderSetupStep[];
+  providerType: string;
+  setupSteps: ProviderSetupStep[];
 }
 
 export interface Namespace {
@@ -199,18 +199,19 @@ export interface Namespace {
   };
   organization?: {
     id: string;
-    display_name: string;
+    displayName: string;
   };
 }
 
 // User from whoami endpoint
 export interface User {
   id: string;
-  workos_user_id: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  created_at: string | null;
+  workosUserId: string | null;
+  userType: 'human' | 'service_account';
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  createdAt: string | null;
 }
 
 // Generic list response wrapper
@@ -234,15 +235,15 @@ export enum WorkflowDeploymentStatus {
 
 export interface WorkflowDeployment {
   id: string;
-  workflow_id: string;
-  runtime_id: string;
-  deployed_by_id?: string | null;
-  user_code: {
+  workflowId: string;
+  runtimeId: string;
+  deployedById?: string | null;
+  userCode: {
     files: Record<string, string>;
     entrypoint: string;
   };
   status: WorkflowDeploymentStatus;
-  deployed_at: string;
+  deployedAt: string;
   note?: string | null;
   webhooks?: Array<{
     id: string;
@@ -261,25 +262,25 @@ export interface ApiKey {
   id: string;
   name: string;
   prefix: string;
-  created_at: string;
-  last_used_at?: string | null;
-  revoked_at?: string | null;
+  createdAt: string;
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
 }
 
 export interface ApiKeyCreatedResponse extends ApiKey {
-  api_key: string;
+  apiKey: string;
 }
 
 export interface ServiceAccount {
   id: string;
   name: string;
-  organization_id: string;
-  api_keys: ApiKey[];
+  organizationId: string;
+  apiKeys: ApiKey[];
 }
 
 export interface ServiceAccountCreate {
   name: string;
-  organization_id: string;
+  organizationId: string;
 }
 
 export interface ServiceAccountUpdate {
@@ -306,7 +307,7 @@ export type LogLevel = "debug" | "info" | "warn" | "error" | "log";
 
 export interface ExecutionLogEntry {
   id: string;
-  execution_id: string;
+  executionId: string;
   timestamp: string;
   level: LogLevel;
   message: string;
@@ -314,19 +315,19 @@ export interface ExecutionLogEntry {
 
 export interface ExecutionHistory {
   id: string;
-  workflow_id: string;
-  trigger_id: string | null;
-  deployment_id: string | null;
+  workflowId: string;
+  triggerId: string | null;
+  deploymentId: string | null;
   status: ExecutionStatus;
-  received_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-  duration_ms: number | null;
-  error_message: string | null;
-  log_entries: ExecutionLogEntry[] | null;
-  trigger_type: string | null;
-  webhook_path: string | null;
-  webhook_method: string | null;
+  receivedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  durationMs: number | null;
+  errorMessage: string | null;
+  logEntries: ExecutionLogEntry[] | null;
+  triggerType: string | null;
+  webhookPath: string | null;
+  webhookMethod: string | null;
 }
 
 export interface ExecutionHistoryResponse {
@@ -335,7 +336,7 @@ export interface ExecutionHistoryResponse {
 }
 
 export interface WorkflowLogsResponse {
-  workflow_id: string;
+  workflowId: string;
   logs: ExecutionLogEntry[];
   limit: number;
   offset: number;
@@ -349,15 +350,15 @@ export interface ExecutionDaySummary {
   started: number;
   received: number;
   timeout: number;
-  no_deployment: number;
+  noDeployment: number;
 }
 
 export interface SummaryResponse {
-  executions_by_day: ExecutionDaySummary[];
-  total_executions: number;
-  total_completed: number;
-  total_failed: number;
-  period_days: number;
+  executionsByDay: ExecutionDaySummary[];
+  totalExecutions: number;
+  totalCompleted: number;
+  totalFailed: number;
+  periodDays: number;
 }
 
 // Access Control types
@@ -380,10 +381,10 @@ export enum ResourceType {
 
 export interface ProviderAccessEntry {
   id: string;
-  user_id: string;
-  user_email?: string;
-  user_first_name?: string;
-  user_last_name?: string;
+  userId: string;
+  userEmail?: string;
+  userFirstName?: string;
+  userLastName?: string;
   role: AccessRole;
 }
 
@@ -392,7 +393,7 @@ export interface ProviderAccessListResponse {
 }
 
 export interface GrantUserProviderAccessRequest {
-  user_id: string;
+  userId: string;
   role: AccessRole;
 }
 

@@ -124,10 +124,10 @@ export function WorkflowLogs({ workflowId }: WorkflowLogsProps) {
                   {getLevelBadge(log.level)}
                   <Link
                     to="/workflows/$workflowId/executions/$executionId"
-                    params={{ workflowId, executionId: log.execution_id }}
+                    params={{ workflowId, executionId: log.executionId }}
                     className="font-mono text-xs text-zinc-500 hover:text-zinc-300 whitespace-nowrap"
                   >
-                    {log.execution_id.substring(0, 8)}
+                    {log.executionId.substring(0, 8)}
                   </Link>
                   <pre className="text-sm text-zinc-100 whitespace-pre-wrap font-mono flex-1 break-all">
                     {log.message}

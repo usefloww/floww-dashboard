@@ -55,7 +55,7 @@ function HomePage() {
         return null;
       }
       return await api.get<SummaryResponse>("/summary", {
-        params: { namespace_id: currentNamespace.id, days: 7 },
+        params: { namespaceId: currentNamespace.id, days: 7 },
       });
     },
     enabled: !!currentNamespace?.id,

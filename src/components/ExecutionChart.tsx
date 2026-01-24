@@ -18,10 +18,10 @@ export function ExecutionChart({ data, isLoading, error }: ExecutionChartProps) 
     if (!data) return [];
 
     // Format data for the chart - show last 7 days
-    const daysToShow = Math.min(7, data.executions_by_day.length);
-    const recentData = data.executions_by_day.slice(-daysToShow);
+    const daysToShow = Math.min(7, data.executionsByDay.length);
+    const recentData = data.executionsByDay.slice(-daysToShow);
 
-    return recentData.map((day) => ({
+    return recentData.map((day: { date: string; completed: number; total: number }) => ({
       date: new Date(day.date).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -67,7 +67,7 @@ export function ExecutionChart({ data, isLoading, error }: ExecutionChartProps) 
     );
   }
 
-  if (!data || data.total_executions === 0) {
+  if (!data || data.totalExecutions === 0) {
     return (
       <div className="bg-card border border-border rounded-lg p-6">
         <div className="text-center text-muted-foreground">
@@ -95,15 +95,15 @@ export function ExecutionChart({ data, isLoading, error }: ExecutionChartProps) 
         <div>
           <p className="text-sm text-muted-foreground mb-1">Total Executions</p>
           <p className="text-3xl font-bold text-foreground">
-            {data.total_executions.toLocaleString()}
+            {data.totalExecutions.toLocaleString()}
           </p>
         </div>
         <div>
           <p className="text-sm text-muted-foreground mb-1">Success Rate</p>
           <p className="text-3xl font-bold text-foreground">
-            {data.total_executions > 0
+            {data.totalExecutions > 0
               ? Math.round(
-                  (data.total_completed / data.total_executions) * 100
+                  (data.totalCompleted / data.totalExecutions) * 100
                 )
               : 0}
             %

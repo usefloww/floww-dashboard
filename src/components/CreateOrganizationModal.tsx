@@ -14,14 +14,14 @@ export function CreateOrganizationModal({
 }: CreateOrganizationModalProps) {
   const { createOrganization, isLoading } = useOrganizationStore();
   const [formData, setFormData] = useState({
-    display_name: "",
+    displayName: "",
   });
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.display_name.trim()) {
+    if (!formData.displayName.trim()) {
       setError("Organization name is required");
       return;
     }
@@ -29,7 +29,7 @@ export function CreateOrganizationModal({
     try {
       setError("");
       await createOrganization(formData);
-      setFormData({ display_name: "" });
+      setFormData({ displayName: "" });
       onOpenChange(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to create organization");
@@ -37,7 +37,7 @@ export function CreateOrganizationModal({
   };
 
   const handleCancel = () => {
-    setFormData({ display_name: "" });
+    setFormData({ displayName: "" });
     setError("");
     onOpenChange(false);
   };
@@ -51,14 +51,14 @@ export function CreateOrganizationModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="display_name" className="block text-sm font-medium text-foreground mb-1">
+            <label htmlFor="displayName" className="block text-sm font-medium text-foreground mb-1">
               Organization Name
             </label>
             <Input
-              id="display_name"
+              id="displayName"
               type="text"
-              value={formData.display_name}
-              onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+              value={formData.displayName}
+              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
               placeholder="My Organization"
               disabled={isLoading}
             />

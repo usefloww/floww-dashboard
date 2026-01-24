@@ -218,7 +218,7 @@ export async function getProviderType(providerType: string): Promise<ProviderTyp
   return api.get<ProviderType>(`/provider_types/${providerType}`);
 }
 
-export async function createProvider(data: { namespace_id: string; type: string; alias: string; config: Record<string, any> }) {
+export async function createProvider(data: { namespaceId: string; type: string; alias: string; config: Record<string, any> }) {
   return api.post<any>("/providers", data);
 }
 

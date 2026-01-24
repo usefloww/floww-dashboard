@@ -17,10 +17,10 @@ export function DeploymentHistory({ workflowId, onEdit }: DeploymentHistoryProps
   const { data, isLoading, error } = useQuery({
     queryKey: ['deployments', workflowId],
     queryFn: async () => {
-      const params = { workflow_id: workflowId };
+      const params = { workflowId: workflowId };
       const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
       const sorted = (data.deployments || []).sort(
-        (a, b) => new Date(b.deployed_at).getTime() - new Date(a.deployed_at).getTime()
+        (a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()
       );
       return sorted;
     },
@@ -78,7 +78,7 @@ function DeploymentCard({
   onEdit 
 }: DeploymentCardProps) {
   // Format timestamp with seconds: YYYY-MM-DD HH:MM:SS
-  const deployedTimestamp = new Date(deployment.deployed_at).toLocaleString('en-US', {
+  const deployedTimestamp = new Date(deployment.deployedAt).toLocaleString('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

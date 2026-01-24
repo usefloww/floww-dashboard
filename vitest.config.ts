@@ -1,16 +1,25 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
-    environment: "node",
+    environment: 'node',
     globals: true,
     testTimeout: 30000, // 30 seconds for E2E tests
     hookTimeout: 30000, // 30 seconds for setup/teardown
-    setupFiles: ["./tests/setup.ts"], // Global test setup (MSW, mocks)
+    globalSetup: ['./tests/setup/run-migrations.ts'], // Runs ONCE before all tests
+    setupFiles: ['./tests/setup/global-setup.ts'], // Runs per test file
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true, // Run tests serially for transaction control
+      },
+    },
   },
   resolve: {
     alias: {
-      "@": "/src",
+      '@': path.resolve(__dirname, './src'),
+      '~': path.resolve(__dirname, './'),
     },
   },
 });

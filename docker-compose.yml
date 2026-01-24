@@ -1,0 +1,88 @@
+services:
+  # Dashboard application (development)
+  # app:
+  #   container_name: floww-dashboard-app
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.dev
+  #   volumes:
+  #     # Source code directories (hot reload)
+  #     - ./src:/app/src
+  #     - ./server:/app/server
+  #     - ./public:/app/public
+  #     # Config files
+  #     - ./vite.config.ts:/app/vite.config.ts
+  #     - ./tsconfig.json:/app/tsconfig.json
+  #     - ./tsconfig.app.json:/app/tsconfig.app.json
+  #     - ./tsconfig.node.json:/app/tsconfig.node.json
+  #     - ./drizzle.config.ts:/app/drizzle.config.ts
+  #     - ./tailwind.config.cjs:/app/tailwind.config.cjs
+  #     - ./components.json:/app/components.json
+  #   command: pnpm dev --host 0.0.0.0
+  #   environment:
+  #     - NODE_ENV=development
+  #   env_file:
+  #     - .env.docker
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+
+  # Run database migrations
+  migrations:
+    container_name: floww-dashboard-migrations
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      # Only need server code and drizzle config for migrations
+      - ./server:/app/server
+      - ./drizzle.config.ts:/app/drizzle.config.ts
+    command: pnpm db:push
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # Main database (development + test)
+  # Creates both 'postgres' (dev) and 'floww_test' (test) databases
+  db:
+    image: postgres:16-alpine
+    container_name: floww-dashboard-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Centrifugo (WebSocket server)
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    container_name: floww-dashboard-centrifugo
+    ports:
+      - "8000:8000"
+    environment:
+      CENTRIFUGO_API_KEY: floww-api-key-dev
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: floww-dev-jwt-secret-key-change-in-production
+      CENTRIFUGO_ADMIN_ENABLED: "true"
+      CENTRIFUGO_ADMIN_INSECURE: "true"
+      CENTRIFUGO_ALLOW_ANONYMOUS: "true"
+    command: centrifugo --config=/etc/centrifugo/config.json
+    volumes:
+      - ./centrifugo/config.json:/etc/centrifugo/config.json
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

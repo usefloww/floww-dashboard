@@ -12,8 +12,8 @@ interface OrganizationState {
   // Actions
   setCurrentOrganization: (org: Organization | null) => void;
   fetchOrganizations: () => Promise<void>;
-  createOrganization: (data: { display_name: string }) => Promise<Organization>;
-  updateOrganization: (id: string, data: { display_name?: string }) => Promise<Organization>;
+  createOrganization: (data: { displayName: string }) => Promise<Organization>;
+  updateOrganization: (id: string, data: { displayName?: string }) => Promise<Organization>;
   deleteOrganization: (id: string) => Promise<void>;
 }
 

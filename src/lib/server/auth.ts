@@ -1,79 +1,88 @@
-import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-import { User } from '@/types/api'
-import { settings } from '@/settings'
-import { cachePerRequest } from './requestCache'
+import { createServerFn } from '@tanstack/react-start';
+import { getRequest } from '@tanstack/react-start/server';
+import { User } from '@/types/api';
+import { cachePerRequest } from './requestCache';
 
 /**
- * Server function to check authentication by calling the backend whoami endpoint
- * This runs on the server and forwards cookies from the browser request
+ * Server function to check authentication
+ * This runs on the server and validates the session directly (no backend call needed)
  *
  * Optimizations:
- * - Checks for session cookie before making backend request
+ * - Checks for session cookie before database lookup
  * - Deduplicates multiple calls within the same request/page load
  */
 export const getCurrentUser = createServerFn({ method: 'GET' }).handler(async () => {
   return cachePerRequest('getCurrentUser', async () => {
     try {
       // Get the request to access headers/cookies
-      const request = getRequest()
-      const cookies = request.headers.get('cookie')
+      const request = getRequest();
+      const cookies = request.headers.get('cookie');
+      const authHeader = request.headers.get('authorization');
 
-      // Early return if no cookies at all
-      if (!cookies) {
-        return null
+      // Early return if no cookies and no auth header
+      if (!cookies && !authHeader) {
+        return null;
       }
 
-      // Check specifically for the session cookie
-      const hasSessionCookie = cookies.split(';').some(cookie =>
-        cookie.trim().startsWith('session=')
-      )
+      // Lazy import to avoid circular dependency issues with Vite SSR
+      const { authenticateRequest } = await import('~/server/services/auth');
 
-      if (!hasSessionCookie) {
-        return null
+      // Authenticate the request
+      const user = await authenticateRequest(cookies, authHeader);
+
+      if (!user) {
+        return null;
       }
 
-      // Call the backend API to check authentication
-      const response = await fetch(`${settings.BACKEND_URL}/api/whoami`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': cookies,
-        },
-      })
+      // Convert to API User type
+      const apiUser: User = {
+        id: user.id,
+        workosUserId: user.workosUserId,
+        userType: user.userType,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        createdAt: user.createdAt.toISOString(),
+      };
 
-      if (!response.ok) {
-        return null
-      }
-
-      const userData = await response.json() as User
-      return userData
+      return apiUser;
     } catch (error) {
-      console.error('Server auth check failed:', error)
-      return null
+      console.error('Server auth check failed:', error);
+      return null;
     }
-  })
-})
+  });
+});
 
 /**
  * Server function to handle logout
- * Calls the backend logout endpoint and returns success status
+ * Clears the session cookie and revokes refresh tokens
  */
 export const logoutUser = createServerFn({ method: 'POST' }).handler(async () => {
   try {
-    const request = getRequest()
-    const cookies = request.headers.get('cookie')
+    // Get the request to access headers/cookies
+    const request = getRequest();
+    const cookies = request.headers.get('cookie');
+    const authHeader = request.headers.get('authorization');
 
-    const response = await fetch(`${settings.BACKEND_URL}/auth/logout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(cookies ? { 'Cookie': cookies } : {}),
-      },
-    })
+    // Only attempt revocation if we have auth info
+    if (cookies || authHeader) {
+      // Lazy import to avoid circular dependency issues with Vite SSR
+      const { authenticateRequest } = await import('~/server/services/auth');
+      const { revokeAllUserTokens } = await import('~/server/services/refresh-token-service');
 
-    return { success: response.ok }
+      // Authenticate the request to get the user
+      const user = await authenticateRequest(cookies, authHeader);
+
+      if (user) {
+        // Revoke all refresh tokens for this user
+        await revokeAllUserTokens(user.id);
+      }
+    }
   } catch (error) {
-    console.error('Server logout failed:', error)
-    return { success: false }
+    // Log but don't fail - logout should still succeed even if revocation fails
+    console.error('Error during session revocation:', error);
   }
-})
+
+  // The client should clear the session cookie
+  return { success: true };
+});

@@ -69,7 +69,7 @@ function ProvidersPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['providers', currentNamespace?.id],
     queryFn: async () => {
-      const params = currentNamespace?.id ? { namespace_id: currentNamespace.id } : undefined;
+      const params = currentNamespace?.id ? { namespaceId: currentNamespace.id } : undefined;
       const data = await api.get<{ results: Provider[] }>("/providers", { params });
       return Array.isArray(data?.results) ? data.results : [];
     },
@@ -248,11 +248,11 @@ interface ProviderRowProps {
 
 function ProviderRow({ provider, onConfigure, onDelete, onManageAccess }: ProviderRowProps) {
   const providerName = provider.alias || provider.name || 'Unnamed Provider';
-  const formattedDate = provider.created_at 
-    ? new Date(provider.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+  const formattedDate = provider.createdAt 
+    ? new Date(provider.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
     : '—';
-  const lastUsedDate = provider.last_used_at 
-    ? new Date(provider.last_used_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+  const lastUsedDate = provider.lastUsedAt 
+    ? new Date(provider.lastUsedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
     : 'Never';
   const status = 'connected';
   const logoUrl = getProviderLogoUrl(provider.type);

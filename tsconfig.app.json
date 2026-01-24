@@ -25,9 +25,10 @@
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "~/*": ["./*"]
     },
     "plugins": []
   },
-  "include": ["src"]
+  "include": ["src", "server"]
 }

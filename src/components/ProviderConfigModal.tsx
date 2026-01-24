@@ -76,7 +76,7 @@ export function ProviderConfigModal({
   useEffect(() => {
     if (isEditMode && provider && providerTypeData) {
       const connected: Record<string, boolean> = {};
-      providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+      providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type === "oauth") {
           // Check if we have OAuth tokens in the config
           connected[step.alias] = !!(provider.config?.access_token);
@@ -95,7 +95,7 @@ export function ProviderConfigModal({
         // Initialize config with existing values, but mask secrets
         const initialConfig: Record<string, string> = {};
         if (providerTypeData) {
-          providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+          providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
             if (step.type === "secret" && provider.config[step.alias]) {
               // Mask existing secrets
               initialConfig[step.alias] = "••••••••";
@@ -126,7 +126,7 @@ export function ProviderConfigModal({
   useEffect(() => {
     if (isEditMode && provider && providerTypeData) {
       const updatedConfig: Record<string, string> = {};
-      providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+      providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type === "secret" && provider.config[step.alias]) {
           updatedConfig[step.alias] = "••••••••";
         } else if (step.type !== "info" && step.type !== "oauth") {
@@ -144,7 +144,7 @@ export function ProviderConfigModal({
         const updatedConfig = { ...prev };
         let hasChanges = false;
         
-        providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+        providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
           // Only set defaults for non-secret fields that don't have values yet
           if (step.type !== "secret" && step.type !== "info" && step.type !== "oauth" && step.type !== "webhook") {
             // Only set default if field doesn't exist or is empty
@@ -161,7 +161,7 @@ export function ProviderConfigModal({
   }, [providerTypeData, isEditMode, open]);
 
   const createMutation = useMutation({
-    mutationFn: async (data: { namespace_id: string; type: string; alias: string; config: Record<string, any> }) => {
+    mutationFn: async (data: { namespaceId: string; type: string; alias: string; config: Record<string, any> }) => {
       return await createProvider(data);
     },
     onSuccess: () => {
@@ -210,7 +210,7 @@ export function ProviderConfigModal({
     // Validate required fields
     const newErrors: Record<string, string> = {};
     if (providerTypeData) {
-          providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+          providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type !== "info" && step.type !== "oauth" && step.type !== "webhook" && step.required) {
           const value = config[step.alias];
           const hasExistingSecret = isEditMode && step.type === "secret" && provider && provider.config[step.alias];
@@ -231,7 +231,7 @@ export function ProviderConfigModal({
     // Build config object, excluding masked secrets in edit mode
     const configToSend: Record<string, any> = {};
     if (providerTypeData) {
-      providerTypeData.setup_steps.forEach((step: ProviderSetupStep) => {
+      providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type !== "info" && step.type !== "oauth") {
           // For webhook steps, include the default value if it exists
           if (step.type === "webhook") {
@@ -272,7 +272,7 @@ export function ProviderConfigModal({
       });
     } else {
       createMutation.mutate({
-        namespace_id: namespaceId,
+        namespaceId: namespaceId,
         type: selectedProviderType,
         alias: alias.trim(),
         config: configToSend,
@@ -305,14 +305,14 @@ export function ProviderConfigModal({
         <div key={step.alias} className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
           <h4 className="font-medium text-blue-900 dark:text-blue-200 mb-1">{step.title}</h4>
           {step.message && <p className="text-sm text-blue-700 dark:text-blue-300">{step.message}</p>}
-          {step.action_url && step.action_text && (
+          {step.actionUrl && step.actionText && (
             <a
-              href={step.action_url}
+              href={step.actionUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 inline-block text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
-              {step.action_text}
+              {step.actionText}
             </a>
           )}
         </div>
@@ -371,7 +371,7 @@ export function ProviderConfigModal({
         setOauthLoading(step.alias);
 
         try {
-          const { auth_url } = await getOAuthAuthorizeUrl(step.provider_name!, provider.id);
+          const { auth_url } = await getOAuthAuthorizeUrl(step.providerName!, provider.id);
 
           // Open popup for OAuth flow
           const width = 600;
@@ -590,13 +590,13 @@ export function ProviderConfigModal({
           </div>
 
           <Loader isLoading={isLoadingType} loadingMessage="Loading provider configuration...">
-            {providerTypeData && providerTypeData.setup_steps.length > 0 && (
+            {providerTypeData && providerTypeData.setupSteps.length > 0 && (
               <div className="space-y-4 border-t pt-4">
                 <h3 className="font-medium text-sm">Configuration</h3>
-                {providerTypeData.setup_steps.map((step: ProviderSetupStep) => renderSetupStep(step))}
+                {providerTypeData.setupSteps.map((step: ProviderSetupStep) => renderSetupStep(step))}
               </div>
             )}
-            {providerTypeData && providerTypeData.setup_steps.length === 0 && (
+            {providerTypeData && providerTypeData.setupSteps.length === 0 && (
               <div className="text-sm text-muted-foreground border-t pt-4">
                 This provider type requires no additional configuration.
               </div>

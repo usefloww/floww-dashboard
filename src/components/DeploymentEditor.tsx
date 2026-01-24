@@ -31,10 +31,10 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
   const { data: allDeployments = [], isLoading: isLoadingDeployments } = useQuery({
     queryKey: ['deployments', workflowId],
     queryFn: async () => {
-      const params = { workflow_id: workflowId };
+      const params = { workflowId: workflowId };
       const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
       const sorted = (data.deployments || []).sort(
-        (a, b) => new Date(b.deployed_at).getTime() - new Date(a.deployed_at).getTime()
+        (a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()
       );
       return sorted;
     },
@@ -66,7 +66,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
     if (!deployment) return;
 
     // Filter to only TypeScript/JavaScript files
-    const allFiles = deployment.user_code?.files || {};
+    const allFiles = deployment.userCode?.files || {};
     const tsFiles: Record<string, string> = {};
     Object.keys(allFiles).forEach((fileName) => {
       if (
@@ -80,7 +80,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
     });
 
     setCode(tsFiles);
-    const initialEntrypoint = deployment.user_code?.entrypoint || "";
+    const initialEntrypoint = deployment.userCode?.entrypoint || "";
     const initialFile =
       (initialEntrypoint && (initialEntrypoint.endsWith('.ts') || initialEntrypoint.endsWith('.tsx') || initialEntrypoint.endsWith('.js') || initialEntrypoint.endsWith('.jsx')) && tsFiles[initialEntrypoint])
         ? initialEntrypoint
@@ -99,14 +99,14 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
 
       // Get all files from original deployment to preserve non-TS files
       const allFiles = {
-        ...deployment.user_code.files,
+        ...deployment.userCode.files,
         ...code,
       };
 
       // Create a new deployment instead of updating
       const deploymentData = {
-        workflow_id: workflowId,
-        runtime_id: deployment.runtime_id,
+        workflowId: workflowId,
+        runtimeId: deployment.runtimeId,
         code: {
           files: allFiles,
           entrypoint: currentFile || entrypoint,
@@ -148,7 +148,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
 
   // Format deployment date for dropdown
   const formatDeploymentDate = (deployment: WorkflowDeployment) => {
-    const date = new Date(deployment.deployed_at);
+    const date = new Date(deployment.deployedAt);
     return `Version ${deployment.id.slice(0, 8)} - ${date.toLocaleString()}`;
   };
 

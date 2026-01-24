@@ -34,7 +34,7 @@ export function CreateApiKeyModal({
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['service-accounts', organizationId] });
-      setCreatedApiKey(data.api_key);
+      setCreatedApiKey(data.apiKey);
       showSuccessNotification("API key created", "Make sure to copy the key now - it won't be shown again.");
     },
     onError: (error) => {

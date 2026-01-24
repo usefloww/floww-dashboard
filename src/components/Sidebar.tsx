@@ -69,7 +69,7 @@ export function Sidebar() {
   } = useNamespaceStore();
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ display_name: "" });
+  const [formData, setFormData] = useState({ displayName: "" });
   const [createError, setCreateError] = useState("");
 
   useEffect(() => {
@@ -85,14 +85,14 @@ export function Sidebar() {
     e.preventDefault();
     setCreateError("");
 
-    if (!formData.display_name.trim()) {
+    if (!formData.displayName.trim()) {
       setCreateError("Organization name is required");
       return;
     }
 
     try {
-      await createNamespace({ display_name: formData.display_name });
-      setFormData({ display_name: "" });
+      await createNamespace({ displayName: formData.displayName });
+      setFormData({ displayName: "" });
       setIsCreateDialogOpen(false);
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : "Failed to create organization");
@@ -101,16 +101,16 @@ export function Sidebar() {
 
   const getUserInitials = () => {
     if (!user) return "U";
-    if (user.first_name && user.last_name) {
-      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
     }
-    if (user.first_name) return user.first_name.substring(0, 2).toUpperCase();
-    if (user.last_name) return user.last_name.substring(0, 2).toUpperCase();
+    if (user.firstName) return user.firstName.substring(0, 2).toUpperCase();
+    if (user.lastName) return user.lastName.substring(0, 2).toUpperCase();
     if (user.email) return user.email.substring(0, 2).toUpperCase();
-    return (user.workos_user_id || user.id).substring(0, 2).toUpperCase();
+    return (user.workosUserId || user.id).substring(0, 2).toUpperCase();
   };
 
-  const currentDisplayName = currentNamespace?.organization.display_name || "Select Workspace";
+  const currentDisplayName = currentNamespace?.organization.displayName || "Select Workspace";
 
   return (
     <div 
@@ -135,9 +135,9 @@ export function Sidebar() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  {user?.first_name && user?.last_name
-                    ? `${user.first_name} ${user.last_name}`
-                    : user?.first_name || user?.last_name || user?.email || "User"}
+                  {user?.firstName && user?.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : user?.firstName || user?.lastName || user?.email || "User"}
                 </TooltipContent>
               </Tooltip>
             ) : (
@@ -149,9 +149,9 @@ export function Sidebar() {
                 </Avatar>
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {user?.first_name && user?.last_name
-                      ? `${user.first_name} ${user.last_name}`
-                      : user?.first_name || user?.last_name || user?.email || "User"}
+                    {user?.firstName && user?.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.firstName || user?.lastName || user?.email || "User"}
                   </p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -283,7 +283,7 @@ export function Sidebar() {
                     >
                       <Building2 className="h-4 w-4" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{namespace.organization.display_name}</div>
+                        <div className="font-medium truncate">{namespace.organization.displayName}</div>
                       </div>
                     </button>
                   ))}
@@ -304,11 +304,11 @@ export function Sidebar() {
                         </DialogHeader>
                         <form onSubmit={handleCreateNamespace} className="space-y-4">
                           <div className="space-y-2">
-                            <label htmlFor="display_name" className="text-sm font-medium">Organization Name</label>
+                            <label htmlFor="displayName" className="text-sm font-medium">Organization Name</label>
                             <Input
-                              id="display_name"
-                              value={formData.display_name}
-                              onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
+                              id="displayName"
+                              value={formData.displayName}
+                              onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
                               placeholder="My Organization"
                               required
                             />

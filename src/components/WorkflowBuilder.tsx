@@ -186,7 +186,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
     queryKey: ['providers', currentNamespace?.id],
     queryFn: async () => {
       if (!currentNamespace?.id) return [];
-      const params = { namespace_id: currentNamespace.id };
+      const params = { namespaceId: currentNamespace.id };
       const data = await api.get<{ results: Provider[] }>("/providers", { params });
       return Array.isArray(data?.results) ? data.results : [];
     },
@@ -220,10 +220,10 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   const { data: deploymentsData } = useQuery<WorkflowDeployment[]>({
     queryKey: ['deployments', workflowId],
     queryFn: async () => {
-      const params = { workflow_id: workflowId };
+      const params = { workflowId: workflowId };
       const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
       return (data.deployments || []).sort(
-        (a, b) => new Date(b.deployed_at).getTime() - new Date(a.deployed_at).getTime()
+        (a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()
       );
     },
   });
@@ -235,7 +235,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   const deployMutation = useMutation({
     mutationFn: async () => {
       const deploymentData: Record<string, unknown> = {
-        workflow_id: workflowId,
+        workflowId: workflowId,
         code: {
           files: { "main.ts": code },
           entrypoint: "main.ts",
@@ -243,8 +243,8 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
       };
       
       // Use existing runtime if available, otherwise backend will use default runtime
-      if (latestDeployment?.runtime_id) {
-        deploymentData.runtime_id = latestDeployment.runtime_id;
+      if (latestDeployment?.runtimeId) {
+        deploymentData.runtimeId = latestDeployment.runtimeId;
       }
       
       return api.post("/workflow_deployments", deploymentData);
@@ -288,10 +288,9 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
         `/workflows/${workflowId}/builder/chat`,
         {
           messages: simpleMessages,
-          user_message: userContent,
-          current_code: code,
-          namespace_id: currentNamespace?.id,
-          plan: currentPlan,
+          userMessage: userContent,
+          currentCode: code,
+          namespaceId: currentNamespace?.id,
         },
         {
           timeout: 90000, // 90 seconds for code generation
@@ -450,8 +449,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           messages: simpleMessages,
           user_message: labelString,
           current_code: code,
-          namespace_id: currentNamespace?.id,
-          plan: currentPlan,
+          namespaceId: currentNamespace?.id,
         },
         {
           timeout: 90000, // 90 seconds for code generation

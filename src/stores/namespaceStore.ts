@@ -6,7 +6,7 @@ export interface Namespace {
   id: string;
   organization: {
     id: string;
-    display_name: string;
+    displayName: string;
   };
 }
 
@@ -24,7 +24,7 @@ interface NamespaceState {
   // Actions
   setCurrentNamespace: (namespace: Namespace | null) => void;
   fetchNamespaces: () => Promise<void>;
-  createNamespace: (organizationData: { display_name: string }) => Promise<Namespace>;
+  createNamespace: (organizationData: { displayName: string }) => Promise<Namespace>;
 }
 
 export const useNamespaceStore = create<NamespaceState>()(
@@ -78,7 +78,7 @@ export const useNamespaceStore = create<NamespaceState>()(
 
           // Find the namespace for the newly created organization
           const newNamespace = namespaces.find(
-            ns => ns.organization?.display_name === organizationData.display_name
+            ns => ns.organization?.displayName === organizationData.displayName
           );
 
           // Update state with refreshed namespaces and select the new one

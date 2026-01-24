@@ -93,7 +93,7 @@ export function ProviderAccessManagement({
 
   // Grant access mutation
   const grantAccessMutation = useMutation({
-    mutationFn: async (data: { user_id: string; role: AccessRole }) => {
+    mutationFn: async (data: { userId: string; role: AccessRole }) => {
       return api.post<ProviderAccessEntry>(
         `/access/providers/${providerId}/users`,
         data
@@ -149,9 +149,9 @@ export function ProviderAccessManagement({
   const errorMessage = accessError ? handleApiError(accessError) : null;
 
   // Filter out users who already have access
-  const existingUserIds = new Set(accessList.map((a) => a.user_id));
+  const existingUserIds = new Set(accessList.map((a) => a.userId));
   const availableMembers = members.filter(
-    (m) => !existingUserIds.has(m.user_id)
+    (m) => !existingUserIds.has(m.userId)
   );
 
   const handleGrantAccess = () => {
@@ -159,12 +159,12 @@ export function ProviderAccessManagement({
       setAddError("Please select a user");
       return;
     }
-    grantAccessMutation.mutate({ user_id: selectedUserId, role: selectedRole });
+    grantAccessMutation.mutate({ userId: selectedUserId, role: selectedRole });
   };
 
   const handleRevokeAccess = () => {
     if (userToRemove) {
-      revokeAccessMutation.mutate(userToRemove.user_id);
+      revokeAccessMutation.mutate(userToRemove.userId);
     }
   };
 
@@ -191,18 +191,18 @@ export function ProviderAccessManagement({
   };
 
   const getUserDisplayName = (entry: ProviderAccessEntry) => {
-    if (entry.user_first_name && entry.user_last_name) {
-      return `${entry.user_first_name} ${entry.user_last_name}`;
+    if (entry.userFirstName && entry.userLastName) {
+      return `${entry.userFirstName} ${entry.userLastName}`;
     }
-    return entry.user_email || "Unknown User";
+    return entry.userEmail || "Unknown User";
   };
 
   const getUserInitials = (entry: ProviderAccessEntry) => {
-    if (entry.user_first_name && entry.user_last_name) {
-      return `${entry.user_first_name[0]}${entry.user_last_name[0]}`.toUpperCase();
+    if (entry.userFirstName && entry.userLastName) {
+      return `${entry.userFirstName[0]}${entry.userLastName[0]}`.toUpperCase();
     }
-    if (entry.user_email) {
-      return entry.user_email.substring(0, 2).toUpperCase();
+    if (entry.userEmail) {
+      return entry.userEmail.substring(0, 2).toUpperCase();
     }
     return "??";
   };
@@ -288,11 +288,11 @@ export function ProviderAccessManagement({
                                 <div className="text-sm font-medium text-foreground">
                                   {getUserDisplayName(entry)}
                                 </div>
-                                {entry.user_email &&
-                                  entry.user_first_name &&
-                                  entry.user_last_name && (
+                                {entry.userEmail &&
+                                  entry.userFirstName &&
+                                  entry.userLastName && (
                                     <div className="text-xs text-muted-foreground">
-                                      {entry.user_email}
+                                      {entry.userEmail}
                                     </div>
                                   )}
                               </div>
@@ -315,7 +315,7 @@ export function ProviderAccessManagement({
                                 <DropdownMenuItem
                                   onClick={() =>
                                     updateRoleMutation.mutate({
-                                      userId: entry.user_id,
+                                      userId: entry.userId,
                                       role: AccessRole.OWNER,
                                     })
                                   }
@@ -327,7 +327,7 @@ export function ProviderAccessManagement({
                                 <DropdownMenuItem
                                   onClick={() =>
                                     updateRoleMutation.mutate({
-                                      userId: entry.user_id,
+                                      userId: entry.userId,
                                       role: AccessRole.USER,
                                     })
                                   }
@@ -384,10 +384,10 @@ export function ProviderAccessManagement({
                       </SelectItem>
                     ) : (
                       availableMembers.map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          {member.user.first_name && member.user.last_name
-                            ? `${member.user.first_name} ${member.user.last_name}`
-                            : member.user.email || member.user_id}
+                        <SelectItem key={member.userId} value={member.userId}>
+                          {member.user.firstName && member.user.lastName
+                            ? `${member.user.firstName} ${member.user.lastName}`
+                            : member.user.email || member.userId}
                         </SelectItem>
                       ))
                     )}
