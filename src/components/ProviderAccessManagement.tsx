@@ -97,7 +97,7 @@ export function ProviderAccessManagement({
         data: {
           providerId,
           userId: data.userId,
-          role: data.role === AccessRole.OWNER ? 'owner' : 'user',
+          role: data.role === AccessRole.OWNER ? 'OWNER' : 'USER',
         },
       });
     },
@@ -122,7 +122,7 @@ export function ProviderAccessManagement({
         data: {
           providerId,
           userId: data.userId,
-          role: data.role === AccessRole.OWNER ? 'owner' : 'user',
+          role: data.role === AccessRole.OWNER ? 'OWNER' : 'USER',
         },
       });
     },
@@ -329,7 +329,7 @@ export function ProviderAccessManagement({
                                       role: AccessRole.OWNER,
                                     })
                                   }
-                                  disabled={entry.role === AccessRole.OWNER}
+                                  disabled={entry.role === 'OWNER'}
                                 >
                                   <Crown className="h-4 w-4 mr-2 text-yellow-600" />
                                   Owner
@@ -341,7 +341,7 @@ export function ProviderAccessManagement({
                                       role: AccessRole.USER,
                                     })
                                   }
-                                  disabled={entry.role === AccessRole.USER}
+                                  disabled={entry.role === 'USER'}
                                 >
                                   <User className="h-4 w-4 mr-2" />
                                   User

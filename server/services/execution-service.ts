@@ -19,13 +19,13 @@ import {
 import { generateUlidUuid } from '~/server/utils/uuid';
 
 export type ExecutionStatus =
-  | 'received'
-  | 'started'
-  | 'completed'
-  | 'failed'
-  | 'timeout'
-  | 'no_deployment';
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'log';
+  | 'RECEIVED'
+  | 'STARTED'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'TIMEOUT'
+  | 'NO_DEPLOYMENT';
+export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'LOG';
 
 export interface ExecutionInfo {
   id: string;
@@ -79,7 +79,7 @@ export async function createExecution(params: {
       workflowId: params.workflowId,
       triggerId: params.triggerId ?? null,
       triggeredByUserId: params.triggeredByUserId ?? null,
-      status: 'received',
+      status: 'RECEIVED',
     })
     .returning();
 
@@ -110,7 +110,7 @@ export async function updateExecutionStarted(
   const [execution] = await db
     .update(executionHistory)
     .set({
-      status: 'started',
+      status: 'STARTED',
       startedAt: new Date(),
       deploymentId,
     })
@@ -147,7 +147,7 @@ export async function updateExecutionCompleted(
   const [execution] = await db
     .update(executionHistory)
     .set({
-      status: 'completed',
+      status: 'COMPLETED',
       completedAt: new Date(),
       durationMs: options.durationMs ?? null,
     })
@@ -189,7 +189,7 @@ export async function updateExecutionFailed(
   const [execution] = await db
     .update(executionHistory)
     .set({
-      status: 'failed',
+      status: 'FAILED',
       completedAt: new Date(),
       errorMessage,
       durationMs: options.durationMs ?? null,
@@ -225,7 +225,7 @@ export async function updateExecutionNoDeployment(executionId: string): Promise<
   const [execution] = await db
     .update(executionHistory)
     .set({
-      status: 'no_deployment',
+      status: 'NO_DEPLOYMENT',
       completedAt: new Date(),
     })
     .where(eq(executionHistory.id, executionId))
@@ -255,7 +255,7 @@ export async function updateExecutionTimeout(executionId: string): Promise<Execu
   const [execution] = await db
     .update(executionHistory)
     .set({
-      status: 'timeout',
+      status: 'TIMEOUT',
       completedAt: new Date(),
     })
     .where(eq(executionHistory.id, executionId))
@@ -352,7 +352,7 @@ export async function listExecutions(
   const conditions = [eq(executionHistory.workflowId, workflowId)];
 
   if (excludeNoDeployment) {
-    conditions.push(ne(executionHistory.status, 'no_deployment'));
+    conditions.push(ne(executionHistory.status, 'NO_DEPLOYMENT'));
   }
 
   if (status) {
@@ -537,7 +537,7 @@ export async function addExecutionLog(params: {
       id: generateUlidUuid(),
       executionHistoryId: params.executionId,
       timestamp: params.timestamp ?? new Date(),
-      logLevel: params.logLevel ?? 'log',
+      logLevel: params.logLevel ?? 'LOG',
       message: params.message,
     })
     .returning();
@@ -567,7 +567,7 @@ async function processLogs(
       id: generateUlidUuid(),
       executionHistoryId: executionId,
       timestamp: new Date(),
-      logLevel: 'log',
+      logLevel: 'LOG',
       message: logs,
     });
   } else {
@@ -584,10 +584,10 @@ async function processLogs(
       }
 
       // Parse log level
-      const levelStr = (entry.level ?? 'log').toLowerCase();
-      const logLevel: LogLevel = ['debug', 'info', 'warn', 'error', 'log'].includes(levelStr)
+      const levelStr = (entry.level ?? 'LOG').toUpperCase();
+      const logLevel: LogLevel = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'LOG'].includes(levelStr)
         ? (levelStr as LogLevel)
-        : 'log';
+        : 'LOG';
 
       return {
         id: generateUlidUuid(),

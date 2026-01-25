@@ -24,14 +24,14 @@ import { generateUlidUuid } from '../utils/uuid';
 
 // ===== ENUMS =====
 
-export const userTypeEnum = pgEnum('usertype', ['human', 'service_account']);
+export const userTypeEnum = pgEnum('usertype', ['HUMAN', 'SERVICE_ACCOUNT']);
 
-export const organizationRoleEnum = pgEnum('organizationrole', ['owner', 'admin', 'member']);
+export const organizationRoleEnum = pgEnum('organizationrole', ['OWNER', 'ADMIN', 'MEMBER']);
 
 export const workflowDeploymentStatusEnum = pgEnum('workflowdeploymentstatus', [
-  'active',
-  'inactive',
-  'failed',
+  'ACTIVE',
+  'INACTIVE',
+  'FAILED',
 ]);
 
 export const runtimeCreationStatusEnum = pgEnum('runtimecreationstatus', [
@@ -42,38 +42,38 @@ export const runtimeCreationStatusEnum = pgEnum('runtimecreationstatus', [
 ]);
 
 export const executionStatusEnum = pgEnum('executionstatus', [
-  'received',
-  'started',
-  'completed',
-  'failed',
-  'timeout',
-  'no_deployment',
+  'RECEIVED',
+  'STARTED',
+  'COMPLETED',
+  'FAILED',
+  'TIMEOUT',
+  'NO_DEPLOYMENT',
 ]);
 
-export const logLevelEnum = pgEnum('loglevel', ['debug', 'info', 'warn', 'error', 'log']);
+export const logLevelEnum = pgEnum('loglevel', ['DEBUG', 'INFO', 'WARN', 'ERROR', 'LOG']);
 
-export const subscriptionTierEnum = pgEnum('subscriptiontier', ['free', 'hobby', 'team']);
+export const subscriptionTierEnum = pgEnum('subscriptiontier', ['FREE', 'HOBBY', 'TEAM']);
 
 export const subscriptionStatusEnum = pgEnum('subscriptionstatus', [
-  'active',
-  'trialing',
-  'past_due',
-  'canceled',
-  'incomplete',
+  'ACTIVE',
+  'TRIALING',
+  'PAST_DUE',
+  'CANCELED',
+  'INCOMPLETE',
 ]);
 
 export const deviceCodeStatusEnum = pgEnum('devicecodestatus', [
-  'pending',
-  'approved',
-  'denied',
-  'expired',
+  'PENDING',
+  'APPROVED',
+  'DENIED',
+  'EXPIRED',
 ]);
 
-export const accessRoleEnum = pgEnum('accessrole', ['owner', 'user']);
+export const accessRoleEnum = pgEnum('accessrole', ['OWNER', 'USER']);
 
-export const resourceTypeEnum = pgEnum('resourcetype', ['workflow', 'folder', 'provider']);
+export const resourceTypeEnum = pgEnum('resourcetype', ['WORKFLOW', 'FOLDER', 'PROVIDER']);
 
-export const principleTypeEnum = pgEnum('principletype', ['user', 'workflow', 'folder']);
+export const principleTypeEnum = pgEnum('principletype', ['USER', 'WORKFLOW', 'FOLDER']);
 
 // ===== TABLES =====
 
@@ -84,7 +84,7 @@ export const users = pgTable(
     id: uuid('id')
       .primaryKey()
       .$defaultFn(() => generateUlidUuid()),
-    userType: userTypeEnum('user_type').notNull().default('human'),
+    userType: userTypeEnum('user_type').notNull().default('HUMAN'),
     workosUserId: varchar('workos_user_id', { length: 255 }).unique(),
     username: varchar('username', { length: 255 }).unique(),
     email: varchar('email', { length: 255 }),
@@ -92,8 +92,8 @@ export const users = pgTable(
     lastName: varchar('last_name', { length: 255 }),
     passwordHash: text('password_hash'),
     isAdmin: boolean('is_admin').notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
   }
 );
 
@@ -107,7 +107,7 @@ export const deviceCodes = pgTable(
     deviceCode: varchar('device_code', { length: 64 }).notNull().unique(),
     userCode: varchar('user_code', { length: 16 }).notNull().unique(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
-    status: deviceCodeStatusEnum('status').notNull().default('pending'),
+    status: deviceCodeStatusEnum('status').notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -149,8 +149,8 @@ export const organizations = pgTable('organizations', {
     .$defaultFn(() => generateUlidUuid()),
   workosOrganizationId: varchar('workos_organization_id', { length: 255 }).unique(),
   displayName: varchar('display_name', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // Organization Members table (junction table)
@@ -167,7 +167,7 @@ export const organizationMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: organizationRoleEnum('role').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex('uq_organization_user').on(table.organizationId, table.userId),
@@ -189,12 +189,12 @@ export const subscriptions = pgTable(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     stripeCustomerId: varchar('stripe_customer_id', { length: 255 }).unique(),
     stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }).unique(),
-    tier: subscriptionTierEnum('tier').notNull().default('free'),
-    status: subscriptionStatusEnum('status').notNull().default('active'),
+    tier: subscriptionTierEnum('tier').notNull(),
+    status: subscriptionStatusEnum('status').notNull(),
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
     currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
     gracePeriodEndsAt: timestamp('grace_period_ends_at', { withTimezone: true }),
-    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -234,8 +234,8 @@ export const namespaces = pgTable(
     organizationOwnerId: uuid('organization_owner_id').references(() => organizations.id, {
       onDelete: 'cascade',
     }),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => [
     check(
@@ -251,7 +251,9 @@ export const namespaces = pgTable(
 export const apiKeys = pgTable(
   'api_keys',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     name: text('name').notNull(),
     prefix: text('prefix').notNull(),
     hashedKey: text('hashed_key').notNull(),
@@ -274,10 +276,8 @@ export const runtimes = pgTable(
       .$defaultFn(() => generateUlidUuid()),
     config: jsonb('config'),
     configHash: uuid('config_hash').notNull().unique(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    creationStatus: runtimeCreationStatusEnum('creation_status')
-      .notNull()
-      .default('IN_PROGRESS'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    creationStatus: runtimeCreationStatusEnum('creation_status').notNull(),
     creationLogs: jsonb('creation_logs'),
   },
   (table) => [uniqueIndex('uq_runtime_config_hash').on(table.configHash)]
@@ -310,10 +310,10 @@ export const workflows = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
     triggersMetadata: jsonb('triggers_metadata'),
-    active: boolean('active').default(true),
+    active: boolean('active'),
     parentFolderId: uuid('parent_folder_id').references(() => workflowFolders.id, {
       onDelete: 'cascade',
     }),
@@ -344,8 +344,8 @@ export const workflowDeployments = pgTable(
     userCode: jsonb('user_code').notNull(),
     providerDefinitions: jsonb('provider_definitions'),
     triggerDefinitions: jsonb('trigger_definitions'),
-    deployedAt: timestamp('deployed_at', { withTimezone: true }).defaultNow().notNull(),
-    status: workflowDeploymentStatusEnum('status').notNull().default('active'),
+    deployedAt: timestamp('deployed_at').defaultNow().notNull(),
+    status: workflowDeploymentStatusEnum('status').notNull(),
     note: text('note'),
   },
   (table) => [
@@ -355,21 +355,17 @@ export const workflowDeployments = pgTable(
 );
 
 // Providers table
-export const providers = pgTable(
-  'providers',
-  {
-    id: uuid('id')
-      .primaryKey()
-      .$defaultFn(() => generateUlidUuid()),
-    namespaceId: uuid('namespace_id')
-      .notNull()
-      .references(() => namespaces.id, { onDelete: 'cascade' }),
-    type: text('type').notNull(),
-    alias: text('alias').notNull(),
-    encryptedConfig: text('encrypted_config').notNull(),
-  },
-  (table) => [index('idx_providers_namespace').on(table.namespaceId)]
-);
+export const providers = pgTable('providers', {
+  id: uuid('id')
+    .primaryKey()
+    .$defaultFn(() => generateUlidUuid()),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  alias: text('alias').notNull(),
+  encryptedConfig: text('encrypted_config').notNull(),
+});
 
 // Triggers table
 export const triggers = pgTable('triggers', {
@@ -430,8 +426,8 @@ export const secrets = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     provider: varchar('provider', { length: 255 }).notNull(),
     encryptedValue: text('encrypted_value').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex('uq_namespace_secret').on(table.namespaceId, table.name),
@@ -450,8 +446,8 @@ export const kvTables = pgTable(
       .notNull()
       .references(() => providers.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex('uq_provider_table_name').on(table.providerId, table.name),
@@ -474,7 +470,7 @@ export const kvTablePermissions = pgTable(
       .references(() => workflows.id, { onDelete: 'cascade' }),
     canRead: boolean('can_read').notNull().default(true),
     canWrite: boolean('can_write').notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex('uq_table_workflow_permission').on(table.tableId, table.workflowId),
@@ -495,8 +491,8 @@ export const kvItems = pgTable(
       .references(() => kvTables.id, { onDelete: 'cascade' }),
     key: text('key').notNull(),
     value: jsonb('value').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex('uq_table_key').on(table.tableId, table.key),
@@ -522,7 +518,7 @@ export const executionHistory = pgTable(
     triggeredByUserId: uuid('triggered_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    status: executionStatusEnum('status').notNull().default('received'),
+    status: executionStatusEnum('status').notNull(),
     receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull(),
     startedAt: timestamp('started_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -551,7 +547,7 @@ export const executionLogs = pgTable(
       .notNull()
       .references(() => executionHistory.id, { onDelete: 'cascade' }),
     timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
-    logLevel: logLevelEnum('log_level').notNull().default('log'),
+    logLevel: logLevelEnum('log_level').notNull(),
     message: text('message').notNull(),
   },
   (table) => [
@@ -565,7 +561,7 @@ export const executionLogs = pgTable(
 export const configurations = pgTable('configurations', {
   key: varchar('key', { length: 255 }).primaryKey(),
   value: jsonb('value').notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // Access Tuples table (provider_access)

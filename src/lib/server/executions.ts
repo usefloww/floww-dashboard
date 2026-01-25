@@ -75,7 +75,7 @@ export const getExecutions = createServerFn({ method: 'GET' })
     const result = await listExecutions(data.workflowId, {
       limit: data.limit ?? 50,
       offset: data.offset ?? 0,
-      status: data.status as 'received' | 'started' | 'completed' | 'failed' | 'timeout' | 'no_deployment' | undefined,
+      status: data.status as 'RECEIVED' | 'STARTED' | 'COMPLETED' | 'FAILED' | 'TIMEOUT' | 'NO_DEPLOYMENT' | undefined,
     });
 
     return {

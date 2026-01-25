@@ -207,7 +207,7 @@ export interface Namespace {
 export interface User {
   id: string;
   workosUserId: string | null;
-  userType: 'human' | 'service_account';
+  userType: 'HUMAN' | 'SERVICE_ACCOUNT';
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
@@ -232,6 +232,7 @@ export interface ApiErrorResponse {
 export enum WorkflowDeploymentStatus {
   ACTIVE = "active",
   INACTIVE = "inactive",
+  FAILED = "failed",
 }
 
 export interface WorkflowDeployment {

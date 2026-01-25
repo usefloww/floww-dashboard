@@ -11,7 +11,7 @@ import { deviceCodes, type DeviceCode } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { logger } from '~/server/utils/logger';
 
-export type DeviceCodeStatus = 'pending' | 'approved' | 'denied' | 'expired';
+export type DeviceCodeStatus = 'PENDING' | 'APPROVED' | 'DENIED' | 'EXPIRED';
 
 export interface DeviceAuthorizationData {
   deviceCode: string;
@@ -80,7 +80,7 @@ export async function createDeviceAuthorization(): Promise<DeviceAuthorizationDa
     id: generateUlidUuid(),
     deviceCode,
     userCode,
-    status: 'pending',
+    status: 'PENDING',
     expiresAt,
   });
 
@@ -140,14 +140,14 @@ export async function approveDeviceCode(userCode: string, userId: string): Promi
   if (new Date() > record.expiresAt) {
     await db
       .update(deviceCodes)
-      .set({ status: 'expired' })
+      .set({ status: 'EXPIRED' })
       .where(eq(deviceCodes.id, record.id));
     logger.warn('Device code expired', { userCode });
     return false;
   }
 
   // Check if already used
-  if (record.status !== 'pending') {
+  if (record.status !== 'PENDING') {
     logger.warn('Device code already used', { userCode, status: record.status });
     return false;
   }
@@ -155,7 +155,7 @@ export async function approveDeviceCode(userCode: string, userId: string): Promi
   // Approve the device code
   await db
     .update(deviceCodes)
-    .set({ status: 'approved', userId })
+    .set({ status: 'APPROVED', userId })
     .where(eq(deviceCodes.id, record.id));
 
   logger.info('Device code approved', { userCode, userId });
@@ -175,7 +175,7 @@ export async function denyDeviceCode(userCode: string): Promise<boolean> {
 
   await db
     .update(deviceCodes)
-    .set({ status: 'denied' })
+    .set({ status: 'DENIED' })
     .where(eq(deviceCodes.id, record.id));
 
   logger.info('Device code denied', { userCode });
@@ -192,16 +192,16 @@ export async function checkDeviceCodeStatus(
 
   const record = await getDeviceCodeByDeviceCode(deviceCode);
   if (!record) {
-    return { status: 'expired', userId: null };
+    return { status: 'EXPIRED', userId: null };
   }
 
   // Check if expired
-  if (new Date() > record.expiresAt && record.status === 'pending') {
+  if (new Date() > record.expiresAt && record.status === 'PENDING') {
     await db
       .update(deviceCodes)
-      .set({ status: 'expired' })
+      .set({ status: 'EXPIRED' })
       .where(eq(deviceCodes.id, record.id));
-    return { status: 'expired', userId: null };
+    return { status: 'EXPIRED', userId: null };
   }
 
   return { status: record.status, userId: record.userId };

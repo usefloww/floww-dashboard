@@ -1,5 +1,5 @@
 {
-  "id": "4cb9dd12-8c3e-4241-8b56-b67afc835780",
+  "id": "0a670400-6711-42ff-ada1-8761e574e796",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -12,8 +12,7 @@
           "name": "id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "name": {
           "name": "name",
@@ -239,7 +238,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -286,8 +285,7 @@
           "type": "devicecodestatus",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
+          "notNull": true
         },
         "expires_at": {
           "name": "expires_at",
@@ -440,8 +438,7 @@
           "type": "executionstatus",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'received'"
+          "notNull": true
         },
         "received_at": {
           "name": "received_at",
@@ -681,8 +678,7 @@
           "type": "loglevel",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'log'"
+          "notNull": true
         },
         "message": {
           "name": "message",
@@ -865,14 +861,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -996,7 +992,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1113,14 +1109,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1209,14 +1205,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1324,7 +1320,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1441,14 +1437,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1633,23 +1629,7 @@
           "notNull": true
         }
       },
-      "indexes": {
-        "idx_providers_namespace": {
-          "name": "idx_providers_namespace",
-          "columns": [
-            {
-              "expression": "namespace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "providers_namespace_id_namespaces_id_fk": {
           "name": "providers_namespace_id_namespaces_id_fk",
@@ -1859,7 +1839,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1869,8 +1849,7 @@
           "type": "runtimecreationstatus",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'IN_PROGRESS'"
+          "notNull": true
         },
         "creation_logs": {
           "name": "creation_logs",
@@ -1947,14 +1926,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -2052,16 +2031,14 @@
           "type": "subscriptiontier",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'free'"
+          "notNull": true
         },
         "status": {
           "name": "status",
           "type": "subscriptionstatus",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
+          "notNull": true
         },
         "trial_ends_at": {
           "name": "trial_ends_at",
@@ -2085,8 +2062,7 @@
           "name": "cancel_at_period_end",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -2255,7 +2231,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'human'"
+          "default": "'HUMAN'"
         },
         "workos_user_id": {
           "name": "workos_user_id",
@@ -2302,14 +2278,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -2386,7 +2362,7 @@
         },
         "deployed_at": {
           "name": "deployed_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -2396,8 +2372,7 @@
           "type": "workflowdeploymentstatus",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
+          "notNull": true
         },
         "note": {
           "name": "note",
@@ -2585,14 +2560,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -2607,8 +2582,7 @@
           "name": "active",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false,
-          "default": true
+          "notNull": false
         },
         "parent_folder_id": {
           "name": "parent_folder_id",
@@ -2753,68 +2727,68 @@
       "name": "accessrole",
       "schema": "public",
       "values": [
-        "owner",
-        "user"
+        "OWNER",
+        "USER"
       ]
     },
     "public.devicecodestatus": {
       "name": "devicecodestatus",
       "schema": "public",
       "values": [
-        "pending",
-        "approved",
-        "denied",
-        "expired"
+        "PENDING",
+        "APPROVED",
+        "DENIED",
+        "EXPIRED"
       ]
     },
     "public.executionstatus": {
       "name": "executionstatus",
       "schema": "public",
       "values": [
-        "received",
-        "started",
-        "completed",
-        "failed",
-        "timeout",
-        "no_deployment"
+        "RECEIVED",
+        "STARTED",
+        "COMPLETED",
+        "FAILED",
+        "TIMEOUT",
+        "NO_DEPLOYMENT"
       ]
     },
     "public.loglevel": {
       "name": "loglevel",
       "schema": "public",
       "values": [
-        "debug",
-        "info",
-        "warn",
-        "error",
-        "log"
+        "DEBUG",
+        "INFO",
+        "WARN",
+        "ERROR",
+        "LOG"
       ]
     },
     "public.organizationrole": {
       "name": "organizationrole",
       "schema": "public",
       "values": [
-        "owner",
-        "admin",
-        "member"
+        "OWNER",
+        "ADMIN",
+        "MEMBER"
       ]
     },
     "public.principletype": {
       "name": "principletype",
       "schema": "public",
       "values": [
-        "user",
-        "workflow",
-        "folder"
+        "USER",
+        "WORKFLOW",
+        "FOLDER"
       ]
     },
     "public.resourcetype": {
       "name": "resourcetype",
       "schema": "public",
       "values": [
-        "workflow",
-        "folder",
-        "provider"
+        "WORKFLOW",
+        "FOLDER",
+        "PROVIDER"
       ]
     },
     "public.runtimecreationstatus": {
@@ -2831,37 +2805,37 @@
       "name": "subscriptionstatus",
       "schema": "public",
       "values": [
-        "active",
-        "trialing",
-        "past_due",
-        "canceled",
-        "incomplete"
+        "ACTIVE",
+        "TRIALING",
+        "PAST_DUE",
+        "CANCELED",
+        "INCOMPLETE"
       ]
     },
     "public.subscriptiontier": {
       "name": "subscriptiontier",
       "schema": "public",
       "values": [
-        "free",
-        "hobby",
-        "team"
+        "FREE",
+        "HOBBY",
+        "TEAM"
       ]
     },
     "public.usertype": {
       "name": "usertype",
       "schema": "public",
       "values": [
-        "human",
-        "service_account"
+        "HUMAN",
+        "SERVICE_ACCOUNT"
       ]
     },
     "public.workflowdeploymentstatus": {
       "name": "workflowdeploymentstatus",
       "schema": "public",
       "values": [
-        "active",
-        "inactive",
-        "failed"
+        "ACTIVE",
+        "INACTIVE",
+        "FAILED"
       ]
     }
   },

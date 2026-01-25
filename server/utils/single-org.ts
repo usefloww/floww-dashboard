@@ -111,8 +111,9 @@ export async function getOrCreateDefaultOrganization(): Promise<{
   await db.insert(subscriptions).values({
     id: generateUlidUuid(),
     organizationId: orgId,
-    tier: 'free',
-    status: 'active',
+    tier: 'FREE',
+    status: 'ACTIVE',
+    cancelAtPeriodEnd: false,
   });
 
   defaultOrgIdCache = orgId;
@@ -150,7 +151,7 @@ export async function getDefaultNamespaceId(): Promise<string> {
  */
 export async function addUserToDefaultOrganization(
   userId: string
-): Promise<{ role: 'owner' | 'admin' | 'member' }> {
+): Promise<{ role: 'OWNER' | 'ADMIN' | 'MEMBER' }> {
   if (!SINGLE_ORG_MODE) {
     throw new Error('addUserToDefaultOrganization can only be used in single-org mode');
   }
@@ -178,7 +179,7 @@ export async function addUserToDefaultOrganization(
     .from(users);
 
   // First user (userCount === 1 since we already created the user) gets owner role
-  const role = userCount <= 1 ? 'owner' : 'member';
+  const role = userCount <= 1 ? 'OWNER' : 'MEMBER';
 
   await db.insert(organizationMembers).values({
     id: generateUlidUuid(),

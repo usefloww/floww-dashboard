@@ -89,7 +89,7 @@ post('/subscriptions/subscribe', async (ctx) => {
       organization.displayName,
       subscription.id,
       subscription.stripeCustomerId,
-      tier
+      tier.toUpperCase() as 'HOBBY' | 'TEAM'
     );
 
     return json({

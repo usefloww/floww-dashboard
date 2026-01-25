@@ -45,7 +45,7 @@ export async function createTestUser(data: Partial<NewUser> = {}) {
       username: data.username || `testuser-${id}`,
       firstName: data.firstName || 'Test',
       lastName: data.lastName || 'User',
-      userType: data.userType || 'human',
+      userType: data.userType || 'HUMAN',
       isAdmin: data.isAdmin ?? false,
       ...data,
     })
@@ -96,7 +96,7 @@ export async function createTestNamespace(
 export async function addUserToOrganization(
   userId: string,
   organizationId: string,
-  role: 'owner' | 'admin' | 'member' = 'member'
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' = 'MEMBER'
 ) {
   const db = getTestDb();
   const [membership] = await db
@@ -195,7 +195,7 @@ export async function createTestWorkflowDeployment(
         files: { 'main.ts': 'export default async function() { return "test"; }' },
         entrypoint: 'main.ts',
       },
-      status: data.status || 'active',
+      status: data.status || 'ACTIVE',
       ...data,
     })
     .returning();
@@ -208,7 +208,7 @@ export async function createTestWorkflowDeployment(
  */
 export async function createTestSubscription(
   organizationId: string,
-  tier: 'free' | 'hobby' | 'team' = 'free'
+  tier: 'FREE' | 'HOBBY' | 'TEAM' = 'FREE'
 ) {
   const db = getTestDb();
   const [subscription] = await db
@@ -216,7 +216,7 @@ export async function createTestSubscription(
     .values({
       organizationId,
       tier,
-      status: 'active',
+      status: 'ACTIVE',
     })
     .returning();
 
@@ -229,7 +229,7 @@ export async function createTestSubscription(
 export async function createFullTestSetup() {
   const user = await createTestUser();
   const org = await createTestOrganization();
-  await addUserToOrganization(user.id, org.id, 'owner');
+  await addUserToOrganization(user.id, org.id, 'OWNER');
   const namespace = await createTestNamespace({ organizationId: org.id });
   const workflow = await createTestWorkflow(namespace.id, user.id);
   const runtime = await createTestRuntime();

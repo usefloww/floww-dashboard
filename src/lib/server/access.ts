@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireUser } from './utils';
 
-export type AccessRole = 'owner' | 'user';
+export type AccessRole = 'OWNER' | 'USER';
 
 export interface ProviderAccessEntry {
   id: string;
@@ -46,9 +46,9 @@ export const getProviderAccess = createServerFn({ method: 'GET' })
       .innerJoin(users, eq(providerAccess.principleId, users.id))
       .where(
         and(
-          eq(providerAccess.resourceType, 'provider'),
+          eq(providerAccess.resourceType, 'PROVIDER'),
           eq(providerAccess.resourceId, data.providerId),
-          eq(providerAccess.principleType, 'user')
+          eq(providerAccess.principleType, 'USER')
         )
       );
 
@@ -77,8 +77,8 @@ export const grantProviderAccess = createServerFn({ method: 'POST' })
     const { users } = await import('~/server/db/schema');
 
     // Verify user has owner access
-    const userRole = await getResolvedAccess('user', user.id, 'provider', data.providerId);
-    if (userRole !== 'owner' && !user.isAdmin) {
+    const userRole = await getResolvedAccess('USER', user.id, 'PROVIDER', data.providerId);
+    if (userRole !== 'OWNER' && !user.isAdmin) {
       throw new Error('You must be an owner of the provider to grant access');
     }
 
@@ -95,7 +95,7 @@ export const grantProviderAccess = createServerFn({ method: 'POST' })
     }
 
     // Grant access
-    const accessRecord = await grantAccess('user', data.userId, 'provider', data.providerId, data.role);
+    const accessRecord = await grantAccess('USER', data.userId, 'PROVIDER', data.providerId, data.role);
 
     return {
       id: accessRecord.id,
@@ -120,8 +120,8 @@ export const updateProviderAccessRole = createServerFn({ method: 'POST' })
     const { providerAccess } = await import('~/server/db/schema');
 
     // Verify user has owner access
-    const userRole = await getResolvedAccess('user', user.id, 'provider', data.providerId);
-    if (userRole !== 'owner' && !user.isAdmin) {
+    const userRole = await getResolvedAccess('USER', user.id, 'PROVIDER', data.providerId);
+    if (userRole !== 'OWNER' && !user.isAdmin) {
       throw new Error('You must be an owner of the provider to update access');
     }
 
@@ -132,9 +132,9 @@ export const updateProviderAccessRole = createServerFn({ method: 'POST' })
       .set({ role: data.role })
       .where(
         and(
-          eq(providerAccess.principleType, 'user'),
+          eq(providerAccess.principleType, 'USER'),
           eq(providerAccess.principleId, data.userId),
-          eq(providerAccess.resourceType, 'provider'),
+          eq(providerAccess.resourceType, 'PROVIDER'),
           eq(providerAccess.resourceId, data.providerId)
         )
       )
@@ -157,12 +157,12 @@ export const revokeProviderAccess = createServerFn({ method: 'POST' })
     const { getResolvedAccess, revokeAccess } = await import('~/server/services/access-service');
 
     // Verify user has owner access
-    const userRole = await getResolvedAccess('user', user.id, 'provider', data.providerId);
-    if (userRole !== 'owner' && !user.isAdmin) {
+    const userRole = await getResolvedAccess('USER', user.id, 'PROVIDER', data.providerId);
+    if (userRole !== 'OWNER' && !user.isAdmin) {
       throw new Error('You must be an owner of the provider to revoke access');
     }
 
-    await revokeAccess('user', data.userId, 'provider', data.providerId);
+    await revokeAccess('USER', data.userId, 'PROVIDER', data.providerId);
 
     return { success: true };
   });

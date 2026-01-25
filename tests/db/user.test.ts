@@ -24,7 +24,7 @@ describe('User Database Operations', () => {
     expect(user.firstName).toBe('New');
     expect(user.lastName).toBe('User');
     expect(user.id).toBeDefined();
-    expect(user.userType).toBe('human');
+    expect(user.userType).toBe('HUMAN');
   });
 
   it('should find user by email', async () => {

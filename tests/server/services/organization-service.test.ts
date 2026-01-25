@@ -78,7 +78,7 @@ describe('OrganizationService', () => {
 
   describe('membership functions', () => {
     it('isMember should return true when user is member', async () => {
-      mockDb.limit.mockResolvedValueOnce([{ userId: 'user-1', role: 'member' }]);
+      mockDb.limit.mockResolvedValueOnce([{ userId: 'user-1', role: 'MEMBER' }]);
       
       const { isMember } = await import('~/server/services/organization-service');
       const result = await isMember('user-1', 'org-1');
@@ -96,7 +96,7 @@ describe('OrganizationService', () => {
     });
 
     it('isAdmin should return true when user has admin role', async () => {
-      mockDb.limit.mockResolvedValueOnce([{ role: 'admin' }]);
+      mockDb.limit.mockResolvedValueOnce([{ role: 'ADMIN' }]);
       
       const { isAdmin } = await import('~/server/services/organization-service');
       const result = await isAdmin('user-1', 'org-1');
@@ -105,7 +105,7 @@ describe('OrganizationService', () => {
     });
 
     it('isOwner should return true when user has owner role', async () => {
-      mockDb.limit.mockResolvedValueOnce([{ role: 'owner' }]);
+      mockDb.limit.mockResolvedValueOnce([{ role: 'OWNER' }]);
       
       const { isOwner } = await import('~/server/services/organization-service');
       const result = await isOwner('user-1', 'org-1');

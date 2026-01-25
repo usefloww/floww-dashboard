@@ -16,7 +16,7 @@ import {
 } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
 
-export type OrganizationRole = 'owner' | 'admin' | 'member';
+export type OrganizationRole = 'OWNER' | 'ADMIN' | 'MEMBER';
 
 export interface OrganizationInfo {
   id: string;
@@ -148,7 +148,7 @@ export async function createOrganization(params: {
   await db.insert(organizationMembers).values({
     organizationId: orgId,
     userId: params.ownerId,
-    role: 'owner',
+    role: 'OWNER',
   });
 
   // Create namespace for the organization
@@ -163,8 +163,9 @@ export async function createOrganization(params: {
   // Create free subscription for the organization
   await db.insert(subscriptions).values({
     organizationId: orgId,
-    tier: 'free',
-    status: 'active',
+    tier: 'FREE',
+    status: 'ACTIVE',
+    cancelAtPeriodEnd: false,
   });
 
   return {
@@ -325,7 +326,7 @@ export async function getOrganizationMembership(
 export async function addMember(
   organizationId: string,
   userId: string,
-  role: OrganizationRole = 'member'
+  role: OrganizationRole = 'MEMBER'
 ): Promise<OrganizationMemberInfo> {
   const db = getDb();
 
@@ -391,10 +392,10 @@ export async function removeMember(organizationId: string, userId: string): Prom
   const owners = await db
     .select({ count: countFn() })
     .from(organizationMembers)
-    .where(and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.role, 'owner')));
+    .where(and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.role, 'OWNER')));
 
   const membership = await getOrganizationMembership(organizationId, userId);
-  if (membership?.role === 'owner' && owners[0].count <= 1) {
+  if (membership?.role === 'OWNER' && owners[0].count <= 1) {
     throw new Error('Cannot remove the last owner of an organization');
   }
 
@@ -423,7 +424,7 @@ export async function isMember(organizationId: string, userId: string): Promise<
  */
 export async function isAdmin(organizationId: string, userId: string): Promise<boolean> {
   const membership = await getOrganizationMembership(organizationId, userId);
-  return membership !== null && (membership.role === 'owner' || membership.role === 'admin');
+  return membership !== null && (membership.role === 'OWNER' || membership.role === 'ADMIN');
 }
 
 /**
@@ -431,7 +432,7 @@ export async function isAdmin(organizationId: string, userId: string): Promise<b
  */
 export async function isOwner(organizationId: string, userId: string): Promise<boolean> {
   const membership = await getOrganizationMembership(organizationId, userId);
-  return membership !== null && membership.role === 'owner';
+  return membership !== null && membership.role === 'OWNER';
 }
 
 /**

@@ -11,7 +11,7 @@ import { settings } from '~/server/settings';
 const stripeSecretKey = settings.stripe.STRIPE_SECRET_KEY;
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
-export type SubscriptionTier = 'free' | 'hobby' | 'team';
+export type SubscriptionTier = 'FREE' | 'HOBBY' | 'TEAM';
 
 function getStripe(): Stripe {
   if (!stripe) {
@@ -21,14 +21,14 @@ function getStripe(): Stripe {
 }
 
 function getPriceIdForTier(tier: SubscriptionTier): string {
-  if (tier === 'hobby') {
+  if (tier === 'HOBBY') {
     const priceId = settings.stripe.STRIPE_PRICE_ID_HOBBY;
     if (!priceId) {
       throw new Error('STRIPE_PRICE_ID_HOBBY is not configured');
     }
     return priceId;
   }
-  if (tier === 'team') {
+  if (tier === 'TEAM') {
     const priceId = settings.stripe.STRIPE_PRICE_ID_TEAM;
     if (!priceId) {
       throw new Error('STRIPE_PRICE_ID_TEAM is not configured');

@@ -21,11 +21,11 @@ export const updateOrganizationSchema = z.object({
 
 export const addMemberSchema = z.object({
   userId: z.string().min(1, 'userId is required'),
-  role: z.enum(['owner', 'admin', 'member']).default('member'),
+  role: z.enum(['OWNER', 'ADMIN', 'MEMBER']).default('MEMBER'),
 });
 
 export const updateMemberRoleSchema = z.object({
-  role: z.enum(['owner', 'admin', 'member']),
+  role: z.enum(['OWNER', 'ADMIN', 'MEMBER']),
 });
 
 // ============================================================================

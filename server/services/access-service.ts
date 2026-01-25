@@ -17,14 +17,14 @@ import {
 } from '~/server/db/schema';
 
 // Types matching the database enums
-export type AccessRole = 'owner' | 'user';
-export type ResourceType = 'workflow' | 'folder' | 'provider';
-export type PrincipalType = 'user' | 'workflow' | 'folder';
+export type AccessRole = 'OWNER' | 'USER';
+export type ResourceType = 'WORKFLOW' | 'FOLDER' | 'PROVIDER';
+export type PrincipalType = 'USER' | 'WORKFLOW' | 'FOLDER';
 
 // Role priority for comparison (higher = more permissive)
 const ROLE_PRIORITY: Record<AccessRole, number> = {
-  user: 1,
-  owner: 2,
+  USER: 1,
+  OWNER: 2,
 };
 
 export interface ResolvedAccess {
@@ -208,7 +208,7 @@ export async function getAccessibleResources(
 
   // Expand folder access to include contained workflows and nested folders
   const folderAccesses = Array.from(results.values()).filter(
-    (ra) => ra.resourceType === 'folder'
+    (ra) => ra.resourceType === 'FOLDER'
   );
 
   for (const folderAccess of folderAccesses) {
@@ -216,7 +216,7 @@ export async function getAccessibleResources(
     const descendantFolderIds = await getFolderDescendants(folderAccess.resourceId);
 
     // Add descendant folders as inherited access
-    if (!resourceType || resourceType === 'folder') {
+    if (!resourceType || resourceType === 'FOLDER') {
       for (const folderId of descendantFolderIds) {
         const key = `folder:${folderId}`;
         const existing = results.get(key);
@@ -228,7 +228,7 @@ export async function getAccessibleResources(
           results.set(key, {
             principalType,
             principalId,
-            resourceType: 'folder',
+            resourceType: 'FOLDER',
             resourceId: folderId,
             role: folderAccess.role,
             inheritedFrom: folderAccess.resourceId,
@@ -238,7 +238,7 @@ export async function getAccessibleResources(
     }
 
     // Get workflows in the folder and all descendant folders
-    if (!resourceType || resourceType === 'workflow') {
+    if (!resourceType || resourceType === 'WORKFLOW') {
       const allFolderIds = [folderAccess.resourceId, ...descendantFolderIds];
 
       const workflowsInFolders = await db
@@ -257,7 +257,7 @@ export async function getAccessibleResources(
           results.set(key, {
             principalType,
             principalId,
-            resourceType: 'workflow',
+            resourceType: 'WORKFLOW',
             resourceId: workflow.id,
             role: folderAccess.role,
             inheritedFrom: folderAccess.resourceId,
@@ -317,7 +317,7 @@ export async function getResourcePrincipals(
   }
 
   // For workflows: check access via parent folder hierarchy
-  if (resourceType === 'workflow') {
+  if (resourceType === 'WORKFLOW') {
     const [workflow] = await db
       .select({ parentFolderId: workflows.parentFolderId })
       .from(workflows)
@@ -335,7 +335,7 @@ export async function getResourcePrincipals(
         .from(providerAccess)
         .where(
           and(
-            eq(providerAccess.resourceType, 'folder'),
+            eq(providerAccess.resourceType, 'FOLDER'),
             inArray(providerAccess.resourceId, ancestorFolderIds)
           )
         );
@@ -362,7 +362,7 @@ export async function getResourcePrincipals(
   }
 
   // For folders: check access via parent folder hierarchy
-  if (resourceType === 'folder') {
+  if (resourceType === 'FOLDER') {
     const ancestorFolderIds = await getFolderAncestors(resourceId);
 
     if (ancestorFolderIds.length > 0) {
@@ -371,7 +371,7 @@ export async function getResourcePrincipals(
         .from(providerAccess)
         .where(
           and(
-            eq(providerAccess.resourceType, 'folder'),
+            eq(providerAccess.resourceType, 'FOLDER'),
             inArray(providerAccess.resourceId, ancestorFolderIds)
           )
         );
@@ -434,7 +434,7 @@ export async function getResolvedAccess(
   }
 
   // For workflows: check access via parent folder hierarchy
-  if (resourceType === 'workflow') {
+  if (resourceType === 'WORKFLOW') {
     const [workflow] = await db
       .select({ parentFolderId: workflows.parentFolderId })
       .from(workflows)
@@ -454,7 +454,7 @@ export async function getResolvedAccess(
           and(
             eq(providerAccess.principleType, principalType),
             eq(providerAccess.principleId, principalId),
-            eq(providerAccess.resourceType, 'folder'),
+            eq(providerAccess.resourceType, 'FOLDER'),
             inArray(providerAccess.resourceId, ancestorFolderIds)
           )
         );
@@ -468,7 +468,7 @@ export async function getResolvedAccess(
   }
 
   // For folders: check access via parent folder hierarchy
-  if (resourceType === 'folder') {
+  if (resourceType === 'FOLDER') {
     const ancestorFolderIds = await getFolderAncestors(resourceId);
 
     if (ancestorFolderIds.length > 0) {
@@ -479,7 +479,7 @@ export async function getResolvedAccess(
           and(
             eq(providerAccess.principleType, principalType),
             eq(providerAccess.principleId, principalId),
-            eq(providerAccess.resourceType, 'folder'),
+            eq(providerAccess.resourceType, 'FOLDER'),
             inArray(providerAccess.resourceId, ancestorFolderIds)
           )
         );

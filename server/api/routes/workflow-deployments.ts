@@ -51,7 +51,7 @@ const createWorkflowDeploymentSchema = z.object({
 });
 
 const updateWorkflowDeploymentSchema = z.object({
-  status: z.enum(['active', 'inactive', 'failed']).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'FAILED']).optional(),
   userCode: z.record(z.unknown()).optional(),
 });
 

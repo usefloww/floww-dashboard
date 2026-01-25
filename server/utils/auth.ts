@@ -53,9 +53,9 @@ export async function getOptionalAuth(request: Request) {
 
 // Role priority for comparison (higher = more permissive)
 const ROLE_PRIORITY: Record<OrganizationRole, number> = {
-  member: 1,
-  admin: 2,
-  owner: 3,
+  MEMBER: 1,
+  ADMIN: 2,
+  OWNER: 3,
 };
 
 /**
@@ -65,7 +65,7 @@ const ROLE_PRIORITY: Record<OrganizationRole, number> = {
 export async function checkOrganizationRole(
   userId: string,
   organizationId: string,
-  requiredRole: 'owner' | 'admin' | 'member'
+  requiredRole: 'OWNER' | 'ADMIN' | 'MEMBER'
 ): Promise<boolean> {
   const membership = await getOrganizationMembership(organizationId, userId);
   if (!membership) {

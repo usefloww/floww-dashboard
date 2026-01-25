@@ -145,7 +145,7 @@ async function getActiveDeployment(workflowId: string) {
     .from(workflowDeployments)
     .innerJoin(runtimes, eq(workflowDeployments.runtimeId, runtimes.id))
     .where(
-      and(eq(workflowDeployments.workflowId, workflowId), eq(workflowDeployments.status, 'active'))
+      and(eq(workflowDeployments.workflowId, workflowId), eq(workflowDeployments.status, 'ACTIVE'))
     )
     .orderBy(desc(workflowDeployments.deployedAt))
     .limit(1);

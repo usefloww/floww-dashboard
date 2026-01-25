@@ -15,7 +15,7 @@ export interface UserInfo {
   email: string | null;
   firstName: string | null;
   lastName: string | null;
-  userType: 'human' | 'service_account';
+  userType: 'HUMAN' | 'SERVICE_ACCOUNT';
   isAdmin: boolean;
   createdAt: Date;
 }
@@ -124,7 +124,7 @@ export async function getOrCreateUser(params: {
       firstName: params.firstName ?? null,
       lastName: params.lastName ?? null,
       username: params.username ?? null,
-      userType: 'human',
+      userType: 'HUMAN',
       isAdmin: false,
     })
     .returning();

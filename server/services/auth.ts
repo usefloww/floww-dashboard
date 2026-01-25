@@ -18,7 +18,7 @@ import { logger } from '~/server/utils/logger';
 export interface AuthenticatedUser {
   id: string;
   workosUserId: string | null;
-  userType: 'human' | 'service_account';
+  userType: 'HUMAN' | 'SERVICE_ACCOUNT';
   email: string | null;
   firstName: string | null;
   lastName: string | null;

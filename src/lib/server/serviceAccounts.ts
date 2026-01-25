@@ -65,7 +65,7 @@ export const getServiceAccounts = createServerFn({ method: 'GET' })
       .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
       .where(
         and(
-          eq(users.userType, 'service_account'),
+          eq(users.userType, 'SERVICE_ACCOUNT'),
           eq(organizationMembers.organizationId, data.organizationId)
         )
       );
@@ -140,7 +140,7 @@ export const createServiceAccount = createServerFn({ method: 'POST' })
       .insert(users)
       .values({
         id: saId,
-        userType: 'service_account',
+        userType: 'SERVICE_ACCOUNT',
         username: data.name,
       })
       .returning();
@@ -152,7 +152,7 @@ export const createServiceAccount = createServerFn({ method: 'POST' })
       id: generateUlidUuid(),
       organizationId: data.organizationId,
       userId: saId,
-      role: 'member',
+      role: 'MEMBER',
     });
 
     return {
@@ -184,7 +184,7 @@ export const deleteServiceAccount = createServerFn({ method: 'POST' })
       })
       .from(users)
       .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
-      .where(and(eq(users.id, data.serviceAccountId), eq(users.userType, 'service_account')))
+      .where(and(eq(users.id, data.serviceAccountId), eq(users.userType, 'SERVICE_ACCOUNT')))
       .limit(1);
 
     if (results.length === 0) {
@@ -237,7 +237,7 @@ export const createApiKey = createServerFn({ method: 'POST' })
       })
       .from(users)
       .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
-      .where(and(eq(users.id, data.serviceAccountId), eq(users.userType, 'service_account')))
+      .where(and(eq(users.id, data.serviceAccountId), eq(users.userType, 'SERVICE_ACCOUNT')))
       .limit(1);
 
     if (results.length === 0) {
@@ -308,7 +308,7 @@ export const revokeApiKey = createServerFn({ method: 'POST' })
       })
       .from(users)
       .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
-      .where(and(eq(users.id, data.serviceAccountId), eq(users.userType, 'service_account')))
+      .where(and(eq(users.id, data.serviceAccountId), eq(users.userType, 'SERVICE_ACCOUNT')))
       .limit(1);
 
     if (results.length === 0) {

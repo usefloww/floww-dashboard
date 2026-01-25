@@ -51,8 +51,8 @@ describe('BillingService', () => {
       const freeSubscription = {
         id: 'sub-1',
         organizationId: 'org-1',
-        tier: 'free' as const,
-        status: 'active' as const,
+        tier: 'FREE' as const,
+        status: 'ACTIVE' as const,
         stripeCustomerId: null,
         stripeSubscriptionId: null,
         trialEndsAt: null,
@@ -63,7 +63,7 @@ describe('BillingService', () => {
       
       const result = getSubscriptionDetails(freeSubscription);
       
-      expect(result.tier).toBe('free');
+      expect(result.tier).toBe('FREE');
       expect(result.isPaid).toBe(false);
       expect(result.planName).toBe('Free');
     });
@@ -74,8 +74,8 @@ describe('BillingService', () => {
       const hobbySubscription = {
         id: 'sub-1',
         organizationId: 'org-1',
-        tier: 'hobby' as const,
-        status: 'active' as const,
+        tier: 'HOBBY' as const,
+        status: 'ACTIVE' as const,
         stripeCustomerId: 'cus_123',
         stripeSubscriptionId: 'sub_123',
         trialEndsAt: null,
@@ -86,7 +86,7 @@ describe('BillingService', () => {
       
       const result = getSubscriptionDetails(hobbySubscription);
       
-      expect(result.tier).toBe('hobby');
+      expect(result.tier).toBe('HOBBY');
       expect(result.isPaid).toBe(true);
       expect(result.planName).toBe('Hobby');
     });
@@ -97,8 +97,8 @@ describe('BillingService', () => {
       const mockSubscription = {
         id: 'sub-1',
         organizationId: 'org-1',
-        tier: 'free',
-        status: 'active',
+        tier: 'FREE',
+        status: 'ACTIVE',
       };
       (mockDb.limit as ReturnType<typeof vi.fn>).mockResolvedValueOnce([mockSubscription]);
       
@@ -115,21 +115,21 @@ describe('BillingService', () => {
       (mockDb.returning as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{
         id: 'sub-new',
         organizationId: 'org-1',
-        tier: 'free',
-        status: 'active',
+        tier: 'FREE',
+        status: 'ACTIVE',
       }]);
       
       const { getOrCreateSubscription } = await import('~/server/services/billing-service');
       const result = await getOrCreateSubscription('org-1');
       
-      expect(result.tier).toBe('free');
+      expect(result.tier).toBe('FREE');
     });
   });
 
   describe('checkWorkflowLimit', () => {
     it('should return allowed when under limit', async () => {
       // Mock subscription lookup returns free tier
-      (mockDb.limit as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ tier: 'free', status: 'active' }]);
+      (mockDb.limit as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ tier: 'FREE', status: 'ACTIVE' }]);
       // Mock workflow count - under free tier limit of 3
       (mockDb.execute as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ count: '2' }]);
       
@@ -143,7 +143,7 @@ describe('BillingService', () => {
   describe('checkExecutionLimit', () => {
     it('should return allowed when under monthly limit', async () => {
       // Mock subscription lookup
-      (mockDb.limit as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ tier: 'free', status: 'active' }]);
+      (mockDb.limit as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ tier: 'FREE', status: 'ACTIVE' }]);
       // Mock execution count  
       (mockDb.execute as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ count: '50' }]);
       

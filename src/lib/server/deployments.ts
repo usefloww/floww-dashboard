@@ -6,7 +6,7 @@ export interface DeploymentInfo {
   workflowId: string;
   runtimeId: string;
   deployedById: string | null;
-  status: 'active' | 'inactive' | 'failed';
+  status: 'ACTIVE' | 'INACTIVE' | 'FAILED';
   deployedAt: string;
   note: string | null;
   userCode?: {} | undefined;
@@ -138,7 +138,7 @@ export const updateDeployment = createServerFn({ method: 'POST' })
       files: Record<string, string>;
       entrypoint: string;
     };
-    status?: 'active' | 'inactive' | 'failed';
+    status?: 'ACTIVE' | 'INACTIVE' | 'FAILED';
   }) => input)
   .handler(async ({ data }): Promise<DeploymentInfo> => {
     const user = await requireUser();

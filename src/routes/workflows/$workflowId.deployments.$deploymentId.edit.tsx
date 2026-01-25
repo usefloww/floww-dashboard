@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { handleApiError, ApiError } from "@/lib/api";
-import { WorkflowDeployment } from "@/types/api";
+import { WorkflowDeployment, WorkflowDeploymentStatus } from "@/types/api";
 import { getDeployment, updateDeployment } from "@/lib/server/deployments";
 import { Loader } from "@/components/Loader";
 import { ArrowLeft, Save, X } from "lucide-react";
@@ -37,11 +37,15 @@ function EditDeploymentPage() {
     workflowId: deploymentData.workflowId,
     runtimeId: deploymentData.runtimeId,
     deployedById: deploymentData.deployedById ?? undefined,
-    status: deploymentData.status,
+    status: (deploymentData.status.toLowerCase() === 'failed' 
+      ? WorkflowDeploymentStatus.FAILED 
+      : deploymentData.status.toLowerCase() === 'inactive'
+      ? WorkflowDeploymentStatus.INACTIVE
+      : WorkflowDeploymentStatus.ACTIVE) as WorkflowDeploymentStatus,
     deployedAt: deploymentData.deployedAt,
     note: deploymentData.note ?? undefined,
     userCode: deploymentData.userCode as { files: Record<string, string>; entrypoint: string },
-  } as WorkflowDeployment : undefined;
+  } : undefined;
 
   // Update local state when deployment data changes
   useEffect(() => {

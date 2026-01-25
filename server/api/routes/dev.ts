@@ -32,7 +32,7 @@ post('/dev/sync-triggers', async ({ user }) => {
     })
     .from(workflowDeployments)
     .innerJoin(workflows, eq(workflowDeployments.workflowId, workflows.id))
-    .where(eq(workflowDeployments.status, 'active'));
+    .where(eq(workflowDeployments.status, 'ACTIVE'));
 
   const results: Array<{ deploymentId: string; status: string; error?: string }> = [];
 

@@ -1,17 +1,17 @@
-CREATE TYPE "public"."accessrole" AS ENUM('owner', 'user');--> statement-breakpoint
-CREATE TYPE "public"."devicecodestatus" AS ENUM('pending', 'approved', 'denied', 'expired');--> statement-breakpoint
-CREATE TYPE "public"."executionstatus" AS ENUM('received', 'started', 'completed', 'failed', 'timeout', 'no_deployment');--> statement-breakpoint
-CREATE TYPE "public"."loglevel" AS ENUM('debug', 'info', 'warn', 'error', 'log');--> statement-breakpoint
-CREATE TYPE "public"."organizationrole" AS ENUM('owner', 'admin', 'member');--> statement-breakpoint
-CREATE TYPE "public"."principletype" AS ENUM('user', 'workflow', 'folder');--> statement-breakpoint
-CREATE TYPE "public"."resourcetype" AS ENUM('workflow', 'folder', 'provider');--> statement-breakpoint
+CREATE TYPE "public"."accessrole" AS ENUM('OWNER', 'USER');--> statement-breakpoint
+CREATE TYPE "public"."devicecodestatus" AS ENUM('PENDING', 'APPROVED', 'DENIED', 'EXPIRED');--> statement-breakpoint
+CREATE TYPE "public"."executionstatus" AS ENUM('RECEIVED', 'STARTED', 'COMPLETED', 'FAILED', 'TIMEOUT', 'NO_DEPLOYMENT');--> statement-breakpoint
+CREATE TYPE "public"."loglevel" AS ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'LOG');--> statement-breakpoint
+CREATE TYPE "public"."organizationrole" AS ENUM('OWNER', 'ADMIN', 'MEMBER');--> statement-breakpoint
+CREATE TYPE "public"."principletype" AS ENUM('USER', 'WORKFLOW', 'FOLDER');--> statement-breakpoint
+CREATE TYPE "public"."resourcetype" AS ENUM('WORKFLOW', 'FOLDER', 'PROVIDER');--> statement-breakpoint
 CREATE TYPE "public"."runtimecreationstatus" AS ENUM('IN_PROGRESS', 'COMPLETED', 'FAILED', 'REMOVED');--> statement-breakpoint
-CREATE TYPE "public"."subscriptionstatus" AS ENUM('active', 'trialing', 'past_due', 'canceled', 'incomplete');--> statement-breakpoint
-CREATE TYPE "public"."subscriptiontier" AS ENUM('free', 'hobby', 'team');--> statement-breakpoint
-CREATE TYPE "public"."usertype" AS ENUM('human', 'service_account');--> statement-breakpoint
-CREATE TYPE "public"."workflowdeploymentstatus" AS ENUM('active', 'inactive', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."subscriptionstatus" AS ENUM('ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELED', 'INCOMPLETE');--> statement-breakpoint
+CREATE TYPE "public"."subscriptiontier" AS ENUM('FREE', 'HOBBY', 'TEAM');--> statement-breakpoint
+CREATE TYPE "public"."usertype" AS ENUM('HUMAN', 'SERVICE_ACCOUNT');--> statement-breakpoint
+CREATE TYPE "public"."workflowdeploymentstatus" AS ENUM('ACTIVE', 'INACTIVE', 'FAILED');--> statement-breakpoint
 CREATE TABLE "api_keys" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"prefix" text NOT NULL,
 	"hashed_key" text NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE "billing_events" (
 CREATE TABLE "configurations" (
 	"key" varchar(255) PRIMARY KEY NOT NULL,
 	"value" jsonb NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "device_codes" (
@@ -42,7 +42,7 @@ CREATE TABLE "device_codes" (
 	"device_code" varchar(64) NOT NULL,
 	"user_code" varchar(16) NOT NULL,
 	"user_id" uuid,
-	"status" "devicecodestatus" DEFAULT 'pending' NOT NULL,
+	"status" "devicecodestatus" NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "device_codes_device_code_unique" UNIQUE("device_code"),
@@ -55,7 +55,7 @@ CREATE TABLE "execution_history" (
 	"trigger_id" uuid,
 	"deployment_id" uuid,
 	"triggered_by_user_id" uuid,
-	"status" "executionstatus" DEFAULT 'received' NOT NULL,
+	"status" "executionstatus" NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"started_at" timestamp with time zone,
 	"completed_at" timestamp with time zone,
@@ -67,7 +67,7 @@ CREATE TABLE "execution_logs" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"execution_history_id" uuid NOT NULL,
 	"timestamp" timestamp with time zone NOT NULL,
-	"log_level" "loglevel" DEFAULT 'log' NOT NULL,
+	"log_level" "loglevel" NOT NULL,
 	"message" text NOT NULL
 );
 --> statement-breakpoint
@@ -85,8 +85,8 @@ CREATE TABLE "kv_items" (
 	"table_id" uuid NOT NULL,
 	"key" text NOT NULL,
 	"value" jsonb NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "kv_table_permissions" (
@@ -95,23 +95,23 @@ CREATE TABLE "kv_table_permissions" (
 	"workflow_id" uuid NOT NULL,
 	"can_read" boolean DEFAULT true NOT NULL,
 	"can_write" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "kv_tables" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"provider_id" uuid NOT NULL,
 	"name" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "namespaces" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"user_owner_id" uuid,
 	"organization_owner_id" uuid,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "chk_namespace_single_owner" CHECK ((("user_owner_id" IS NOT NULL)::int + ("organization_owner_id" IS NOT NULL)::int = 1))
 );
 --> statement-breakpoint
@@ -120,15 +120,15 @@ CREATE TABLE "organization_members" (
 	"organization_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
 	"role" "organizationrole" NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "organizations" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"workos_organization_id" varchar(255),
 	"display_name" varchar(255) NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "organizations_workos_organization_id_unique" UNIQUE("workos_organization_id")
 );
 --> statement-breakpoint
@@ -169,8 +169,8 @@ CREATE TABLE "runtimes" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"config" jsonb,
 	"config_hash" uuid NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"creation_status" "runtimecreationstatus" DEFAULT 'IN_PROGRESS' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"creation_status" "runtimecreationstatus" NOT NULL,
 	"creation_logs" jsonb,
 	CONSTRAINT "runtimes_config_hash_unique" UNIQUE("config_hash")
 );
@@ -181,8 +181,8 @@ CREATE TABLE "secrets" (
 	"name" varchar(255) NOT NULL,
 	"provider" varchar(255) NOT NULL,
 	"encrypted_value" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "subscriptions" (
@@ -190,12 +190,12 @@ CREATE TABLE "subscriptions" (
 	"organization_id" uuid NOT NULL,
 	"stripe_customer_id" varchar(255),
 	"stripe_subscription_id" varchar(255),
-	"tier" "subscriptiontier" DEFAULT 'free' NOT NULL,
-	"status" "subscriptionstatus" DEFAULT 'active' NOT NULL,
+	"tier" "subscriptiontier" NOT NULL,
+	"status" "subscriptionstatus" NOT NULL,
 	"trial_ends_at" timestamp with time zone,
 	"current_period_end" timestamp with time zone,
 	"grace_period_ends_at" timestamp with time zone,
-	"cancel_at_period_end" boolean DEFAULT false NOT NULL,
+	"cancel_at_period_end" boolean NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "subscriptions_organization_id_unique" UNIQUE("organization_id"),
@@ -214,7 +214,7 @@ CREATE TABLE "triggers" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY NOT NULL,
-	"user_type" "usertype" DEFAULT 'human' NOT NULL,
+	"user_type" "usertype" DEFAULT 'HUMAN' NOT NULL,
 	"workos_user_id" varchar(255),
 	"username" varchar(255),
 	"email" varchar(255),
@@ -222,8 +222,8 @@ CREATE TABLE "users" (
 	"last_name" varchar(255),
 	"password_hash" text,
 	"is_admin" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "users_workos_user_id_unique" UNIQUE("workos_user_id"),
 	CONSTRAINT "users_username_unique" UNIQUE("username")
 );
@@ -236,8 +236,8 @@ CREATE TABLE "workflow_deployments" (
 	"user_code" jsonb NOT NULL,
 	"provider_definitions" jsonb,
 	"trigger_definitions" jsonb,
-	"deployed_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"status" "workflowdeploymentstatus" DEFAULT 'active' NOT NULL,
+	"deployed_at" timestamp DEFAULT now() NOT NULL,
+	"status" "workflowdeploymentstatus" NOT NULL,
 	"note" text
 );
 --> statement-breakpoint
@@ -254,10 +254,10 @@ CREATE TABLE "workflows" (
 	"name" varchar(255) NOT NULL,
 	"description" text,
 	"created_by_id" uuid,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"triggers_metadata" jsonb,
-	"active" boolean DEFAULT true,
+	"active" boolean,
 	"parent_folder_id" uuid
 );
 --> statement-breakpoint
@@ -328,7 +328,6 @@ CREATE INDEX "idx_organization_members_user" ON "organization_members" USING btr
 CREATE UNIQUE INDEX "uq_access_principal_resource" ON "provider_access" USING btree ("principle_type","principle_id","resource_type","resource_id");--> statement-breakpoint
 CREATE INDEX "idx_access_principal" ON "provider_access" USING btree ("principle_type","principle_id");--> statement-breakpoint
 CREATE INDEX "idx_access_resource" ON "provider_access" USING btree ("resource_type","resource_id");--> statement-breakpoint
-CREATE INDEX "idx_providers_namespace" ON "providers" USING btree ("namespace_id");--> statement-breakpoint
 CREATE INDEX "idx_refresh_tokens_token_hash" ON "refresh_tokens" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX "idx_refresh_tokens_user_id" ON "refresh_tokens" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_refresh_tokens_revoked_at" ON "refresh_tokens" USING btree ("revoked_at");--> statement-breakpoint

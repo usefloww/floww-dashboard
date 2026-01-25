@@ -17,8 +17,8 @@ import {
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { settings } from '~/server/settings';
 
-export type SubscriptionTier = 'free' | 'hobby' | 'team';
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete';
+export type SubscriptionTier = 'FREE' | 'HOBBY' | 'TEAM';
+export type SubscriptionStatus = 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED' | 'INCOMPLETE';
 
 export interface SubscriptionDetails {
   tier: SubscriptionTier;
@@ -30,15 +30,15 @@ export interface SubscriptionDetails {
 
 // Plan limits: [workflowLimit, executionLimitPerMonth]
 const PLAN_LIMITS: Record<SubscriptionTier, [number, number]> = {
-  free: [3, 100],
-  hobby: [100, 10_000],
-  team: [100, 50_000],
+  FREE: [3, 100],
+  HOBBY: [100, 10_000],
+  TEAM: [100, 50_000],
 };
 
 const PLAN_NAMES: Record<SubscriptionTier, string> = {
-  free: 'Free',
-  hobby: 'Hobby',
-  team: 'Team',
+  FREE: 'Free',
+  HOBBY: 'Hobby',
+  TEAM: 'Team',
 };
 
 // Settings from environment
@@ -47,21 +47,21 @@ const TRIAL_PERIOD_DAYS = settings.stripe.TRIAL_PERIOD_DAYS;
 const GRACE_PERIOD_DAYS = settings.stripe.GRACE_PERIOD_DAYS;
 
 function isSubscriptionActive(subscription: Subscription): boolean {
-  if (subscription.tier === 'free') {
+  if (subscription.tier === 'FREE') {
     return false;
   }
 
   const now = new Date();
 
-  if (subscription.status === 'trialing') {
+  if (subscription.status === 'TRIALING') {
     return subscription.trialEndsAt ? subscription.trialEndsAt > now : false;
   }
 
-  if (subscription.status === 'active') {
+  if (subscription.status === 'ACTIVE') {
     return true;
   }
 
-  if (subscription.status === 'past_due') {
+  if (subscription.status === 'PAST_DUE') {
     return subscription.gracePeriodEndsAt ? subscription.gracePeriodEndsAt > now : false;
   }
 
@@ -86,10 +86,10 @@ export function getSubscriptionDetails(subscription: Subscription): Subscription
     };
   }
 
-  const [workflowLimit, executionLimit] = PLAN_LIMITS.free;
+  const [workflowLimit, executionLimit] = PLAN_LIMITS.FREE;
   return {
-    tier: 'free',
-    planName: PLAN_NAMES.free,
+    tier: 'FREE',
+    planName: PLAN_NAMES.FREE,
     workflowLimit,
     executionLimitPerMonth: executionLimit,
     isPaid: false,
@@ -120,8 +120,9 @@ export async function getOrCreateSubscription(organizationId: string): Promise<S
       .values({
         id: generateUlidUuid(),
         organizationId,
-        tier: 'free',
-        status: 'active',
+        tier: 'FREE',
+        status: 'ACTIVE',
+        cancelAtPeriodEnd: false,
       })
       .returning();
 
@@ -171,7 +172,7 @@ export async function getExecutionCountThisMonth(organizationId: string): Promis
       and(
         eq(namespaces.organizationOwnerId, organizationId),
         gte(executionHistory.receivedAt, startOfMonth),
-        inArray(executionHistory.status, ['completed', 'started', 'received'])
+        inArray(executionHistory.status, ['COMPLETED', 'STARTED', 'RECEIVED'])
       )
     );
 
@@ -252,8 +253,8 @@ export async function startTrial(
   await db
     .update(subscriptions)
     .set({
-      tier: 'hobby',
-      status: 'trialing',
+      tier: 'HOBBY',
+      status: 'TRIALING',
       trialEndsAt: trialEnd,
       updatedAt: new Date(),
     })
@@ -273,7 +274,7 @@ export async function activatePaidSubscription(
   await db
     .update(subscriptions)
     .set({
-      status: 'active',
+      status: 'ACTIVE',
       stripeSubscriptionId,
       currentPeriodEnd,
       trialEndsAt: null,
@@ -309,7 +310,7 @@ export async function startGracePeriod(subscriptionId: string): Promise<void> {
   await db
     .update(subscriptions)
     .set({
-      status: 'past_due',
+      status: 'PAST_DUE',
       gracePeriodEndsAt,
       updatedAt: new Date(),
     })
@@ -325,8 +326,8 @@ export async function downgradeToFree(subscriptionId: string): Promise<void> {
   await db
     .update(subscriptions)
     .set({
-      tier: 'free',
-      status: 'active',
+      tier: 'FREE',
+      status: 'ACTIVE',
       stripeSubscriptionId: null,
       currentPeriodEnd: null,
       trialEndsAt: null,
@@ -451,7 +452,7 @@ export async function handleSubscriptionCreated(
   const trialEnd = trialEndTs ? new Date(trialEndTs * 1000) : null;
   const stripeStatus = eventData.status as string;
 
-  if (stripeStatus === 'trialing') {
+  if (stripeStatus === 'TRIALING') {
     await startTrial(subscription.id, trialEnd ?? undefined);
     await db
       .update(subscriptions)
@@ -461,7 +462,7 @@ export async function handleSubscriptionCreated(
       })
       .where(eq(subscriptions.id, subscription.id));
   } else if (
-    ['active', 'past_due'].includes(stripeStatus) &&
+    ['ACTIVE', 'PAST_DUE'].includes(stripeStatus) &&
     stripeSubscriptionId &&
     currentPeriodEnd
   ) {
@@ -478,9 +479,9 @@ export async function handleSubscriptionCreated(
   for (const item of items) {
     const priceId = item.price?.id;
     if (priceId === priceIdHobby) {
-      await db.update(subscriptions).set({ tier: 'hobby' }).where(eq(subscriptions.id, subscription.id));
+      await db.update(subscriptions).set({ tier: 'HOBBY' }).where(eq(subscriptions.id, subscription.id));
     } else if (priceId === priceIdTeam) {
-      await db.update(subscriptions).set({ tier: 'team' }).where(eq(subscriptions.id, subscription.id));
+      await db.update(subscriptions).set({ tier: 'TEAM' }).where(eq(subscriptions.id, subscription.id));
     }
   }
 
@@ -522,12 +523,12 @@ export async function handleSubscriptionUpdated(
     updatedAt: new Date(),
   };
 
-  if (stripeStatus === 'active') {
-    updateData.status = 'active';
+  if (stripeStatus === 'ACTIVE') {
+    updateData.status = 'ACTIVE';
     updateData.gracePeriodEndsAt = null;
-  } else if (stripeStatus === 'past_due') {
-    updateData.status = 'past_due';
-  } else if (stripeStatus === 'canceled') {
+  } else if (stripeStatus === 'PAST_DUE') {
+    updateData.status = 'PAST_DUE';
+  } else if (stripeStatus === 'CANCELED') {
     await downgradeToFree(subscription.id);
     await recordEvent(subscription.id, 'customer.subscription.updated', stripeEventId, eventData);
     return;
@@ -536,7 +537,7 @@ export async function handleSubscriptionUpdated(
   await db.update(subscriptions).set(updateData).where(eq(subscriptions.id, subscription.id));
 
   // Sync tier from subscription items
-  if (stripeStatus !== 'canceled') {
+  if (stripeStatus !== 'CANCELED') {
     const items = ((eventData.items as Record<string, unknown>)?.data ?? []) as Array<{
       price?: { id?: string };
     }>;
@@ -546,9 +547,9 @@ export async function handleSubscriptionUpdated(
     for (const item of items) {
       const priceId = item.price?.id;
       if (priceId === priceIdHobby) {
-        await db.update(subscriptions).set({ tier: 'hobby' }).where(eq(subscriptions.id, subscription.id));
+        await db.update(subscriptions).set({ tier: 'HOBBY' }).where(eq(subscriptions.id, subscription.id));
       } else if (priceId === priceIdTeam) {
-        await db.update(subscriptions).set({ tier: 'team' }).where(eq(subscriptions.id, subscription.id));
+        await db.update(subscriptions).set({ tier: 'TEAM' }).where(eq(subscriptions.id, subscription.id));
       }
     }
   }
@@ -646,11 +647,11 @@ export async function handlePaymentSucceeded(
   }
 
   // If was past due, reactivate
-  if (subscription.status === 'past_due') {
+  if (subscription.status === 'PAST_DUE') {
     await db
       .update(subscriptions)
       .set({
-        status: 'active',
+        status: 'ACTIVE',
         gracePeriodEndsAt: null,
         updatedAt: new Date(),
       })

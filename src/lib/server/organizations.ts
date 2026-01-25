@@ -261,7 +261,7 @@ export const addOrganizationMember = createServerFn({ method: 'POST' })
       throw new Error('Admin access required');
     }
 
-    const membership = await addMember(data.organizationId, data.userId, data.role as 'owner' | 'admin' | 'member');
+    const membership = await addMember(data.organizationId, data.userId, data.role as 'OWNER' | 'ADMIN' | 'MEMBER');
 
     return {
       id: membership.id,
@@ -286,7 +286,7 @@ export const updateOrganizationMemberRole = createServerFn({ method: 'POST' })
       throw new Error('Admin access required');
     }
 
-    const membership = await updateMemberRole(data.organizationId, data.userId, data.role as 'owner' | 'admin' | 'member');
+    const membership = await updateMemberRole(data.organizationId, data.userId, data.role as 'OWNER' | 'ADMIN' | 'MEMBER');
     if (!membership) {
       throw new Error('Member not found');
     }

@@ -283,7 +283,7 @@ async function handleProviderWebhook(
       results.push({
         triggerId: trigger.id,
         executionId: execution.id,
-        status: result ? 'executed' : 'no_deployment',
+        status: result ? 'executed' : 'NO_DEPLOYMENT',
       });
     } catch (error) {
       logger.error('Failed to execute trigger', { triggerId: trigger.id, error: error instanceof Error ? error.message : String(error) });

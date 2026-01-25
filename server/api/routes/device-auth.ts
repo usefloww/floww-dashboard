@@ -156,26 +156,26 @@ post('/auth/device/token', async ({ request }) => {
   const { status, userId } = await checkDeviceCodeStatus(deviceCode);
 
   switch (status) {
-    case 'pending':
+    case 'PENDING':
       return json({
         error: 'authorization_pending',
         error_description: 'User has not yet authorized the device',
       }, 400);
 
-    case 'denied':
+    case 'DENIED':
       await deleteDeviceCode(deviceCode);
       return json({
         error: 'access_denied',
         error_description: 'User denied the authorization request',
       }, 400);
 
-    case 'expired':
+    case 'EXPIRED':
       return json({
         error: 'expired_token',
         error_description: 'The device code has expired',
       }, 400);
 
-    case 'approved':
+    case 'APPROVED':
       if (!userId) {
         return json({ error: 'server_error' }, 500);
       }

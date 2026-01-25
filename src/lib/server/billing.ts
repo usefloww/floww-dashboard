@@ -143,7 +143,7 @@ export const createSubscriptionIntent = createServerFn({ method: 'POST' })
 
     // Check admin membership
     const membership = await getOrganizationMembership(data.organizationId, user.id);
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
       throw new Error('Admin access required');
     }
 
@@ -160,7 +160,7 @@ export const createSubscriptionIntent = createServerFn({ method: 'POST' })
       organization.displayName,
       subscription.id,
       subscription.stripeCustomerId,
-      tier
+      tier.toUpperCase() as 'HOBBY' | 'TEAM'
     );
 
     return {
@@ -214,7 +214,7 @@ export const cancelSubscription = createServerFn({ method: 'POST' })
 
     // Check admin membership
     const membership = await getOrganizationMembership(data.organizationId, user.id);
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
       throw new Error('Admin access required');
     }
 
@@ -240,7 +240,7 @@ export const upgradeSubscription = createServerFn({ method: 'POST' })
 
     // Check admin membership
     const membership = await getOrganizationMembership(data.organizationId, user.id);
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
       throw new Error('Admin access required');
     }
 
@@ -258,7 +258,7 @@ export const upgradeSubscription = createServerFn({ method: 'POST' })
       organization.displayName,
       subscription.id,
       subscription.stripeCustomerId,
-      tier
+      tier.toUpperCase() as 'HOBBY' | 'TEAM'
     );
 
     return {
@@ -281,7 +281,7 @@ export const createPortalSession = createServerFn({ method: 'POST' })
 
     // Check admin membership
     const membership = await getOrganizationMembership(data.organizationId, user.id);
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
       throw new Error('Admin access required');
     }
 
@@ -365,7 +365,7 @@ export const createPaymentMethodSetupIntent = createServerFn({ method: 'POST' })
 
     // Check admin membership
     const membership = await getOrganizationMembership(data.organizationId, user.id);
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
       throw new Error('Admin access required');
     }
 
@@ -419,7 +419,7 @@ export const confirmPaymentMethodSetup = createServerFn({ method: 'POST' })
 
     // Check admin membership
     const membership = await getOrganizationMembership(data.organizationId, user.id);
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
       throw new Error('Admin access required');
     }
 

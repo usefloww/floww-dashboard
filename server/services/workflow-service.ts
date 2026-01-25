@@ -37,7 +37,7 @@ export interface WorkflowDeploymentInfo {
   providerDefinitions: unknown;
   triggerDefinitions: unknown;
   deployedAt: Date;
-  status: 'active' | 'inactive' | 'failed';
+  status: 'ACTIVE' | 'INACTIVE' | 'FAILED';
   note: string | null;
 }
 
@@ -284,7 +284,7 @@ export async function getActiveDeployment(
     .select()
     .from(workflowDeployments)
     .where(
-      and(eq(workflowDeployments.workflowId, workflowId), eq(workflowDeployments.status, 'active'))
+      and(eq(workflowDeployments.workflowId, workflowId), eq(workflowDeployments.status, 'ACTIVE'))
     )
     .orderBy(desc(workflowDeployments.deployedAt))
     .limit(1);
@@ -386,11 +386,11 @@ export async function createDeployment(params: {
   // Deactivate previous active deployment
   await db
     .update(workflowDeployments)
-    .set({ status: 'inactive' })
+    .set({ status: 'INACTIVE' })
     .where(
       and(
         eq(workflowDeployments.workflowId, params.workflowId),
-        eq(workflowDeployments.status, 'active')
+        eq(workflowDeployments.status, 'ACTIVE')
       )
     );
 
@@ -405,7 +405,7 @@ export async function createDeployment(params: {
       userCode: params.userCode,
       providerDefinitions: params.providerDefinitions ?? null,
       triggerDefinitions: params.triggerDefinitions ?? null,
-      status: 'active',
+      status: 'ACTIVE',
       note: params.note ?? null,
     })
     .returning();
@@ -435,7 +435,7 @@ export async function createDeployment(params: {
  */
 export async function updateDeploymentStatus(
   deploymentId: string,
-  status: 'active' | 'inactive' | 'failed'
+  status: 'ACTIVE' | 'INACTIVE' | 'FAILED'
 ): Promise<WorkflowDeploymentInfo | null> {
   const db = getDb();
 
