@@ -74,6 +74,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -113,6 +116,9 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
 
       - name: Extract metadata
         id: meta
