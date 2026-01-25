@@ -11,102 +11,9 @@ env:
   IMAGE_NAME: usefloww/floww-dashboard
 
 jobs:
-  build:
-    name: Build Docker Images
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      test_image: ${{ steps.set-test-image.outputs.image }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set test image name
-        id: set-test-image
-        run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-test:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
-
-      - name: Build and push test image
-        uses: useblacksmith/build-push-action@v2
-        with:
-          context: .
-          target: test
-          push: true
-          tags: ${{ steps.set-test-image.outputs.image }}
-
-      - name: Extract metadata (app)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push (app)
-        uses: useblacksmith/build-push-action@v2
-        with:
-          context: .
-          target: runner
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  build-centrifugo:
-    name: Build Centrifugo
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (centrifugo)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-centrifugo
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push (centrifugo)
-        uses: useblacksmith/build-push-action@v2
-        with:
-          context: ./centrifugo
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
   test:
     name: Test
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [build]
     services:
       postgres:
         image: postgres:16-alpine
@@ -125,20 +32,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Copy node_modules from test image
-        run: |
-          docker create --name test-container ${{ needs.build.outputs.test_image }}
-          docker cp test-container:/app/node_modules ./node_modules
-          docker cp test-container:/app/packages ./packages
-          docker rm test-container
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -148,6 +41,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Run TypeScript check
         run: pnpm typecheck
@@ -160,10 +57,94 @@ jobs:
           JWT_SECRET: test-jwt-secret
           SESSION_SECRET: test-session-secret
 
+  build:
+    name: Build App Image
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Blacksmith Buildx
+        uses: useblacksmith/setup-buildx@v1
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: .
+          target: runner
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build-centrifugo:
+    name: Build Centrifugo
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Blacksmith Buildx
+        uses: useblacksmith/setup-buildx@v1
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-centrifugo
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: ./centrifugo
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   deploy-staging:
     name: Deploy to Staging
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [test, build-centrifugo]
+    needs: [build, build-centrifugo]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: staging
