@@ -4,9 +4,12 @@
 # Whitelist essential files for build
 !package.json
 !pnpm-lock.yaml
+!pnpm-workspace.yaml
 
 # Whitelist source code
 !src/
+!server/
+!packages/
 !index.html
 
 # Whitelist configuration files
