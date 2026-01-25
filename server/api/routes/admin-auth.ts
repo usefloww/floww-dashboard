@@ -18,7 +18,7 @@ import { users } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { createJwt } from '~/server/utils/jwt';
 import { createSessionCookie, clearSessionCookie } from '~/server/utils/session';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { logger } from '~/server/utils/logger';
 import { settings } from '~/server/settings';
 

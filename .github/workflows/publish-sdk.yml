@@ -4,13 +4,6 @@ on:
   push:
     branches:
       - main
-      - monorepo
-      - 'feature/**'
-      - 'feat/**'
-      - develop
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -50,7 +43,6 @@ jobs:
     name: Publish to GitHub Package Registry
     needs: test-sdk
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,17 +66,16 @@ jobs:
       - name: Build SDK
         run: pnpm --filter floww build
 
-      - name: Generate version from branch and commit
+      - name: Generate version from commit hash
         working-directory: packages/sdk
         run: |
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
           COMMIT_HASH=${GITHUB_SHA:0:8}
 
-          # Sanitize branch name for npm version (replace special chars with dash)
-          SAFE_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+          # Get base version from package.json
+          BASE_VERSION=$(jq -r '.version' package.json)
 
-          # Create semver-compliant version: 0.0.0-branch.commithash
-          NEW_VERSION="0.0.0-${SAFE_BRANCH}.${COMMIT_HASH}"
+          # Create version with commit hash: x.y.z-sha.commithash
+          NEW_VERSION="${BASE_VERSION}-sha.${COMMIT_HASH}"
 
           # Update package.json version and name for GitHub Package Registry
           jq --arg version "$NEW_VERSION" --arg name "@usefloww/floww-sdk" '.version = $version | .name = $name' package.json > package.tmp.json
@@ -106,7 +97,6 @@ jobs:
     name: Publish to npm
     needs: test-sdk
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
         with:

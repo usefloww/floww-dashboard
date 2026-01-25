@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Code, Package, Activity, Settings, FileText, Sparkles, PlayCircle } from "lucide-react";
+import { ArrowLeft, Code, Package, Activity, Settings, FileText, Sparkles, PlayCircle, Loader2 } from "lucide-react";
 import { handleApiError } from "@/lib/api";
 import { getWorkflow } from "@/lib/server/workflows";
 import { Loader } from "@/components/Loader";
@@ -10,9 +10,25 @@ import { DeploymentHistory } from "@/components/DeploymentHistory";
 import { ExecutionHistory } from "@/components/ExecutionHistory";
 import { WorkflowConfiguration } from "@/components/WorkflowConfiguration";
 import { WorkflowLogs } from "@/components/WorkflowLogs";
-import { WorkflowBuilder } from "@/components/WorkflowBuilder";
 import { ManualTriggersSection } from "@/components/ManualTriggersSection";
 import { useNamespaceStore } from "@/stores/namespaceStore";
+import { ClientOnly } from "@/components/ClientOnly";
+
+// Lazy load WorkflowBuilder since it includes heavy dependencies (@llamaindex/chat-ui, monaco-editor)
+// This is wrapped in ClientOnly to completely skip SSR for this component
+const WorkflowBuilder = lazy(() => import("@/components/WorkflowBuilder").then(m => ({ default: m.WorkflowBuilder })));
+
+// Loading fallback for lazy-loaded components
+function TabLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-[400px]">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </div>
+    </div>
+  );
+}
 
 type TabType = "edit" | "deployments" | "executions" | "logs" | "config" | "builder" | "triggers";
 
@@ -251,7 +267,11 @@ function DeploymentsPage() {
             />
           ) : null
         ) : activeTab === "builder" ? (
-          <WorkflowBuilder workflowId={workflowId} />
+          <ClientOnly fallback={<TabLoadingFallback />}>
+            <Suspense fallback={<TabLoadingFallback />}>
+              <WorkflowBuilder workflowId={workflowId} />
+            </Suspense>
+          </ClientOnly>
         ) : activeTab === "triggers" ? (
           <ManualTriggersSection workflowId={workflowId} />
         ) : null}
