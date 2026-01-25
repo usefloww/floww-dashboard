@@ -72,6 +72,11 @@ services:
       - staging_backend_stripe_secret_key
       - staging_backend_stripe_webhook_secret
       - staging_backend_workos_api_key
+      - staging_backend_aws_access_key_id
+      - staging_backend_aws_secret_access_key
+      - staging_backend_google_oauth_client_id
+      - staging_backend_google_oauth_client_secret
+      - staging_backend_openrouter_api_key
 
     environment:
       # Non-sensitive configuration
@@ -95,6 +100,11 @@ services:
       - STRIPE_PUBLISHABLE_KEY=pk_test_51SToIL6Sf2jh0J7U2zK8kB10riNkBMYt0l29srRSjhDcH0fVq1wkvJsz5NVrrHAKJuikDg5ZmOeAKFv2AkghqR0h006yNZRHDx
       - STRIPE_PRICE_ID_HOBBY=price_1SjjFK9QR0ekoyxEJlYJwPmb
       - STRIPE_PRICE_ID_TEAM=price_1SjjFK9QR0ekoyxEJKp9zl6q
+      # Runtime configuration
+      - RUNTIME_TYPE=lambda
+      - AWS_REGION=us-east-1
+      - REGISTRY_URL=501046919403.dkr.ecr.us-east-1.amazonaws.com
+      - ECR_REPOSITORY_NAME=trigger-lambda
 
       # Secret file paths (read by settings.ts via *_FILE env vars)
       - AUTH_CLIENT_SECRET_FILE=/run/secrets/staging_backend_auth_client_secret
@@ -108,6 +118,11 @@ services:
       - STRIPE_SECRET_KEY_FILE=/run/secrets/staging_backend_stripe_secret_key
       - STRIPE_WEBHOOK_SECRET_FILE=/run/secrets/staging_backend_stripe_webhook_secret
       - WORKOS_API_KEY_FILE=/run/secrets/staging_backend_workos_api_key
+      - AWS_ACCESS_KEY_ID_FILE=/run/secrets/staging_backend_aws_access_key_id
+      - AWS_SECRET_ACCESS_KEY_FILE=/run/secrets/staging_backend_aws_secret_access_key
+      - GOOGLE_OAUTH_CLIENT_ID_FILE=/run/secrets/staging_backend_google_oauth_client_id
+      - GOOGLE_OAUTH_CLIENT_SECRET_FILE=/run/secrets/staging_backend_google_oauth_client_secret
+      - OPENROUTER_API_KEY_FILE=/run/secrets/staging_backend_openrouter_api_key
 
     deploy:
       mode: replicated
@@ -166,6 +181,16 @@ secrets:
   staging_backend_stripe_webhook_secret:
     external: true
   staging_backend_workos_api_key:
+    external: true
+  staging_backend_aws_access_key_id:
+    external: true
+  staging_backend_aws_secret_access_key:
+    external: true
+  staging_backend_google_oauth_client_id:
+    external: true
+  staging_backend_google_oauth_client_secret:
+    external: true
+  staging_backend_openrouter_api_key:
     external: true
 
 networks:

@@ -8,6 +8,7 @@ import { LambdaClient } from '@aws-sdk/client-lambda';
 import type { Runtime } from './runtime-types';
 import { DockerRuntime, type DockerRuntimeConfig } from './implementations/docker-runtime';
 import { LambdaRuntime, type LambdaRuntimeConfig } from './implementations/lambda-runtime';
+import { settings } from '~/server/settings';
 
 export * from './runtime-types';
 export { DockerRuntime, type DockerRuntimeConfig } from './implementations/docker-runtime';
@@ -43,28 +44,28 @@ function getEnvOrThrow(key: string): string {
  * Create a runtime instance with the given configuration
  */
 export function createRuntime(config: RuntimeFactoryConfig = {}): Runtime {
-  const runtimeType = config.runtimeType ?? (process.env.RUNTIME_TYPE as RuntimeType) ?? 'docker';
+  const runtimeType = config.runtimeType ?? settings.runtime.RUNTIME_TYPE;
 
   switch (runtimeType) {
     case 'docker': {
       const dockerConfig: DockerRuntimeConfig = {
-        repositoryName: config.repositoryName ?? process.env.DOCKER_REPOSITORY_NAME ?? 'docker-runtime',
-        registryUrl: config.registryUrl ?? process.env.DOCKER_REGISTRY_URL ?? 'localhost:5000',
+        repositoryName: config.repositoryName ?? settings.runtime.DOCKER_REPOSITORY_NAME,
+        registryUrl: config.registryUrl ?? settings.runtime.DOCKER_REGISTRY_URL,
       };
       return new DockerRuntime(dockerConfig);
     }
 
     case 'lambda': {
       const lambdaClient = config.lambdaClient ?? new LambdaClient({
-        region: config.awsRegion ?? process.env.AWS_REGION ?? 'us-east-1',
+        region: config.awsRegion ?? settings.runtime.AWS_REGION,
       });
 
       const lambdaConfig: LambdaRuntimeConfig = {
         lambdaClient,
-        executionRoleArn: config.executionRoleArn ?? getEnvOrThrow('LAMBDA_EXECUTION_ROLE_ARN'),
-        registryUrl: config.registryUrl ?? getEnvOrThrow('ECR_REGISTRY_URL'),
-        repositoryName: config.repositoryName ?? process.env.ECR_REPOSITORY_NAME ?? 'floww-runtime',
-        backendUrl: config.backendUrl ?? getEnvOrThrow('BACKEND_URL'),
+        executionRoleArn: config.executionRoleArn ?? (settings.runtime.LAMBDA_EXECUTION_ROLE_ARN ?? getEnvOrThrow('LAMBDA_EXECUTION_ROLE_ARN')),
+        registryUrl: config.registryUrl ?? (settings.runtime.ECR_REGISTRY_URL ?? getEnvOrThrow('ECR_REGISTRY_URL')),
+        repositoryName: config.repositoryName ?? settings.runtime.ECR_REPOSITORY_NAME,
+        backendUrl: config.backendUrl ?? settings.general.BACKEND_URL,
       };
       return new LambdaRuntime(lambdaConfig);
     }

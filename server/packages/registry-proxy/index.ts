@@ -5,6 +5,8 @@
  * routing to the appropriate backend registry (Docker Hub, ECR, GCR, etc).
  */
 
+import { settings } from '~/server/settings';
+
 export interface RegistryCredentials {
   username?: string;
   password?: string;
@@ -199,16 +201,16 @@ export class RegistryProxy {
  * Create a registry proxy from configuration
  */
 export function createRegistryProxy(type?: string): RegistryProxy {
-  const registryType = (type ?? process.env.REGISTRY_TYPE ?? 'dockerhub') as RegistryConfig['type'];
-  const registryUrl = process.env.REGISTRY_URL ?? 'https://registry-1.docker.io';
+  const registryType = (type ?? settings.registry.REGISTRY_TYPE) as RegistryConfig['type'];
+  const registryUrl = settings.registry.REGISTRY_URL;
 
   return new RegistryProxy({
     type: registryType,
     url: registryUrl,
     credentials: {
-      username: process.env.REGISTRY_USERNAME,
-      password: process.env.REGISTRY_PASSWORD,
-      token: process.env.REGISTRY_TOKEN,
+      username: settings.registry.REGISTRY_USERNAME,
+      password: settings.registry.REGISTRY_PASSWORD,
+      token: settings.registry.REGISTRY_TOKEN,
     },
   });
 }

@@ -28,10 +28,11 @@ import {
 import { getJwtFromSessionCookie } from '~/server/utils/session';
 import { createJwt } from '~/server/utils/jwt';
 import { authenticateRequest } from '~/server/services/auth';
+import { settings } from '~/server/settings';
 
 // Start device authorization flow
 post('/auth/device/authorize', async ({ request }) => {
-  const authType = process.env.AUTH_TYPE ?? 'workos';
+  const authType = settings.auth.AUTH_TYPE;
   if (authType !== 'password') {
     return errorResponse('Device authorization is only available with password authentication', 400);
   }
@@ -57,7 +58,7 @@ post('/auth/device/authorize', async ({ request }) => {
 
 // Device verification page (HTML)
 get('/auth/device/verify', async ({ request, query }) => {
-  const authType = process.env.AUTH_TYPE ?? 'workos';
+  const authType = settings.auth.AUTH_TYPE;
   if (authType !== 'password') {
     return errorResponse('Device authorization is only available with password authentication', 400);
   }
@@ -85,7 +86,7 @@ get('/auth/device/verify', async ({ request, query }) => {
 
 // Submit device verification
 post('/auth/device/verify', async ({ request }) => {
-  const authType = process.env.AUTH_TYPE ?? 'workos';
+  const authType = settings.auth.AUTH_TYPE;
   if (authType !== 'password') {
     return errorResponse('Device authorization is only available with password authentication', 400);
   }
@@ -137,7 +138,7 @@ post('/auth/device/verify', async ({ request }) => {
 
 // Poll for token
 post('/auth/device/token', async ({ request }) => {
-  const authType = process.env.AUTH_TYPE ?? 'workos';
+  const authType = settings.auth.AUTH_TYPE;
   if (authType !== 'password') {
     return errorResponse('Device authorization is only available with password authentication', 400);
   }
@@ -203,7 +204,7 @@ post('/auth/device/token', async ({ request }) => {
 
 // Refresh token
 post('/auth/token/refresh', async ({ request }) => {
-  const authType = process.env.AUTH_TYPE ?? 'workos';
+  const authType = settings.auth.AUTH_TYPE;
   if (authType !== 'password') {
     return errorResponse('Token refresh is only available with password authentication', 400);
   }
@@ -239,7 +240,7 @@ post('/auth/token/refresh', async ({ request }) => {
 
 // Revoke token
 post('/auth/token/revoke', async ({ request }) => {
-  const authType = process.env.AUTH_TYPE ?? 'workos';
+  const authType = settings.auth.AUTH_TYPE;
   if (authType !== 'password') {
     return errorResponse('Token revocation is only available with password authentication', 400);
   }

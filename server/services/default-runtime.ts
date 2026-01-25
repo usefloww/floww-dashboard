@@ -11,6 +11,7 @@ import { getDb } from '~/server/db';
 import { configurations, runtimes } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 const DEFAULT_RUNTIME_CONFIG_KEY = 'default_runtime_id';
 
@@ -34,8 +35,8 @@ function generateConfigHashFromUri(imageUri: string): string {
  * Note: Actual Lambda function creation is done by the runtimes package.
  */
 export async function prepareDefaultRuntime(): Promise<void> {
-  const defaultRuntimeImage = process.env.DEFAULT_RUNTIME_IMAGE;
-  const runtimeType = process.env.RUNTIME_TYPE ?? 'docker';
+  const defaultRuntimeImage = settings.runtime.DEFAULT_RUNTIME_IMAGE;
+  const runtimeType = settings.runtime.RUNTIME_TYPE;
 
   if (!defaultRuntimeImage) {
     logger.debug('No DEFAULT_RUNTIME_IMAGE configured, skipping default runtime setup');

@@ -11,6 +11,7 @@ import { Hono } from 'hono';
 import path from 'node:path';
 import fs from 'node:fs';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 /**
  * Convert AdminJS route path format to Hono format
@@ -245,7 +246,7 @@ export function buildAuthenticatedRouter(
     cookieName = 'adminjs_session',
     cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: settings.logging.IS_PRODUCTION,
       sameSite: 'Lax',
       path: admin.options.rootPath,
       maxAge: 86400, // 24 hours

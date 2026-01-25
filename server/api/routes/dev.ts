@@ -11,8 +11,9 @@ import { getDb } from '~/server/db';
 import { workflowDeployments, workflows } from '~/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { syncTriggers } from '~/server/services/trigger-service';
+import { settings } from '~/server/settings';
 
-const isDev = process.env.NODE_ENV !== 'production';
+const isDev = !settings.logging.IS_PRODUCTION;
 
 // Sync all triggers across all deployments
 post('/dev/sync-triggers', async ({ user }) => {

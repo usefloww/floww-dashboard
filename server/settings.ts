@@ -214,6 +214,105 @@ function loadWorkerConfig(): z.infer<typeof WorkerConfigSchema> {
 }
 
 // ============================================================================
+// Runtime Configuration
+// ============================================================================
+
+const RuntimeConfigSchema = z.object({
+  RUNTIME_TYPE: z.enum(['docker', 'lambda', 'kubernetes']).default('docker'),
+  DEFAULT_RUNTIME_IMAGE: z.string().optional(),
+  DOCKER_REPOSITORY_NAME: z.string().default('docker-runtime'),
+  DOCKER_REGISTRY_URL: z.string().default('localhost:5000'),
+  AWS_REGION: z.string().default('us-east-1'),
+  ECR_REPOSITORY_NAME: z.string().default('floww-runtime'),
+  LAMBDA_EXECUTION_ROLE_ARN: z.string().optional(),
+  ECR_REGISTRY_URL: z.string().optional(),
+});
+
+function loadRuntimeConfig(): z.infer<typeof RuntimeConfigSchema> {
+  return {
+    RUNTIME_TYPE: (getEnvWithSecret('RUNTIME_TYPE') as 'docker' | 'lambda' | 'kubernetes') || 'docker',
+    DEFAULT_RUNTIME_IMAGE: getEnvWithSecret('DEFAULT_RUNTIME_IMAGE'),
+    DOCKER_REPOSITORY_NAME: getEnvWithSecret('DOCKER_REPOSITORY_NAME') || 'docker-runtime',
+    DOCKER_REGISTRY_URL: getEnvWithSecret('DOCKER_REGISTRY_URL') || 'localhost:5000',
+    AWS_REGION: getEnvWithSecret('AWS_REGION') || 'us-east-1',
+    ECR_REPOSITORY_NAME: getEnvWithSecret('ECR_REPOSITORY_NAME') || 'floww-runtime',
+    LAMBDA_EXECUTION_ROLE_ARN: getEnvWithSecret('LAMBDA_EXECUTION_ROLE_ARN'),
+    ECR_REGISTRY_URL: getEnvWithSecret('ECR_REGISTRY_URL'),
+  };
+}
+
+// ============================================================================
+// OAuth Configuration
+// ============================================================================
+
+const OAuthConfigSchema = z.object({
+  GOOGLE_OAUTH_CLIENT_ID: z.string().default(''),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().default(''),
+});
+
+function loadOAuthConfig(): z.infer<typeof OAuthConfigSchema> {
+  return {
+    GOOGLE_OAUTH_CLIENT_ID: getEnvWithSecret('GOOGLE_OAUTH_CLIENT_ID') || '',
+    GOOGLE_OAUTH_CLIENT_SECRET: getEnvWithSecret('GOOGLE_OAUTH_CLIENT_SECRET') || '',
+  };
+}
+
+// ============================================================================
+// Registry Configuration
+// ============================================================================
+
+const RegistryConfigSchema = z.object({
+  REGISTRY_TYPE: z.enum(['dockerhub', 'ecr', 'gcr', 'generic']).default('dockerhub'),
+  REGISTRY_URL: z.string().url().default('https://registry-1.docker.io'),
+  REGISTRY_USERNAME: z.string().optional(),
+  REGISTRY_PASSWORD: z.string().optional(),
+  REGISTRY_TOKEN: z.string().optional(),
+});
+
+function loadRegistryConfig(): z.infer<typeof RegistryConfigSchema> {
+  return {
+    REGISTRY_TYPE: (getEnvWithSecret('REGISTRY_TYPE') as 'dockerhub' | 'ecr' | 'gcr' | 'generic') || 'dockerhub',
+    REGISTRY_URL: getEnvWithSecret('REGISTRY_URL') || 'https://registry-1.docker.io',
+    REGISTRY_USERNAME: getEnvWithSecret('REGISTRY_USERNAME'),
+    REGISTRY_PASSWORD: getEnvWithSecret('REGISTRY_PASSWORD'),
+    REGISTRY_TOKEN: getEnvWithSecret('REGISTRY_TOKEN'),
+  };
+}
+
+// ============================================================================
+// Logging Configuration
+// ============================================================================
+
+const LoggingConfigSchema = z.object({
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  IS_PRODUCTION: z.boolean().default(false),
+});
+
+function loadLoggingConfig(): z.infer<typeof LoggingConfigSchema> {
+  const nodeEnv = (getEnvWithSecret('NODE_ENV') || 'development') as 'development' | 'production' | 'test';
+  return {
+    LOG_LEVEL: (getEnvWithSecret('LOG_LEVEL') as 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal') || 'info',
+    NODE_ENV: nodeEnv,
+    IS_PRODUCTION: nodeEnv === 'production',
+  };
+}
+
+// ============================================================================
+// Version Configuration
+// ============================================================================
+
+const VersionConfigSchema = z.object({
+  VERSION: z.string().default('0.0.0'),
+});
+
+function loadVersionConfig(): z.infer<typeof VersionConfigSchema> {
+  return {
+    VERSION: getEnvWithSecret('npm_package_version') || getEnvWithSecret('VERSION') || '0.0.0',
+  };
+}
+
+// ============================================================================
 // Combined Settings Schema
 // ============================================================================
 
@@ -225,6 +324,11 @@ const SettingsSchema = z.object({
   general: GeneralConfigSchema,
   ai: AIConfigSchema,
   worker: WorkerConfigSchema,
+  runtime: RuntimeConfigSchema,
+  oauth: OAuthConfigSchema,
+  registry: RegistryConfigSchema,
+  logging: LoggingConfigSchema,
+  version: VersionConfigSchema,
 });
 
 type Settings = z.infer<typeof SettingsSchema>;
@@ -242,6 +346,11 @@ function loadSettings(): Settings {
     general: loadGeneralConfig(),
     ai: loadAIConfig(),
     worker: loadWorkerConfig(),
+    runtime: loadRuntimeConfig(),
+    oauth: loadOAuthConfig(),
+    registry: loadRegistryConfig(),
+    logging: loadLoggingConfig(),
+    version: loadVersionConfig(),
   };
 
   // Validate settings
@@ -278,3 +387,8 @@ export type StripeConfig = z.infer<typeof StripeConfigSchema>;
 export type GeneralConfig = z.infer<typeof GeneralConfigSchema>;
 export type AIConfig = z.infer<typeof AIConfigSchema>;
 export type WorkerConfig = z.infer<typeof WorkerConfigSchema>;
+export type RuntimeConfig = z.infer<typeof RuntimeConfigSchema>;
+export type OAuthConfig = z.infer<typeof OAuthConfigSchema>;
+export type RegistryConfig = z.infer<typeof RegistryConfigSchema>;
+export type LoggingConfig = z.infer<typeof LoggingConfigSchema>;
+export type VersionConfig = z.infer<typeof VersionConfigSchema>;

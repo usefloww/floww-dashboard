@@ -6,6 +6,8 @@
  * User-level tokens are stored per-provider in encrypted_config.
  */
 
+import { settings } from '~/server/settings';
+
 export interface OAuthTokens {
   accessToken: string;
   refreshToken: string | null;
@@ -34,8 +36,8 @@ export class GoogleOAuthProvider implements OAuthProvider {
   name = 'google';
 
   constructor() {
-    this.clientId = process.env.GOOGLE_OAUTH_CLIENT_ID ?? '';
-    this.clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? '';
+    this.clientId = settings.oauth.GOOGLE_OAUTH_CLIENT_ID;
+    this.clientSecret = settings.oauth.GOOGLE_OAUTH_CLIENT_SECRET;
   }
 
   getAuthorizationUrl(scopes: string[], state: string, redirectUri: string): string {

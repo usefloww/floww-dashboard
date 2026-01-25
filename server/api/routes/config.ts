@@ -22,6 +22,6 @@ get('/config', async () => {
       maxWorkflows: parseInt(getEnvWithSecret('MAX_WORKFLOWS') ?? '100', 10),
       maxExecutionsPerMonth: parseInt(getEnvWithSecret('MAX_EXECUTIONS_PER_MONTH') ?? '10000', 10),
     },
-    version: process.env.npm_package_version ?? '0.0.0',
+    version: settings.version.VERSION,
   });
 }, false); // No auth required
