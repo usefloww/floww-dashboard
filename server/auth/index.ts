@@ -12,6 +12,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getDb } from '~/server/db';
+import { settings } from '~/server/settings';
 
 // Lazy initialization to avoid issues with Vite SSR
 let _auth: ReturnType<typeof betterAuth> | null = null;
@@ -32,8 +33,8 @@ export function getAuth() {
       },
       // Advanced configuration
       advanced: {},
-      secret: process.env.BETTER_AUTH_SECRET,
-      baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
+      secret: settings.auth.BETTER_AUTH_SECRET,
+      baseURL: settings.auth.BETTER_AUTH_URL || 'http://localhost:3000',
     });
   }
   return _auth;

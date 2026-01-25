@@ -206,7 +206,7 @@ export function getJwtFromSessionCookie(
  * Compatible with Python's itsdangerous
  */
 export function signState(data: { csrf: string; next: string }): string {
-  const key = process.env.SESSION_SECRET_KEY;
+  const key = settings.database.SESSION_SECRET_KEY;
   if (!key) {
     throw new Error('SESSION_SECRET_KEY not configured');
   }
@@ -232,7 +232,7 @@ export function parseState(
   signedState: string,
   maxAgeSeconds: number = 600
 ): { csrf: string; next: string } | null {
-  const key = process.env.SESSION_SECRET_KEY;
+  const key = settings.database.SESSION_SECRET_KEY;
   if (!key) {
     logger.error('SESSION_SECRET_KEY not configured');
     return null;

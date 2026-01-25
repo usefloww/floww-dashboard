@@ -15,6 +15,7 @@ import {
   type Subscription,
 } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
+import { settings } from '~/server/settings';
 
 export type SubscriptionTier = 'free' | 'hobby' | 'team';
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete';
@@ -39,8 +40,6 @@ const PLAN_NAMES: Record<SubscriptionTier, string> = {
   hobby: 'Hobby',
   team: 'Team',
 };
-
-import { settings } from '~/server/settings';
 
 // Settings from environment
 const IS_CLOUD = settings.general.IS_CLOUD;
@@ -541,8 +540,8 @@ export async function handleSubscriptionUpdated(
     const items = ((eventData.items as Record<string, unknown>)?.data ?? []) as Array<{
       price?: { id?: string };
     }>;
-    const priceIdHobby = process.env.STRIPE_PRICE_ID_HOBBY;
-    const priceIdTeam = process.env.STRIPE_PRICE_ID_TEAM;
+    const priceIdHobby = settings.stripe.STRIPE_PRICE_ID_HOBBY;
+    const priceIdTeam = settings.stripe.STRIPE_PRICE_ID_TEAM;
 
     for (const item of items) {
       const priceId = item.price?.id;

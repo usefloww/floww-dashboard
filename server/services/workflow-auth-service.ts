@@ -7,14 +7,12 @@
  */
 
 import * as jose from 'jose';
+import { settings } from '~/server/settings';
 
 // Settings from environment
-const WORKFLOW_JWT_SECRET = process.env.WORKFLOW_JWT_SECRET ?? 'dev-secret-change-in-production';
+const WORKFLOW_JWT_SECRET = settings.auth.WORKFLOW_JWT_SECRET ?? 'dev-secret-change-in-production';
 const WORKFLOW_JWT_ALGORITHM = 'HS256';
-const WORKFLOW_JWT_EXPIRATION_SECONDS = parseInt(
-  process.env.WORKFLOW_JWT_EXPIRATION_SECONDS ?? '300',
-  10
-);
+const WORKFLOW_JWT_EXPIRATION_SECONDS = 300;
 
 // Encode secret for jose
 const secretKey = new TextEncoder().encode(WORKFLOW_JWT_SECRET);

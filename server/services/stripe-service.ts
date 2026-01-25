@@ -285,7 +285,7 @@ export function constructWebhookEvent(
   signature: string
 ): Stripe.Event {
   const stripeClient = getStripe();
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = settings.stripe.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
     throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
