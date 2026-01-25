@@ -11,14 +11,14 @@ env:
   IMAGE_NAME: usefloww/floww-dashboard
 
 jobs:
-  build-test-image:
-    name: Build Test Image
+  build:
+    name: Build Docker Images
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       packages: write
     outputs:
-      test_image: ${{ steps.set-image.outputs.image }}
+      test_image: ${{ steps.set-test-image.outputs.image }}
 
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +30,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image name
-        id: set-image
+      - name: Set test image name
+        id: set-test-image
         run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-test:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Build and push test image
@@ -40,82 +40,13 @@ jobs:
           context: .
           target: test
           push: true
-          tags: ${{ steps.set-image.outputs.image }}
-
-  test:
-    name: Test
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [build-test-image]
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: floww_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    container:
-      image: ${{ needs.build-test-image.outputs.test_image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    steps:
-      - name: Run TypeScript check
-        run: pnpm typecheck
-
-      - name: Run tests
-        run: pnpm test:ci
-        env:
-          DATABASE_URL: postgresql://test:test@postgres:5432/floww_test
-          ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS1mb3ItdGVzdGluZw==
-          JWT_SECRET: test-jwt-secret
-          SESSION_SECRET: test-session-secret
-
-  build:
-    name: Build Docker Images
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [test]
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          tags: ${{ steps.set-test-image.outputs.image }}
 
       - name: Extract metadata (app)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Extract metadata (centrifugo)
-        id: meta-centrifugo
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-centrifugo
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -133,18 +64,106 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  build-centrifugo:
+    name: Build Centrifugo
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (centrifugo)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-centrifugo
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Build and push (centrifugo)
         uses: useblacksmith/build-push-action@v2
         with:
           context: ./centrifugo
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-centrifugo.outputs.tags }}
-          labels: ${{ steps.meta-centrifugo.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  test:
+    name: Test
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: [build]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: floww_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy node_modules from test image
+        run: |
+          docker create --name test-container ${{ needs.build.outputs.test_image }}
+          docker cp test-container:/app/node_modules ./node_modules
+          docker cp test-container:/app/packages ./packages
+          docker rm test-container
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run TypeScript check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test:ci
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/floww_test
+          ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS1mb3ItdGVzdGluZw==
+          JWT_SECRET: test-jwt-secret
+          SESSION_SECRET: test-session-secret
 
   deploy-staging:
     name: Deploy to Staging
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [build]
+    needs: [test, build-centrifugo]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: staging
