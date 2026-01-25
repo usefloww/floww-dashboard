@@ -19,7 +19,7 @@ permissions:
 jobs:
   test-sdk:
     name: Test SDK
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 
@@ -49,7 +49,7 @@ jobs:
   publish-github:
     name: Publish to GitHub Package Registry
     needs: test-sdk
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -105,7 +105,7 @@ jobs:
   publish-npm:
     name: Publish to npm
     needs: test-sdk
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4

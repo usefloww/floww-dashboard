@@ -16,7 +16,7 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       packages: write
@@ -45,7 +45,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: useblacksmith/build-push-action@v2
         with:
           context: .
           push: true
@@ -56,7 +56,7 @@ jobs:
 
   staging-deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: staging
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
@@ -88,7 +88,7 @@ jobs:
 
   production-deploy:
     needs: staging-deploy
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
