@@ -12,7 +12,6 @@
 
 import { z } from 'zod';
 import { getEnvWithSecret } from './utils/docker-secrets';
-import { logger } from './utils/logger';
 
 // ============================================================================
 // Database Configuration
@@ -357,7 +356,8 @@ function loadSettings(): Settings {
   const result = SettingsSchema.safeParse(rawSettings);
 
   if (!result.success) {
-    logger.error('Settings validation failed:', result.error.format());
+    // Use console.error here to avoid circular dependency with logger
+    console.error('Settings validation failed:', result.error.format());
     throw new Error(`Invalid settings configuration: ${result.error.message}`);
   }
 

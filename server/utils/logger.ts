@@ -11,7 +11,6 @@
 
 import pino, { type Logger } from 'pino';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { settings } from '~/server/settings';
 
 export interface RequestContext {
   requestId: string;
@@ -22,10 +21,14 @@ export interface RequestContext {
 
 const asyncLocalStorage = new AsyncLocalStorage<RequestContext>();
 
+// Read directly from process.env to avoid circular dependency with settings
+const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 // Create base pino logger
 const baseLogger: Logger = pino({
-  level: settings.logging.LOG_LEVEL,
-  transport: !settings.logging.IS_PRODUCTION
+  level: LOG_LEVEL,
+  transport: !IS_PRODUCTION
     ? { target: 'pino-pretty', options: { colorize: true } }
     : undefined,
 });
