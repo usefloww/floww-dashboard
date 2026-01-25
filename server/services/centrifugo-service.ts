@@ -5,6 +5,7 @@
  * Used for streaming execution logs, webhook events, etc.
  */
 
+import crypto from 'crypto';
 import { logger } from '~/server/utils/logger';
 import { settings } from '~/server/settings';
 
@@ -165,7 +166,6 @@ class CentrifugoService {
     const payload = Buffer.from(JSON.stringify({ sub: userId, exp })).toString('base64url');
     
     // For proper HMAC, use crypto
-    const crypto = require('crypto');
     const signature = crypto
       .createHmac('sha256', secret)
       .update(`${header}.${payload}`)
@@ -188,7 +188,6 @@ class CentrifugoService {
     const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
     const payload = Buffer.from(JSON.stringify({ sub: userId, channel, exp })).toString('base64url');
     
-    const crypto = require('crypto');
     const signature = crypto
       .createHmac('sha256', secret)
       .update(`${header}.${payload}`)

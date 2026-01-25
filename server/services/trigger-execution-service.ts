@@ -26,6 +26,7 @@ import {
   type RuntimePayload,
 } from '~/server/packages/runtimes';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 export interface TriggerPayload {
   trigger: {
@@ -78,7 +79,6 @@ export function buildTriggerPayload(params: {
   authToken: string;
   executionId: string;
 }): TriggerPayload {
-  const { settings } = require('~/server/settings');
   const backendUrl = settings.general.PUBLIC_API_URL ?? 'http://localhost:3000';
 
   return {

@@ -9,6 +9,7 @@
  */
 
 import crypto from 'crypto';
+import zlib from 'zlib';
 import { logger } from '~/server/utils/logger';
 import { settings } from '~/server/settings';
 
@@ -166,7 +167,6 @@ export function parseSessionCookie(
     if (payloadBytes[0] === 0x2e) {
       // Starts with '.', meaning it's compressed
       // Remove the '.' prefix and decompress
-      const zlib = require('zlib');
       const compressed = payloadBytes.slice(1);
       payloadStr = zlib.inflateSync(compressed).toString('utf-8');
     } else {

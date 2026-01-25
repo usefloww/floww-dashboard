@@ -19,6 +19,7 @@ import {
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { encryptSecret, decryptSecret } from '~/server/utils/encryption';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 import { getProviderDefinition } from 'floww/providers/server';
 
 export interface TriggerInfo {
@@ -451,7 +452,6 @@ export async function syncTriggers(
   newTriggersMetadata: TriggerMetadata[]
 ): Promise<WebhookInfo[]> {
   const db = getDb();
-  const { settings } = require('~/server/settings');
   const publicApiUrl = settings.general.PUBLIC_API_URL ?? 'http://localhost:3000';
 
   // Ensure builtin provider exists

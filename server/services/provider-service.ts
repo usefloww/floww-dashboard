@@ -22,6 +22,7 @@ import {
   getProviderTypes,
   type SetupStep,
 } from 'floww/providers/server';
+import { settings } from '~/server/settings';
 
 export interface ProviderInfo {
   id: string;
@@ -126,7 +127,6 @@ export async function createProvider(
 
   // For Slack providers, create a webhook
   if (params.type === 'slack') {
-    const { settings } = require('~/server/settings');
     const publicApiUrl = settings.general.PUBLIC_API_URL ?? 'http://localhost:3000';
     
     // Generate webhook path if not provided
