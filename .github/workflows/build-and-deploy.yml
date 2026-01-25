@@ -177,7 +177,17 @@ jobs:
           DOCKER_HOST: ssh://${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          docker stack deploy -c stacks/staging.yml floww-dashboard-staging --with-registry-auth --detach=false
+          set -o pipefail
+          output=$(docker stack deploy -c stacks/staging.yml floww-dashboard-staging --with-registry-auth --detach=false 2>&1 | tee /dev/stderr)
+          if echo "$output" | grep -q "rollback"; then
+            echo "::error::Deployment rolled back due to failure"
+            echo "--- Service status ---"
+            docker service ps floww-dashboard-staging_app --no-trunc
+            docker service ps floww-dashboard-staging_centrifugo --no-trunc
+            echo "--- Recent app logs ---"
+            docker service logs floww-dashboard-staging_app --tail 50 2>&1 || true
+            exit 1
+          fi
 
   deploy-production:
     name: Deploy to Production
@@ -212,4 +222,14 @@ jobs:
           DOCKER_HOST: ssh://${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          docker stack deploy -c stacks/production.yml floww-dashboard --with-registry-auth --detach=false
+          set -o pipefail
+          output=$(docker stack deploy -c stacks/production.yml floww-dashboard --with-registry-auth --detach=false 2>&1 | tee /dev/stderr)
+          if echo "$output" | grep -q "rollback"; then
+            echo "::error::Deployment rolled back due to failure"
+            echo "--- Service status ---"
+            docker service ps floww-dashboard_app --no-trunc
+            docker service ps floww-dashboard_centrifugo --no-trunc
+            echo "--- Recent app logs ---"
+            docker service logs floww-dashboard_app --tail 50 2>&1 || true
+            exit 1
+          fi
