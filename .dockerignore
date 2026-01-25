@@ -8,8 +8,11 @@
 
 # Whitelist source code
 !src/
+!src/**
 !server/
+!server/**
 !packages/
+!packages/**
 !index.html
 
 # Whitelist configuration files
@@ -23,6 +26,7 @@
 
 # Whitelist public assets
 !public/
+!public/**
 
 # Whitelist any other config files that might be needed
 !*.config.*
