@@ -7,7 +7,8 @@ import {
 import { Loader2, CheckCircle, CreditCard, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StripeProvider } from "@/components/StripeProvider";
-import { api, handleApiError } from "@/lib/api";
+import { handleApiError } from "@/lib/api";
+import { createPaymentMethodSetupIntent, confirmPaymentMethodSetup } from "@/lib/server/billing";
 
 interface PaymentMethodData {
   payment_method_id: string | null;
@@ -15,11 +16,6 @@ interface PaymentMethodData {
   last4: string | null;
   exp_month: number | null;
   exp_year: number | null;
-}
-
-interface SetupIntentResponse {
-  client_secret: string;
-  setup_intent_id: string;
 }
 
 interface PaymentMethodFormProps {
@@ -73,8 +69,8 @@ function UpdatePaymentForm({
       }
 
       // Confirm with our backend to set as default
-      await api.post(`/organizations/${organizationId}/payment-method/confirm`, {
-        setup_intent_id: setupIntentId,
+      await confirmPaymentMethodSetup({
+        data: { organizationId, setupIntentId },
       });
 
       setIsComplete(true);
@@ -207,9 +203,7 @@ export function PaymentMethodForm({
       setError(null);
 
       try {
-        const response = await api.post<SetupIntentResponse>(
-          `/organizations/${organizationId}/payment-method/setup`
-        );
+        const response = await createPaymentMethodSetupIntent({ data: { organizationId } });
         setClientSecret(response.client_secret);
         setSetupIntentId(response.setup_intent_id);
       } catch (err) {

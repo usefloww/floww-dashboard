@@ -5,6 +5,7 @@
  */
 
 import * as jose from 'jose';
+import { logger } from '~/server/utils/logger';
 
 // Cache for JWKS
 let jwksCache: jose.JSONWebKeySet | null = null;
@@ -73,7 +74,7 @@ export async function validateWorkOsToken(token: string): Promise<TokenUser> {
       picture: (payload.picture as string) || null,
     };
   } catch (error) {
-    console.error('JWT validation failed:', error);
+    logger.error('JWT validation failed', { error: error instanceof Error ? error.message : String(error) });
     throw new Error('Invalid token');
   }
 }
@@ -104,7 +105,7 @@ export async function validatePasswordAuthToken(token: string): Promise<TokenUse
       picture: null,
     };
   } catch (error) {
-    console.error('Password auth JWT validation failed:', error);
+    logger.error('Password auth JWT validation failed', { error: error instanceof Error ? error.message : String(error) });
     throw new Error('Invalid token');
   }
 }

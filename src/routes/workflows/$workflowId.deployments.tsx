@@ -2,8 +2,8 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Code, Package, Activity, Settings, FileText, Sparkles, PlayCircle } from "lucide-react";
-import { api, handleApiError } from "@/lib/api";
-import { Workflow } from "@/types/api";
+import { handleApiError } from "@/lib/api";
+import { getWorkflow } from "@/lib/server/workflows";
 import { Loader } from "@/components/Loader";
 import { DeploymentEditor } from "@/components/DeploymentEditor";
 import { DeploymentHistory } from "@/components/DeploymentHistory";
@@ -47,9 +47,7 @@ function DeploymentsPage() {
   // Fetch workflow to get the name
   const { data: workflow, isLoading, error } = useQuery({
     queryKey: ['workflow', workflowId],
-    queryFn: async () => {
-      return await api.get<Workflow>(`/workflows/${workflowId}`);
-    },
+    queryFn: () => getWorkflow({ data: { workflowId } }),
   });
 
   const errorMessage = error ? handleApiError(error) : null;
@@ -248,7 +246,7 @@ function DeploymentsPage() {
         ) : activeTab === "config" ? (
           workflow && currentNamespace ? (
             <WorkflowConfiguration
-              workflow={workflow}
+              workflow={workflow as any}
               namespaceId={currentNamespace.id}
             />
           ) : null

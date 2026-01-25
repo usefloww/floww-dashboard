@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, handleApiError, ApiError } from "@/lib/api";
+import { handleApiError, ApiError } from "@/lib/api";
 import { WorkflowDeployment } from "@/types/api";
+import { getDeployment, updateDeployment } from "@/lib/server/deployments";
 import { Loader } from "@/components/Loader";
 import { ArrowLeft, Save, X } from "lucide-react";
 import Editor from "@monaco-editor/react";
@@ -25,12 +26,22 @@ function EditDeploymentPage() {
   const { beforeMount: beforeMonacoMount, onMount: onMonacoMount } = useMonacoTypes();
 
   // Use TanStack Query to fetch deployment
-  const { data: deployment, isLoading } = useQuery({
+  const { data: deploymentData, isLoading } = useQuery({
     queryKey: ['deployment', deploymentId],
-    queryFn: async () => {
-      return await api.get<WorkflowDeployment>(`/workflow_deployments/${deploymentId}`);
-    },
+    queryFn: () => getDeployment({ data: { deploymentId } }),
   });
+
+  // Map the server function response to the expected format
+  const deployment: WorkflowDeployment | undefined = deploymentData && deploymentData.userCode ? {
+    id: deploymentData.id,
+    workflowId: deploymentData.workflowId,
+    runtimeId: deploymentData.runtimeId,
+    deployedById: deploymentData.deployedById ?? undefined,
+    status: deploymentData.status,
+    deployedAt: deploymentData.deployedAt,
+    note: deploymentData.note ?? undefined,
+    userCode: deploymentData.userCode as { files: Record<string, string>; entrypoint: string },
+  } as WorkflowDeployment : undefined;
 
   // Update local state when deployment data changes
   useEffect(() => {
@@ -74,10 +85,13 @@ function EditDeploymentPage() {
       const allFiles = deployment.userCode?.files || {};
       const updatedFiles = { ...allFiles, ...code };
       
-      await api.patch(`/workflow_deployments/${deploymentId}`, {
-        user_code: {
-          files: updatedFiles,
-          entrypoint: currentFile || entrypoint,
+      await updateDeployment({
+        data: {
+          deploymentId,
+          userCode: {
+            files: updatedFiles,
+            entrypoint: currentFile || entrypoint,
+          },
         },
       });
 
@@ -87,10 +101,10 @@ function EditDeploymentPage() {
         params: { workflowId },
         search: { tab: "edit" },
       });
-    } catch (error) {
+    } catch (err) {
       // Extract structured error data if available
-      if (error instanceof ApiError && error.data?.detail) {
-        const errorDetail = error.data.detail;
+      if (err instanceof ApiError && err.data?.detail) {
+        const errorDetail = err.data.detail;
         // Format structured errors nicely
         if (errorDetail.failed_triggers && Array.isArray(errorDetail.failed_triggers)) {
           const formattedErrors = errorDetail.failed_triggers.map((trigger: any) => {
@@ -103,10 +117,10 @@ function EditDeploymentPage() {
           const baseMessage = errorDetail.message || 'Failed to create one or more triggers';
           setError(`${baseMessage}\n\n${formattedErrors.join('\n')}`);
         } else {
-          setError(handleApiError(error));
+          setError(handleApiError(err));
         }
       } else {
-        setError(handleApiError(error));
+        setError(handleApiError(err));
       }
     } finally {
       setIsSaving(false);

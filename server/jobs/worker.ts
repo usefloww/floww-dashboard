@@ -6,6 +6,7 @@
 
 import { run, Runner, makeWorkerUtils, WorkerUtils } from 'graphile-worker';
 import { taskList, cronJobs } from './index';
+import { logger } from '~/server/utils/logger';
 
 let workerInstance: Runner | null = null;
 let workerUtils: WorkerUtils | null = null;
@@ -44,11 +45,11 @@ export function getWorkerUtils(): WorkerUtils {
  */
 export async function startWorker(): Promise<Runner> {
   if (workerInstance) {
-    console.log('Worker already running');
+    logger.debug('Worker already running');
     return workerInstance;
   }
 
-  console.log('Starting Graphile Worker...');
+  logger.info('Starting Graphile Worker...');
 
   // Initialize utils first
   await initWorkerUtils();
@@ -67,7 +68,7 @@ export async function startWorker(): Promise<Runner> {
   // Set up cron jobs
   await setupCronJobs();
 
-  console.log('Graphile Worker started');
+  logger.info('Graphile Worker started');
 
   return workerInstance;
 }
@@ -83,7 +84,7 @@ async function setupCronJobs(): Promise<void> {
   // This is a simplified approach - in production use crontab file
 
   for (const cronJob of cronJobs) {
-    console.log(`Setting up cron job: ${cronJob.task} with pattern: ${cronJob.pattern}`);
+    logger.debug('Setting up cron job', { task: cronJob.task, pattern: cronJob.pattern });
 
     // Schedule first run
     await utils.addJob(cronJob.task, {}, { jobKey: `cron:${cronJob.task}` });
@@ -95,7 +96,7 @@ async function setupCronJobs(): Promise<void> {
  */
 export async function stopWorker(): Promise<void> {
   if (workerInstance) {
-    console.log('Stopping Graphile Worker...');
+    logger.info('Stopping Graphile Worker...');
     await workerInstance.stop();
     workerInstance = null;
   }
@@ -105,7 +106,7 @@ export async function stopWorker(): Promise<void> {
     workerUtils = null;
   }
 
-  console.log('Graphile Worker stopped');
+  logger.info('Graphile Worker stopped');
 }
 
 /**

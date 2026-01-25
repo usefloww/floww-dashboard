@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
-import { api, handleApiError } from "@/lib/api";
+import { handleApiError } from "@/lib/api";
 import { Provider } from "@/types/api";
+import { getProviders } from "@/lib/server/providers";
 import { Loader } from "@/components/Loader";
 import { Search, Building2, CheckCircle, XCircle, Clock, MoreVertical, Settings, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,8 +70,7 @@ function ProvidersPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['providers', currentNamespace?.id],
     queryFn: async () => {
-      const params = currentNamespace?.id ? { namespaceId: currentNamespace.id } : undefined;
-      const data = await api.get<{ results: Provider[] }>("/providers", { params });
+      const data = await getProviders({ data: { namespaceId: currentNamespace?.id } });
       return Array.isArray(data?.results) ? data.results : [];
     },
   });
@@ -80,7 +80,7 @@ function ProvidersPage() {
 
   const filteredProviders = Array.isArray(providers)
     ? providers.filter(provider =>
-        (provider?.alias || provider?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (provider?.alias || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         provider?.type?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];

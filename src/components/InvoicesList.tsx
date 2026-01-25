@@ -2,21 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, Download, ExternalLink, Loader2, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { api } from "@/lib/api";
-
-interface Invoice {
-  id: string;
-  number: string | null;
-  amount_due: number;
-  amount_paid: number;
-  currency: string;
-  status: string | null;
-  created: number;
-  period_start: number | null;
-  period_end: number | null;
-  pdf_url: string | null;
-  hosted_invoice_url: string | null;
-}
+import { getInvoices, type InvoiceInfo } from "@/lib/server/billing";
 
 interface InvoicesListProps {
   organizationId: string;
@@ -78,9 +64,9 @@ export function InvoicesList({ organizationId }: InvoicesListProps) {
     data: invoices,
     isLoading,
     error,
-  } = useQuery<Invoice[]>({
+  } = useQuery<InvoiceInfo[]>({
     queryKey: ["invoices", organizationId],
-    queryFn: () => api.get<Invoice[]>(`/organizations/${organizationId}/invoices`),
+    queryFn: () => getInvoices({ data: { organizationId } }),
   });
 
   if (isLoading) {

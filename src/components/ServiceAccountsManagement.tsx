@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, handleApiError } from "@/lib/api";
-import { ServiceAccountsListResponse, ApiKey } from "@/types/api";
+import { handleApiError } from "@/lib/api";
+import {
+  getServiceAccounts,
+  deleteServiceAccount,
+  revokeApiKey,
+  type ServiceAccountInfo,
+  type ApiKeyInfo,
+} from "@/lib/server/serviceAccounts";
 import { Loader } from "@/components/Loader";
 import { Key, Plus, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,16 +30,14 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
   const { data, isLoading, error } = useQuery({
     queryKey: ['service-accounts', organizationId],
     queryFn: async () => {
-      const data = await api.get<ServiceAccountsListResponse>("/service_accounts", {
-        params: { organizationId: organizationId },
-      });
-      return data.results || [];
+      const result = await getServiceAccounts({ data: { organizationId } });
+      return result.results || [];
     },
   });
 
   const revokeMutation = useMutation({
     mutationFn: async ({ serviceAccountId, apiKeyId }: { serviceAccountId: string; apiKeyId: string }) => {
-      return await api.post<ApiKey>(`/service_accounts/${serviceAccountId}/api_keys/${apiKeyId}/revoke`);
+      return await revokeApiKey({ data: { serviceAccountId, apiKeyId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-accounts', organizationId] });
@@ -47,7 +51,7 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
 
   const deleteMutation = useMutation({
     mutationFn: async (serviceAccountId: string) => {
-      return await api.delete(`/service_accounts/${serviceAccountId}`);
+      return await deleteServiceAccount({ data: { serviceAccountId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-accounts', organizationId] });
@@ -59,10 +63,10 @@ export function ServiceAccountsManagement({ organizationId }: ServiceAccountsMan
     },
   });
 
-  const serviceAccounts = data || [];
+  const serviceAccounts: ServiceAccountInfo[] = data || [];
   const errorMessage = error ? handleApiError(error) : null;
 
-  const isApiKeyRevoked = (apiKey: ApiKey) => {
+  const isApiKeyRevoked = (apiKey: ApiKeyInfo) => {
     return apiKey.revokedAt !== null && apiKey.revokedAt !== undefined;
   };
 

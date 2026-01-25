@@ -15,7 +15,7 @@ interface ExecutionChartProps {
 
 export function ExecutionChart({ data, isLoading, error }: ExecutionChartProps) {
   const chartData = useMemo(() => {
-    if (!data) return [];
+    if (!data || !data.executionsByDay) return [];
 
     // Format data for the chart - show last 7 days
     const daysToShow = Math.min(7, data.executionsByDay.length);
@@ -67,7 +67,7 @@ export function ExecutionChart({ data, isLoading, error }: ExecutionChartProps) 
     );
   }
 
-  if (!data || data.totalExecutions === 0) {
+  if (!data || !data.executionsByDay || data.totalExecutions === 0) {
     return (
       <div className="bg-card border border-border rounded-lg p-6">
         <div className="text-center text-muted-foreground">

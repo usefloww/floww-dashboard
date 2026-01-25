@@ -9,6 +9,7 @@
  */
 
 import crypto from 'crypto';
+import { logger } from '~/server/utils/logger';
 
 /**
  * Encode data as URL-safe base64 (RFC 4648)
@@ -177,7 +178,7 @@ export function parseSessionCookie(
 
     return typeof jwt === 'string' ? jwt : null;
   } catch (error) {
-    console.error('Failed to parse session cookie:', error);
+    logger.error('Failed to parse session cookie', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -192,7 +193,7 @@ export function getJwtFromSessionCookie(
 ): string | null {
   const key = secretKey || process.env.SESSION_SECRET_KEY;
   if (!key) {
-    console.error('SESSION_SECRET_KEY not configured');
+    logger.error('SESSION_SECRET_KEY not configured');
     return null;
   }
 
@@ -232,7 +233,7 @@ export function parseState(
 ): { csrf: string; next: string } | null {
   const key = process.env.SESSION_SECRET_KEY;
   if (!key) {
-    console.error('SESSION_SECRET_KEY not configured');
+    logger.error('SESSION_SECRET_KEY not configured');
     return null;
   }
 
@@ -266,7 +267,7 @@ export function parseState(
 
     return data;
   } catch (error) {
-    console.error('Failed to parse state:', error);
+    logger.error('Failed to parse state', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }

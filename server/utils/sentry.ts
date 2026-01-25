@@ -5,6 +5,8 @@
  * Only active when SENTRY_DSN is configured.
  */
 
+import { logger } from '~/server/utils/logger';
+
 // Check if Sentry should be enabled
 const SENTRY_DSN = process.env.SENTRY_DSN;
 const SENTRY_ENVIRONMENT = process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development';
@@ -18,7 +20,7 @@ let sentryInstance: typeof import('@sentry/node') | null = null;
  */
 export async function initSentry(): Promise<void> {
   if (!SENTRY_DSN) {
-    console.log('Sentry not configured (SENTRY_DSN not set)');
+    logger.debug('Sentry not configured (SENTRY_DSN not set)');
     return;
   }
 
@@ -34,9 +36,9 @@ export async function initSentry(): Promise<void> {
     });
 
     sentryInstance = Sentry;
-    console.log('Sentry initialized', { environment: SENTRY_ENVIRONMENT, release: SENTRY_RELEASE });
+    logger.info('Sentry initialized', { environment: SENTRY_ENVIRONMENT, release: SENTRY_RELEASE });
   } catch (error) {
-    console.warn('Failed to initialize Sentry:', error);
+    logger.warn('Failed to initialize Sentry', { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -55,7 +57,7 @@ export function captureException(
   context?: Record<string, unknown>
 ): string | undefined {
   if (!sentryInstance) {
-    console.error('Error captured (Sentry not available):', error.message);
+    logger.error('Error captured (Sentry not available)', { error: error.message });
     return undefined;
   }
 
@@ -74,7 +76,7 @@ export function captureMessage(
   level: 'fatal' | 'error' | 'warning' | 'log' | 'info' | 'debug' = 'info'
 ): string | undefined {
   if (!sentryInstance) {
-    console.log('Message captured (Sentry not available):', message);
+    logger.info('Message captured (Sentry not available)', { message });
     return undefined;
   }
 

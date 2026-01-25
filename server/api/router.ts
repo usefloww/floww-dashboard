@@ -7,6 +7,7 @@
 
 import { type ZodSchema, type ZodError } from 'zod';
 import { authenticateRequest, type AuthenticatedUser } from '~/server/services/auth';
+import { logger, updateRequestContext } from '~/server/utils/logger';
 
 export interface ApiContext {
   user: AuthenticatedUser | null;
@@ -163,6 +164,9 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       if (!user) {
         return json({ error: 'Unauthorized' }, 401);
       }
+
+      // Update request context with userId for logging
+      updateRequestContext({ userId: user.id });
     }
 
     // Create context
@@ -177,7 +181,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     try {
       return await route.handler(ctx);
     } catch (error) {
-      console.error('API error:', error);
+      logger.error('API error', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
       return json({ error: 'Internal server error' }, 500);
     }
   }

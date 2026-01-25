@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { api, handleApiError } from "@/lib/api";
-import { ExecutionHistory } from "@/types/api";
+import { handleApiError } from "@/lib/api";
+import { ExecutionHistory, ExecutionStatus, LogLevel } from "@/types/api";
+import { getExecution, getExecutionLogs } from "@/lib/server/executions";
 import { Loader } from "@/components/Loader";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
@@ -13,12 +14,46 @@ export const Route = createFileRoute("/workflows/$workflowId/executions/$executi
 function ExecutionDetailPage() {
   const { workflowId, executionId } = Route.useParams();
 
-  const { data: execution, isLoading, error } = useQuery({
+  // Fetch execution details
+  const { data: executionData, isLoading: executionLoading, error: executionError } = useQuery({
     queryKey: ['execution', executionId],
-    queryFn: async () => {
-      return await api.get<ExecutionHistory>(`/executions/${executionId}`);
-    },
+    queryFn: () => getExecution({ data: { executionId } }),
   });
+
+  // Fetch execution logs
+  const { data: logsData } = useQuery({
+    queryKey: ['execution-logs', executionId],
+    queryFn: () => getExecutionLogs({ data: { executionId } }),
+    enabled: !!executionData,
+  });
+
+  // Combine execution data with logs to match expected format
+  const execution: ExecutionHistory | undefined = executionData ? {
+    id: executionData.id,
+    workflowId: executionData.workflowId,
+    triggerId: executionData.triggerId,
+    deploymentId: null,
+    status: executionData.status as ExecutionStatus,
+    receivedAt: executionData.startedAt,
+    startedAt: executionData.startedAt,
+    completedAt: executionData.completedAt,
+    durationMs: executionData.completedAt && executionData.startedAt 
+      ? new Date(executionData.completedAt).getTime() - new Date(executionData.startedAt).getTime()
+      : null,
+    errorMessage: executionData.error,
+    logEntries: logsData?.results.map(log => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      level: log.level as LogLevel,
+      message: log.message,
+    })) || null,
+    triggerType: null,
+    webhookPath: null,
+    webhookMethod: null,
+  } as ExecutionHistory : undefined;
+
+  const isLoading = executionLoading;
+  const error = executionError;
 
   const errorMessage = error ? handleApiError(error) : null;
 

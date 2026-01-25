@@ -14,6 +14,7 @@ import "@llamaindex/chat-ui/styles/editor.css";
 import Markdown from "react-markdown";
 import Editor from "@monaco-editor/react";
 import { api, handleApiError } from "@/lib/api";
+import { builderChat } from "@/lib/server/workflowBuilder";
 import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import { useMonacoTypes } from "@/hooks/useMonacoTypes";
  import { 
@@ -52,6 +53,7 @@ interface QuestionOption {
   description?: string;
 }
 
+// Extended types for plan support (extends server types)
 interface MessagePart {
   type: string;
   text?: string;
@@ -274,28 +276,15 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
         content: getMessageText(m),
       }));
 
-      // Use planRef to get the latest plan value even if state hasn't updated yet
-      const currentPlan = planRef.current;
-
-      console.log("[WorkflowBuilder] Sending message:", {
-        user_message: userContent,
-        has_plan: !!currentPlan,
-        plan_summary: currentPlan?.summary,
-        plan_from_state: plan?.summary,
-      });
-
-      const resp = await api.post<BuilderChatResponse>(
-        `/workflows/${workflowId}/builder/chat`,
-        {
+      const resp = (await builderChat({
+        data: {
+          workflowId,
           messages: simpleMessages,
           userMessage: userContent,
           currentCode: code,
           namespaceId: currentNamespace?.id,
         },
-        {
-          timeout: 90000, // 90 seconds for code generation
-        }
-      );
+      })) as BuilderChatResponse;
 
       console.log("[WorkflowBuilder] Received response:", {
         has_code: !!resp.code,
@@ -434,27 +423,15 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
         content: getMessageText(m),
       }));
 
-      // Use planRef to get the latest plan value
-      const currentPlan = planRef.current;
-
-      console.log("[WorkflowBuilder] Sending message (handleSelectionConfirm):", {
-        user_message: labelString,
-        has_plan: !!currentPlan,
-        plan_summary: currentPlan?.summary,
-      });
-
-      const resp = await api.post<BuilderChatResponse>(
-        `/workflows/${workflowId}/builder/chat`,
-        {
+      const resp = (await builderChat({
+        data: {
+          workflowId,
           messages: simpleMessages,
-          user_message: labelString,
-          current_code: code,
+          userMessage: labelString,
+          currentCode: code,
           namespaceId: currentNamespace?.id,
         },
-        {
-          timeout: 90000, // 90 seconds for code generation
-        }
-      );
+      })) as BuilderChatResponse;
 
       const processedParts: any[] = [];
       

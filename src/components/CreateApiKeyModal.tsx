@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, handleApiError } from "@/lib/api";
-import { ApiKeyCreatedResponse, ApiKeyCreate } from "@/types/api";
+import { handleApiError } from "@/lib/api";
+import { createApiKey } from "@/lib/server/serviceAccounts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,8 +29,8 @@ export function CreateApiKeyModal({
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
-    mutationFn: async (data: ApiKeyCreate) => {
-      return await api.post<ApiKeyCreatedResponse>(`/service_accounts/${serviceAccountId}/api_keys`, data);
+    mutationFn: async (data: { name: string }) => {
+      return await createApiKey({ data: { serviceAccountId, name: data.name } });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['service-accounts', organizationId] });

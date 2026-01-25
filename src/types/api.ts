@@ -211,6 +211,7 @@ export interface User {
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  isAdmin: boolean;
   createdAt: string | null;
 }
 

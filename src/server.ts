@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 
 // Load environment variables from .env.local first, then .env
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,6 +17,7 @@ import {
 } from "./serverUtils";
 import { handleApiRequest } from "~/server/api";
 import { startWorker, stopWorker, isWorkerRunning, initWorkerUtils } from "~/server/jobs/worker";
+import { logger, runWithRequestContext } from "~/server/utils/logger";
 
 // Auth handlers (lazy loaded to avoid SSR issues)
 async function handleAuthLogin(request: Request): Promise<Response> {
@@ -79,7 +81,7 @@ async function handleAuthCallback(request: Request): Promise<Response> {
 
   // Handle OAuth errors
   if (error) {
-    console.error("OAuth error:", error);
+    logger.error("OAuth error", { error });
     return Response.redirect(
       new URL(`/auth/login?error=${encodeURIComponent(error)}`, request.url),
       302
@@ -133,7 +135,7 @@ async function handleAuthCallback(request: Request): Promise<Response> {
       },
     });
   } catch (err) {
-    console.error("OAuth callback error:", err);
+    logger.error("OAuth callback error", { error: err instanceof Error ? err.message : String(err) });
     return Response.redirect(
       new URL("/auth/login?error=authentication_failed", request.url),
       302
@@ -164,7 +166,7 @@ async function handleAuthLogout(request: Request): Promise<Response> {
           await revokeSession(jwt);
         }
       } catch (error) {
-        console.error("Session revocation error:", error);
+        logger.error("Session revocation error", { error: error instanceof Error ? error.message : String(error) });
       }
     }
   }
@@ -187,8 +189,9 @@ async function handleAuthLogout(request: Request): Promise<Response> {
 const serverEntry: ServerEntry = {
   async fetch(request) {
     const url = new URL(request.url);
+    const requestId = crypto.randomUUID();
 
-    // Handle health check endpoint
+    // Handle health check endpoint (skip request context for performance)
     if (url.pathname === "/health") {
       return new Response(JSON.stringify({ status: "ok" }), {
         status: 200,
@@ -196,44 +199,50 @@ const serverEntry: ServerEntry = {
       });
     }
 
-    // Handle auth endpoints directly (bypass TanStack Router)
-    if (url.pathname === "/auth/login") {
-      return handleAuthLogin(request);
-    }
-    if (url.pathname === "/auth/callback") {
-      return handleAuthCallback(request);
-    }
-    if (url.pathname === "/auth/logout") {
-      return handleAuthLogout(request);
-    }
+    // Wrap all other requests with request context
+    return runWithRequestContext(
+      { requestId, method: request.method, path: url.pathname },
+      async () => {
+        // Handle auth endpoints directly (bypass TanStack Router)
+        if (url.pathname === "/auth/login") {
+          return handleAuthLogin(request);
+        }
+        if (url.pathname === "/auth/callback") {
+          return handleAuthCallback(request);
+        }
+        if (url.pathname === "/auth/logout") {
+          return handleAuthLogout(request);
+        }
 
-    // Handle API routes
-    if (url.pathname.startsWith("/api/")) {
-      const apiResponse = await handleApiRequest(request);
-      if (apiResponse) {
-        return apiResponse;
+        // Handle API routes
+        if (url.pathname.startsWith("/api/")) {
+          const apiResponse = await handleApiRequest(request);
+          if (apiResponse) {
+            return apiResponse;
+          }
+        }
+
+        // Handle admin panel routes (if enabled)
+        if (url.pathname.startsWith("/admin") && process.env.ENABLE_ADMIN === "true") {
+          try {
+            const { createAdminRouter } = await import("~/server/admin");
+            const adminRouter = await createAdminRouter({
+              rootPath: "/admin",
+              credentials: process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD ? {
+                email: process.env.ADMIN_EMAIL,
+                password: process.env.ADMIN_PASSWORD,
+              } : undefined,
+            });
+            return adminRouter.fetch(request);
+          } catch (error) {
+            logger.error('Admin panel error', { error: error instanceof Error ? error.message : String(error) });
+            return new Response(`Admin Error: ${error}`, { status: 500 });
+          }
+        }
+
+        return handler.fetch(request);
       }
-    }
-
-    // Handle admin panel routes (if enabled)
-    if (url.pathname.startsWith("/admin") && process.env.ENABLE_ADMIN === "true") {
-      try {
-        const { createAdminRouter } = await import("~/server/admin");
-        const adminRouter = await createAdminRouter({
-          rootPath: "/admin",
-          credentials: process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD ? {
-            email: process.env.ADMIN_EMAIL,
-            password: process.env.ADMIN_PASSWORD,
-          } : undefined,
-        });
-        return adminRouter.fetch(request);
-      } catch (error) {
-        console.error('Admin panel error:', error);
-        return new Response(`Admin Error: ${error}`, { status: 500 });
-      }
-    }
-
-    return handler.fetch(request);
+    );
   },
 };
 
@@ -260,25 +269,25 @@ if (isMainModule) {
   // If running as worker-only mode, just start the worker
   if (WORKER_ONLY) {
     (async () => {
-      console.log("Starting in worker-only mode...");
+      logger.info("Starting in worker-only mode...");
       try {
         await startWorker();
-        console.log("Background worker started successfully");
+        logger.info("Background worker started successfully");
       } catch (error) {
-        console.error("Failed to start worker:", error);
+        logger.error("Failed to start worker", { error: error instanceof Error ? error.message : String(error) });
         process.exit(1);
       }
     })();
   } else {
     // Initialize worker utils so jobs can be scheduled even if worker is separate
     initWorkerUtils().catch((err: unknown) => {
-      console.warn("Failed to initialize worker utils:", err);
+      logger.warn("Failed to initialize worker utils", { error: err instanceof Error ? err.message : String(err) });
     });
 
     // Optionally start worker in same process
     if (ENABLE_WORKER) {
       startWorker().catch((err: unknown) => {
-        console.error("Failed to start embedded worker:", err);
+        logger.error("Failed to start embedded worker", { error: err instanceof Error ? err.message : String(err) });
       });
     }
 
@@ -339,7 +348,7 @@ if (isMainModule) {
             }
             res.end();
           } catch (error) {
-            console.error("Error streaming response:", error);
+            logger.error("Error streaming response", { error: error instanceof Error ? error.message : String(error) });
             if (!res.headersSent) {
               res.statusCode = 500;
             }
@@ -351,7 +360,7 @@ if (isMainModule) {
         res.end();
       }
     } catch (error) {
-      console.error("Server error:", error);
+      logger.error("Server error", { error: error instanceof Error ? error.message : String(error) });
       if (!res.headersSent) {
         res.statusCode = 500;
       }
@@ -360,25 +369,25 @@ if (isMainModule) {
   });
 
   server.listen(Number(PORT), HOST, () => {
-    console.log(`Server running on http://${HOST}:${PORT}`);
+    logger.info(`Server running on http://${HOST}:${PORT}`);
   });
 
   const gracefulShutdown = async (signal: string) => {
-    console.log(`\n${signal} received, shutting down gracefully...`);
+    logger.info(`${signal} received, shutting down gracefully...`);
 
     // Stop worker if running
     if (isWorkerRunning()) {
-      console.log("Stopping background worker...");
+      logger.info("Stopping background worker...");
       await stopWorker();
     }
 
     server.close(() => {
-      console.log("HTTP server closed");
+      logger.info("HTTP server closed");
       process.exit(0);
     });
 
     setTimeout(() => {
-      console.error("Forced shutdown after timeout");
+      logger.error("Forced shutdown after timeout");
       process.exit(1);
     }, 10000);
   };

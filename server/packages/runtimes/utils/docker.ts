@@ -8,6 +8,7 @@
 
 import Docker from 'dockerode';
 import { hostname } from 'os';
+import { logger } from '~/server/utils/logger';
 
 // Container naming convention
 const CONTAINER_NAME_PREFIX = 'floww-runtime-';
@@ -58,14 +59,14 @@ async function getBackendNetwork(): Promise<string> {
 
       if (networkNames.length > 0) {
         backendNetwork = networkNames[0];
-        console.log(`Detected backend network: ${backendNetwork}`);
+        logger.info('Detected backend network', { network: backendNetwork });
         return backendNetwork;
       }
     } catch {
-      console.warn('Could not inspect backend container, falling back to bridge');
+      logger.warn('Could not inspect backend container, falling back to bridge');
     }
   } catch (error) {
-    console.warn('Could not detect backend network, falling back to bridge', error);
+    logger.warn('Could not detect backend network, falling back to bridge', { error: error instanceof Error ? error.message : String(error) });
   }
 
   backendNetwork = 'bridge';
@@ -75,10 +76,10 @@ async function getBackendNetwork(): Promise<string> {
 async function ensureImageExists(docker: Docker, imageUri: string): Promise<void> {
   try {
     await docker.getImage(imageUri).inspect();
-    console.log(`Docker image already exists: ${imageUri}`);
+    logger.debug('Docker image already exists', { imageUri });
   } catch (error) {
     if ((error as { statusCode?: number }).statusCode === 404) {
-      console.log(`Pulling Docker image: ${imageUri}`);
+      logger.info('Pulling Docker image', { imageUri });
       const stream = await docker.pull(imageUri);
       await new Promise<void>((resolve, reject) => {
         docker.modem.followProgress(stream, (err) => {
@@ -86,7 +87,7 @@ async function ensureImageExists(docker: Docker, imageUri: string): Promise<void
           else resolve();
         });
       });
-      console.log(`Docker image pulled successfully: ${imageUri}`);
+      logger.info('Docker image pulled successfully', { imageUri });
     } else {
       throw error;
     }
@@ -137,7 +138,7 @@ async function waitForContainerReady(containerName: string, timeout = 30): Promi
         signal: AbortSignal.timeout(2000),
       });
       if (response.status === 200) {
-        console.log(`Container is ready: ${containerName}`);
+        logger.info('Container is ready', { containerName });
         return;
       }
     } catch {
@@ -173,7 +174,7 @@ async function getLastActivityTime(container: Docker.Container): Promise<Date> {
       }
     }
   } catch (error) {
-    console.warn('Failed to get container logs', error);
+    logger.warn('Failed to get container logs', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Fallback to container start time
@@ -195,20 +196,20 @@ export async function createContainer(runtimeId: string, imageUri: string): Prom
     // Check if container already exists
     const existingContainer = docker.getContainer(containerName);
     await existingContainer.inspect();
-    console.log(`Container already exists, skipping creation: ${containerName}`);
+    logger.debug('Container already exists, skipping creation', { containerName });
     return;
   } catch (error) {
     if ((error as { statusCode?: number }).statusCode === 404) {
-      console.log(`Creating new container: ${containerName} with image ${imageUri}`);
+      logger.info('Creating new container', { containerName, imageUri });
 
       await ensureImageExists(docker, imageUri);
       const config = await getContainerConfig(runtimeId, imageUri, containerName);
       const container = await docker.createContainer(config);
       await container.start();
 
-      console.log(`Container created and started: ${containerName}`);
+      logger.info('Container created and started', { containerName });
     } else {
-      console.error(`Docker error while creating container: ${runtimeId}`, error);
+      logger.error('Docker error while creating container', { runtimeId, error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -254,7 +255,7 @@ export async function getContainerStatus(runtimeId: string): Promise<ContainerSt
         logs: `Container not found: ${containerName}`,
       };
     }
-    console.error(`Error checking container status: ${runtimeId}`, error);
+    logger.error('Error checking container status', { runtimeId, error: error instanceof Error ? error.message : String(error) });
     return {
       status: 'FAILED',
       logs: `Error checking container status: ${String(error)}`,
@@ -272,11 +273,11 @@ export async function startContainerIfStopped(runtimeId: string): Promise<void> 
     const state = containerInfo.State;
 
     if (state?.Running) {
-      console.debug(`Container already running: ${containerName}`);
+      logger.debug('Container already running', { containerName });
       return;
     }
 
-    console.log(`Container stopped, starting it: ${containerName}`);
+    logger.info('Container stopped, starting it', { containerName });
     await container.start();
     await waitForContainerReady(containerName);
   } catch (error) {
@@ -285,7 +286,7 @@ export async function startContainerIfStopped(runtimeId: string): Promise<void> 
         `Container ${containerName} does not exist. Runtime must be created before invocation.`
       );
     }
-    console.error(`Error starting container: ${runtimeId}`, error);
+    logger.error('Error starting container', { runtimeId, error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -298,7 +299,7 @@ export async function sendWebhookToContainer(
   const containerName = getContainerName(runtimeId);
   const url = `${getContainerUrl(containerName)}/execute`;
 
-  console.log(`Sending webhook to container: ${containerName}`);
+  logger.debug('Sending webhook to container', { containerName });
 
   try {
     const response = await fetch(url, {
@@ -312,10 +313,10 @@ export async function sendWebhookToContainer(
       throw new Error(`HTTP ${response.status}: ${await response.text()}`);
     }
 
-    console.log(`Container executed webhook successfully: ${containerName}`);
+    logger.debug('Container executed webhook successfully', { containerName });
     return (await response.json()) as Record<string, unknown>;
   } catch (error) {
-    console.error(`Failed to send webhook to container: ${runtimeId}`, error);
+    logger.error('Failed to send webhook to container', { runtimeId, error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -344,22 +345,23 @@ export async function cleanupIdleContainers(idleTimeout?: number): Promise<void>
           const lastActivityTime = await getLastActivityTime(container);
 
           if (lastActivityTime < cutoffTime) {
-            console.log(`Stopping idle container: ${containerName}`, {
+            logger.info('Stopping idle container', {
+              containerName,
               runtimeId,
               lastActivity: lastActivityTime.toISOString(),
               idleSeconds: (Date.now() - lastActivityTime.getTime()) / 1000,
             });
             await container.stop();
           } else {
-            console.debug(`Container still active: ${containerName}`);
+            logger.debug('Container still active', { containerName });
           }
         }
       } catch (error) {
-        console.error('Error processing container for cleanup', error);
+        logger.error('Error processing container for cleanup', { error: error instanceof Error ? error.message : String(error) });
       }
     }
   } catch (error) {
-    console.error('Error during container cleanup', error);
+    logger.error('Error during container cleanup', { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -370,14 +372,14 @@ export async function removeContainer(runtimeId: string): Promise<boolean> {
   try {
     const container = docker.getContainer(containerName);
     await container.remove({ force: true });
-    console.log(`Container removed: ${containerName}`);
+    logger.info('Container removed', { containerName });
     return true;
   } catch (error) {
     if ((error as { statusCode?: number }).statusCode === 404) {
-      console.log(`Container not found, nothing to remove: ${containerName}`);
+      logger.debug('Container not found, nothing to remove', { containerName });
       return false;
     }
-    console.error(`Error removing container: ${runtimeId}`, error);
+    logger.error('Error removing container', { runtimeId, error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }

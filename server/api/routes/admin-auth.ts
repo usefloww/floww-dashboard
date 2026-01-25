@@ -19,6 +19,7 @@ import { generateUlidUuid } from '~/server/utils/uuid';
 import { createJwt } from '~/server/utils/jwt';
 import { createSessionCookie, clearSessionCookie } from '~/server/utils/session';
 import * as bcrypt from 'bcrypt';
+import { logger } from '~/server/utils/logger';
 
 const authType = process.env.AUTH_TYPE ?? 'workos';
 const workosClientId = process.env.WORKOS_CLIENT_ID;
@@ -127,7 +128,7 @@ get('/auth/callback', async ({ query }) => {
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
-      console.error('WorkOS auth failed:', error);
+      logger.error('WorkOS auth failed', { error });
       return Response.redirect('/login?error=auth_failed', 302);
     }
 
@@ -181,7 +182,7 @@ get('/auth/callback', async ({ query }) => {
       },
     });
   } catch (error) {
-    console.error('OAuth callback error:', error);
+    logger.error('OAuth callback error', { error: error instanceof Error ? error.message : String(error) });
     return Response.redirect('/login?error=callback_failed', 302);
   }
 }, false);

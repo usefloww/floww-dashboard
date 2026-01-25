@@ -9,7 +9,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "~/*": ["./*"]
+      "~/*": ["./*"],
+      "floww": ["./packages/sdk/index.ts"],
+      "floww/*": ["./packages/sdk/*"]
     },
     "skipLibCheck": true
   }

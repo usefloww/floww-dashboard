@@ -2,8 +2,19 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
-import { api, handleApiError, updateWorkflow } from "@/lib/api";
-import { Workflow, WorkflowCreate, Folder, FolderWithPath, FoldersListResponse } from "@/types/api";
+import { handleApiError } from "@/lib/api";
+import { Workflow, Folder } from "@/types/api";
+import {
+  getWorkflows,
+  createWorkflow as createWorkflowFn,
+  updateWorkflow as updateWorkflowFn,
+  importN8nWorkflow,
+  getFolders,
+  getFolderPath,
+  createFolder as createFolderFn,
+  updateFolder as updateFolderFn,
+  deleteFolder as deleteFolderFn,
+} from "@/lib/server/workflows";
 import { Loader } from "@/components/Loader";
 import { FolderBreadcrumb } from "@/components/FolderBreadcrumb";
 import { 
@@ -51,12 +62,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-interface N8nImportResponse {
-  workflow: Workflow;
-  generated_code: string;
-  message: string;
-}
 
 // Provider logo mapping to Simple Icons CDN
 const getProviderLogoUrl = (type: string): string | null => {
@@ -128,8 +133,8 @@ function WorkflowsPage() {
     queryKey: ['folder-path', currentFolderId],
     queryFn: async () => {
       if (!currentFolderId) return [];
-      const data = await api.get<FolderWithPath>(`/folders/${currentFolderId}/path`);
-      return data.path;
+      const data = await getFolderPath({ data: { folderId: currentFolderId } });
+      return data.results;
     },
     enabled: !!currentFolderId,
   });
@@ -138,10 +143,12 @@ function WorkflowsPage() {
   const { data: foldersData, isLoading: foldersLoading } = useQuery({
     queryKey: ['folders', currentNamespace?.id, currentFolderId],
     queryFn: async () => {
-      const params: Record<string, string> = {};
-      if (currentNamespace?.id) params.namespaceId = currentNamespace.id;
-      if (currentFolderId) params.parentFolderId = currentFolderId;
-      const data = await api.get<FoldersListResponse>("/folders", { params });
+      const data = await getFolders({
+        data: {
+          namespaceId: currentNamespace?.id,
+          parentFolderId: currentFolderId,
+        },
+      });
       return data.results || [];
     },
     enabled: !!currentNamespace?.id,
@@ -151,13 +158,13 @@ function WorkflowsPage() {
   const { data: workflowsData, isLoading: workflowsLoading, error } = useQuery({
     queryKey: ['workflows', currentNamespace?.id, currentFolderId],
     queryFn: async () => {
-      const params: Record<string, string | boolean> = { rootOnly: true };
-      if (currentNamespace?.id) params.namespaceId = currentNamespace.id;
-      if (currentFolderId) {
-        params.parentFolderId = currentFolderId;
-        delete params.rootOnly;
-      }
-      const data = await api.get<{ results: Workflow[] }>("/workflows", { params });
+      const data = await getWorkflows({
+        data: {
+          namespaceId: currentNamespace?.id,
+          parentFolderId: currentFolderId,
+          rootOnly: !currentFolderId,
+        },
+      });
       return Array.isArray(data?.results) ? data.results : [];
     },
     enabled: !!currentNamespace?.id,
@@ -183,14 +190,16 @@ function WorkflowsPage() {
       if (!currentNamespace?.id) {
         throw new Error("No namespace selected");
       }
-      return api.post<N8nImportResponse>("/workflows/import/n8n", {
-        namespaceId: currentNamespace.id,
-        n8nJson: n8nJson,
+      return importN8nWorkflow({
+        data: {
+          namespaceId: currentNamespace.id,
+          n8nJson: n8nJson,
+        },
       });
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
-      showSuccessNotification("Workflow imported", data.message);
+      showSuccessNotification("Workflow imported", "The workflow was imported successfully.");
     },
     onError: (error) => {
       showErrorNotification("Import failed", handleApiError(error));
@@ -203,13 +212,14 @@ function WorkflowsPage() {
       if (!currentNamespace?.id) {
         throw new Error("No namespace selected");
       }
-      const data: WorkflowCreate = {
-        name: "New Workflow",
-        namespaceId: currentNamespace.id,
-        description: "Created with AI Builder",
-        parentFolderId: currentFolderId || undefined,
-      };
-      return api.post<Workflow>("/workflows", data);
+      return createWorkflowFn({
+        data: {
+          name: "New Workflow",
+          namespaceId: currentNamespace.id,
+          description: "Created with AI Builder",
+          parentFolderId: currentFolderId || undefined,
+        },
+      });
     },
     onSuccess: (workflow) => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
@@ -230,10 +240,12 @@ function WorkflowsPage() {
       if (!currentNamespace?.id) {
         throw new Error("No namespace selected");
       }
-      return api.post<Folder>("/folders", {
-        namespaceId: currentNamespace.id,
-        name,
-        parentFolderId: currentFolderId || undefined,
+      return createFolderFn({
+        data: {
+          namespaceId: currentNamespace.id,
+          name,
+          parentFolderId: currentFolderId || undefined,
+        },
       });
     },
     onSuccess: () => {
@@ -250,7 +262,7 @@ function WorkflowsPage() {
   // Rename folder mutation
   const renameFolderMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      return api.patch<Folder>(`/folders/${id}`, { name });
+      return updateFolderFn({ data: { folderId: id, name } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
@@ -268,7 +280,7 @@ function WorkflowsPage() {
   // Delete folder mutation
   const deleteFolderMutation = useMutation({
     mutationFn: async (id: string) => {
-      return api.delete(`/folders/${id}`);
+      return deleteFolderFn({ data: { folderId: id } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
@@ -364,7 +376,7 @@ function WorkflowsPage() {
       {/* Breadcrumb */}
       {(currentFolderId || (folderPath && folderPath.length > 0)) && (
         <FolderBreadcrumb
-          path={folderPath || []}
+          path={folderPath as any || []}
           onNavigate={navigateToFolder}
         />
       )}
@@ -476,7 +488,7 @@ function WorkflowsPage() {
                 {filteredWorkflows.map((workflow) => (
                   <WorkflowRow
                     key={workflow.id}
-                    workflow={workflow}
+                    workflow={workflow as any}
                     onDelete={handleDelete}
                   />
                 ))}
@@ -698,7 +710,7 @@ function WorkflowRow({ workflow, onDelete }: WorkflowRowProps) {
 
   const toggleMutation = useMutation({
     mutationFn: async (active: boolean) => {
-      return await updateWorkflow(workflow.id, { active });
+      return await updateWorkflowFn({ data: { workflowId: workflow.id, active } });
     },
     onSuccess: (_, active) => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });

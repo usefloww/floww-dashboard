@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BaseCard } from "@/components/BaseCard";
 import { ExecutionChart } from "@/components/ExecutionChart";
 import { useNamespaceStore } from "@/stores/namespaceStore";
-import { api } from "@/lib/api";
-import { SummaryResponse } from "@/types/api";
+import { getSummary } from "@/lib/server/summary";
 
 interface NavigationItem {
   name: string;
@@ -50,13 +49,11 @@ function HomePage() {
   // Fetch summary data when namespace is available
   const { data: summaryData, isLoading, error } = useQuery({
     queryKey: ["summary", currentNamespace?.id],
-    queryFn: async () => {
+    queryFn: () => {
       if (!currentNamespace?.id) {
-        return null;
+        throw new Error('Namespace ID is required');
       }
-      return await api.get<SummaryResponse>("/summary", {
-        params: { namespaceId: currentNamespace.id, days: 7 },
-      });
+      return getSummary({ data: { namespaceId: currentNamespace.id } });
     },
     enabled: !!currentNamespace?.id,
   });
@@ -71,7 +68,7 @@ function HomePage() {
       {currentNamespace && (
         <div className="mb-12">
           <ExecutionChart
-            data={summaryData || undefined}
+            data={summaryData as any || undefined}
             isLoading={isLoading}
             error={error as Error | null}
           />

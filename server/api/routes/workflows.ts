@@ -21,6 +21,7 @@ import {
   createFolderSchema,
   importN8nWorkflowSchema,
 } from '~/server/api/schemas';
+import { logger } from '~/server/utils/logger';
 
 // List workflows
 get('/workflows', async (ctx) => {
@@ -460,7 +461,7 @@ post('/workflows/import/n8n', async (ctx) => {
       createdAt: workflow.createdAt.toISOString(),
     }, 201);
   } catch (error) {
-    console.error('n8n import error:', error);
+    logger.error('n8n import error', { error: error instanceof Error ? error.message : String(error) });
     return errorResponse(
       error instanceof Error ? error.message : 'Failed to import n8n workflow',
       400

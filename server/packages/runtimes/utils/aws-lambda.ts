@@ -12,6 +12,7 @@ import {
   DeleteFunctionCommand,
   type FunctionConfiguration,
 } from '@aws-sdk/client-lambda';
+import { logger } from '~/server/utils/logger';
 
 const FUNCTION_NAME_PREFIX = 'floww-runtime-';
 
@@ -52,10 +53,7 @@ export async function deployLambdaFunction(
     })
   );
 
-  console.log(`Created Lambda function: ${functionName}`, {
-    imageUri,
-    backendUrl,
-  });
+  logger.info('Created Lambda function', { functionName, imageUri, backendUrl });
 }
 
 export interface LambdaDeployStatus {
@@ -138,9 +136,7 @@ export async function invokeLambdaAsync(
       })
     );
 
-    console.log(`Lambda invoked asynchronously: ${functionName}`, {
-      statusCode: response.StatusCode,
-    });
+    logger.debug('Lambda invoked asynchronously', { functionName, statusCode: response.StatusCode });
 
     return {
       success: true,
@@ -148,7 +144,7 @@ export async function invokeLambdaAsync(
     };
   } catch (error) {
     const err = error as { message?: string };
-    console.error(`Failed to invoke Lambda: ${functionName}`, error);
+    logger.error('Failed to invoke Lambda', { functionName, error: err.message ?? String(error) });
     return {
       success: false,
       error: err.message ?? String(error),
@@ -180,9 +176,7 @@ export async function invokeLambdaSync(
     const resultStr = new TextDecoder().decode(payloadBytes);
     const result = JSON.parse(resultStr) as Record<string, unknown>;
 
-    console.log(`Lambda invoked synchronously: ${functionName}`, {
-      statusCode: response.StatusCode,
-    });
+    logger.debug('Lambda invoked synchronously', { functionName, statusCode: response.StatusCode });
 
     // Lambda may wrap the response - check for body field
     if (typeof result === 'object' && result !== null && 'body' in result) {
@@ -194,7 +188,7 @@ export async function invokeLambdaSync(
 
     return result;
   } catch (error) {
-    console.error(`Failed to invoke Lambda synchronously: ${functionName}`, error);
+    logger.error('Failed to invoke Lambda synchronously', { functionName, error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -209,11 +203,11 @@ export async function deleteLambdaFunction(
     await client.send(
       new DeleteFunctionCommand({ FunctionName: functionName })
     );
-    console.log(`Deleted Lambda function: ${functionName}`);
+    logger.info('Deleted Lambda function', { functionName });
   } catch (error) {
     const err = error as { name?: string };
     if (err.name === 'ResourceNotFoundException') {
-      console.log(`Lambda function not found, nothing to delete: ${functionName}`);
+      logger.debug('Lambda function not found, nothing to delete', { functionName });
       return;
     }
     throw error;

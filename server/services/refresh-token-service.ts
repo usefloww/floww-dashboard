@@ -10,6 +10,7 @@ import { eq, and, isNull, lt } from 'drizzle-orm';
 import { getDb } from '~/server/db';
 import { refreshTokens } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
+import { logger } from '~/server/utils/logger';
 
 // Refresh token configuration
 const REFRESH_TOKEN_LENGTH = 48; // bytes, results in 64-char URL-safe string
@@ -51,7 +52,7 @@ export async function createRefreshToken(
     deviceName: deviceName ?? null,
   });
 
-  console.log('Created refresh token', { userId, deviceName });
+  logger.info('Created refresh token', { userId, deviceName });
 
   // Return plaintext token to caller
   return plaintextToken;
@@ -76,13 +77,13 @@ export async function validateAndUpdateRefreshToken(
     .limit(1);
 
   if (!tokenRecord) {
-    console.warn('Refresh token not found');
+    logger.warn('Refresh token not found');
     return null;
   }
 
   // Check if token is revoked
   if (tokenRecord.revokedAt !== null) {
-    console.warn('Refresh token is revoked', {
+    logger.warn('Refresh token is revoked', {
       tokenId: tokenRecord.id,
       revokedAt: tokenRecord.revokedAt.toISOString(),
     });
@@ -95,7 +96,7 @@ export async function validateAndUpdateRefreshToken(
     .set({ lastUsedAt: new Date() })
     .where(eq(refreshTokens.id, tokenRecord.id));
 
-  console.log('Refresh token validated', { userId: tokenRecord.userId, tokenId: tokenRecord.id });
+  logger.debug('Refresh token validated', { userId: tokenRecord.userId, tokenId: tokenRecord.id });
 
   return tokenRecord.userId;
 }
@@ -117,13 +118,13 @@ export async function revokeRefreshToken(refreshToken: string): Promise<boolean>
     .limit(1);
 
   if (!tokenRecord) {
-    console.warn('Refresh token not found for revocation');
+    logger.warn('Refresh token not found for revocation');
     return false;
   }
 
   // Check if already revoked
   if (tokenRecord.revokedAt !== null) {
-    console.log('Refresh token already revoked', { tokenId: tokenRecord.id });
+    logger.debug('Refresh token already revoked', { tokenId: tokenRecord.id });
     return true;
   }
 
@@ -133,7 +134,7 @@ export async function revokeRefreshToken(refreshToken: string): Promise<boolean>
     .set({ revokedAt: new Date() })
     .where(eq(refreshTokens.id, tokenRecord.id));
 
-  console.log('Refresh token revoked', { userId: tokenRecord.userId, tokenId: tokenRecord.id });
+  logger.info('Refresh token revoked', { userId: tokenRecord.userId, tokenId: tokenRecord.id });
 
   return true;
 }
@@ -163,7 +164,7 @@ export async function revokeAllUserTokens(userId: string): Promise<number> {
     count++;
   }
 
-  console.log('Revoked all user refresh tokens', { userId, count });
+  logger.info('Revoked all user refresh tokens', { userId, count });
 
   return count;
 }
@@ -244,7 +245,7 @@ export async function cleanupRevokedTokens(daysOld: number = 90): Promise<number
     await db.delete(refreshTokens).where(eq(refreshTokens.id, token.id));
   }
 
-  console.log('Cleaned up old revoked refresh tokens', { count: oldTokens.length, daysOld });
+  logger.info('Cleaned up old revoked refresh tokens', { count: oldTokens.length, daysOld });
 
   return oldTokens.length;
 }

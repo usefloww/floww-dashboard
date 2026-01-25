@@ -9,6 +9,7 @@ import { eq, count, and } from 'drizzle-orm';
 import { getDb } from '~/server/db';
 import { organizations, namespaces, subscriptions, users, organizationMembers } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
+import { logger } from '~/server/utils/logger';
 
 const SINGLE_ORG_MODE = process.env.SINGLE_ORG_MODE === 'true';
 const DEFAULT_ORG_NAME = process.env.DEFAULT_ORG_NAME ?? 'Default Organization';
@@ -115,7 +116,7 @@ export async function getOrCreateDefaultOrganization(): Promise<{
 
   defaultOrgIdCache = orgId;
 
-  console.log('Created default organization for single-org mode', {
+  logger.info('Created default organization for single-org mode', {
     organizationId: orgId,
     namespaceId,
   });
@@ -185,7 +186,7 @@ export async function addUserToDefaultOrganization(
     role,
   });
 
-  console.log('Added user to default organization', {
+  logger.info('Added user to default organization', {
     userId,
     organizationId,
     role,
@@ -202,12 +203,12 @@ export async function initSingleOrgMode(): Promise<void> {
     return;
   }
 
-  console.log('Initializing single-org mode...');
+  logger.info('Initializing single-org mode...');
 
   // Ensure default organization exists
   const { organizationId, namespaceId } = await getOrCreateDefaultOrganization();
 
-  console.log('Single-org mode initialized', {
+  logger.info('Single-org mode initialized', {
     organizationId,
     namespaceId,
   });

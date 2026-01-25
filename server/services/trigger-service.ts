@@ -17,7 +17,9 @@ import {
   type IncomingWebhook,
 } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
-import { encryptSecret } from '~/server/utils/encryption';
+import { encryptSecret, decryptSecret } from '~/server/utils/encryption';
+import { logger } from '~/server/utils/logger';
+import { getProviderDefinition } from 'floww/providers/server';
 
 export interface TriggerInfo {
   id: string;
@@ -124,7 +126,7 @@ async function ensureProviderExists(
   const autoCreateProviders = ['builtin', 'kvstore'];
 
   if (!autoCreateProviders.includes(providerType)) {
-    console.warn(`Provider ${providerType}:${providerAlias} requires setup and cannot be auto-created`);
+    logger.warn('Provider requires setup and cannot be auto-created', { providerType, providerAlias });
     return;
   }
 
@@ -137,7 +139,7 @@ async function ensureProviderExists(
     encryptedConfig: encryptSecret('{}'),
   });
 
-  console.log(`Auto-created ${providerType} provider: ${providerAlias}`);
+  logger.info('Auto-created provider', { providerType, providerAlias });
 }
 
 /**
@@ -163,6 +165,137 @@ async function getProviderByTypeAlias(
     .limit(1);
 
   return provider ?? null;
+}
+
+/**
+ * Get provider secrets for SDK lifecycle
+ */
+async function getProviderSecrets(providerId: string): Promise<Record<string, string>> {
+  const db = getDb();
+
+  const [provider] = await db
+    .select()
+    .from(providers)
+    .where(eq(providers.id, providerId))
+    .limit(1);
+
+  if (!provider) {
+    return {};
+  }
+
+  try {
+    const decrypted = decryptSecret(provider.encryptedConfig);
+    return JSON.parse(decrypted);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Execute SDK lifecycle.create for a trigger
+ */
+async function executeTriggerLifecycleCreate(params: {
+  providerId: string;
+  providerType: string;
+  triggerType: string;
+  triggerId: string;
+  input: Record<string, unknown>;
+  webhookUrl: string;
+}): Promise<Record<string, unknown>> {
+  const providerDef = getProviderDefinition(params.providerType);
+
+  if (!providerDef) {
+    logger.debug('No SDK provider definition found, skipping lifecycle', {
+      providerType: params.providerType,
+    });
+    return {};
+  }
+
+  const triggerDef = providerDef.triggerDefinitions[params.triggerType];
+  if (!triggerDef) {
+    logger.debug('No SDK trigger definition found, skipping lifecycle', {
+      providerType: params.providerType,
+      triggerType: params.triggerType,
+    });
+    return {};
+  }
+
+  const secrets = await getProviderSecrets(params.providerId);
+
+  try {
+    const state = await triggerDef.lifecycle.create({
+      input: params.input,
+      webhookUrl: params.webhookUrl,
+      providerId: params.providerId,
+      triggerId: params.triggerId,
+      secrets,
+    });
+
+    logger.info('SDK trigger lifecycle.create executed', {
+      providerType: params.providerType,
+      triggerType: params.triggerType,
+      triggerId: params.triggerId,
+    });
+
+    return state as Record<string, unknown>;
+  } catch (error) {
+    logger.error('SDK trigger lifecycle.create failed', {
+      providerType: params.providerType,
+      triggerType: params.triggerType,
+      triggerId: params.triggerId,
+      error: String(error),
+    });
+    throw error;
+  }
+}
+
+/**
+ * Execute SDK lifecycle.destroy for a trigger
+ */
+async function executeTriggerLifecycleDestroy(params: {
+  providerId: string;
+  providerType: string;
+  triggerType: string;
+  triggerId: string;
+  input: Record<string, unknown>;
+  state: Record<string, unknown>;
+}): Promise<void> {
+  const providerDef = getProviderDefinition(params.providerType);
+
+  if (!providerDef) {
+    return;
+  }
+
+  const triggerDef = providerDef.triggerDefinitions[params.triggerType];
+  if (!triggerDef) {
+    return;
+  }
+
+  const secrets = await getProviderSecrets(params.providerId);
+
+  try {
+    await triggerDef.lifecycle.destroy({
+      input: params.input,
+      state: params.state,
+      providerId: params.providerId,
+      triggerId: params.triggerId,
+      secrets,
+    });
+
+    logger.info('SDK trigger lifecycle.destroy executed', {
+      providerType: params.providerType,
+      triggerType: params.triggerType,
+      triggerId: params.triggerId,
+    });
+  } catch (error) {
+    logger.error('SDK trigger lifecycle.destroy failed', {
+      providerType: params.providerType,
+      triggerType: params.triggerType,
+      triggerId: params.triggerId,
+      error: String(error),
+    });
+    // Don't throw - cleanup should be best-effort
+  }
 }
 
 /**
@@ -233,6 +366,34 @@ export async function updateTriggerState(
  */
 export async function deleteTrigger(triggerId: string): Promise<boolean> {
   const db = getDb();
+
+  // Get trigger details for lifecycle cleanup
+  const [trigger] = await db
+    .select()
+    .from(triggers)
+    .where(eq(triggers.id, triggerId))
+    .limit(1);
+
+  if (trigger) {
+    // Get provider details
+    const [provider] = await db
+      .select()
+      .from(providers)
+      .where(eq(providers.id, trigger.providerId))
+      .limit(1);
+
+    if (provider) {
+      // Execute SDK lifecycle.destroy
+      await executeTriggerLifecycleDestroy({
+        providerId: trigger.providerId,
+        providerType: provider.type,
+        triggerType: trigger.triggerType,
+        triggerId,
+        input: trigger.input as Record<string, unknown>,
+        state: (trigger.state as Record<string, unknown>) ?? {},
+      });
+    }
+  }
 
   await db.delete(triggers).where(eq(triggers.id, triggerId));
 
@@ -367,7 +528,7 @@ export async function syncTriggers(
     }
   }
 
-  console.log('Trigger sync plan', {
+  logger.info('Trigger sync plan', {
     workflowId,
     toRemove: toRemove.size,
     toAdd: toAdd.size,
@@ -393,6 +554,7 @@ export async function syncTriggers(
         throw new Error(`Provider ${meta.providerType}:${meta.providerAlias} not found`);
       }
 
+      // Create trigger record first to get the ID
       const trigger = await createTrigger({
         workflowId,
         providerId: provider.id,
@@ -400,9 +562,27 @@ export async function syncTriggers(
         input: meta.input,
       });
 
-      // For webhook triggers, create incoming webhook
-      if (meta.triggerType === 'webhook' || meta.triggerType === 'onWebhook') {
-        const webhookPath = `/webhook/${generateUlidUuid()}`;
+      // Generate webhook URL for this trigger
+      const webhookPath = `/webhook/${generateUlidUuid()}`;
+      const webhookUrl = `${publicApiUrl}${webhookPath}`;
+
+      // For webhook-based triggers, create incoming webhook
+      const isWebhookTrigger = 
+        meta.triggerType === 'webhook' || 
+        meta.triggerType === 'onWebhook' ||
+        meta.triggerType.startsWith('on'); // Most provider triggers are webhook-based
+
+      if (isWebhookTrigger && meta.providerType !== 'builtin') {
+        // For provider triggers, we may need external webhook setup
+        await db.insert(incomingWebhooks).values({
+          id: generateUlidUuid(),
+          triggerId: trigger.id,
+          providerId: null,
+          path: webhookPath,
+          method: 'POST',
+        });
+      } else if (meta.triggerType === 'webhook' || meta.triggerType === 'onWebhook') {
+        // For builtin webhooks
         await db.insert(incomingWebhooks).values({
           id: generateUlidUuid(),
           triggerId: trigger.id,
@@ -413,11 +593,34 @@ export async function syncTriggers(
       }
 
       // For cron triggers, create recurring task
-      if (meta.triggerType === 'cron' || meta.triggerType === 'onSchedule') {
+      if (meta.triggerType === 'cron' || meta.triggerType === 'onCron' || meta.triggerType === 'onSchedule') {
         await db.insert(recurringTasks).values({
           id: generateUlidUuid(),
           triggerId: trigger.id,
         });
+      }
+
+      // Execute SDK lifecycle.create to set up external resources (webhooks, etc.)
+      try {
+        const state = await executeTriggerLifecycleCreate({
+          providerId: provider.id,
+          providerType: meta.providerType,
+          triggerType: meta.triggerType,
+          triggerId: trigger.id,
+          input: meta.input,
+          webhookUrl,
+        });
+
+        // Update trigger with state from lifecycle
+        if (Object.keys(state).length > 0) {
+          await updateTriggerState(trigger.id, state);
+        }
+      } catch (lifecycleError) {
+        logger.warn('SDK lifecycle.create failed, trigger created without external resources', {
+          triggerId: trigger.id,
+          error: String(lifecycleError),
+        });
+        // Don't fail the whole sync - the trigger is created, just without external webhook
       }
     } catch (error) {
       errors.push({
@@ -425,7 +628,7 @@ export async function syncTriggers(
         triggerType: meta.triggerType,
         error: String(error),
       });
-      console.error('Failed to create trigger', { meta, error: String(error) });
+      logger.error('Failed to create trigger', { meta, error: String(error) });
     }
   }
 

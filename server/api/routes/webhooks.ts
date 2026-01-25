@@ -22,6 +22,9 @@ import { executeWebhookTrigger } from '~/server/services/trigger-execution-servi
 import { checkExecutionLimit } from '~/server/services/billing-service';
 import { centrifugoService } from '~/server/services/centrifugo-service';
 import { generateInvocationToken } from '~/server/services/workflow-auth-service';
+import { logger } from '~/server/utils/logger';
+import { decryptSecret } from '~/server/utils/encryption';
+import { getProviderDefinition, type TriggerInfo as SdkTriggerInfo } from 'floww/providers/server';
 
 interface WebhookData {
   path: string;
@@ -38,7 +41,7 @@ async function handleWebhook(request: Request, path: string): Promise<Response> 
   const normalizedPath = path.startsWith('/') ? `/webhook${path}` : `/webhook/${path}`;
   const method = request.method.toUpperCase();
 
-  console.log('Webhook lookup', { path, normalizedPath, method });
+  logger.debug('Webhook lookup', { path, normalizedPath, method });
 
   // Query webhook by path and method
   const webhookResults = await db
@@ -97,8 +100,20 @@ async function handleWebhook(request: Request, path: string): Promise<Response> 
     // Trigger-owned webhook: execute single trigger
     return handleTriggerWebhook(webhook, trigger, workflow, webhookData);
   } else {
-    console.error('Webhook has neither provider_id nor trigger_id', { webhookId: webhook.id });
+    logger.error('Webhook has neither provider_id nor trigger_id', { webhookId: webhook.id });
     return json({ error: 'Invalid webhook configuration' }, 500);
+  }
+}
+
+/**
+ * Get provider secrets from encrypted config
+ */
+function getProviderSecrets(encryptedConfig: string): Record<string, string> {
+  try {
+    const decrypted = decryptSecret(encryptedConfig);
+    return JSON.parse(decrypted);
+  } catch {
+    return {};
   }
 }
 
@@ -109,11 +124,42 @@ async function handleProviderWebhook(
 ): Promise<Response> {
   const db = getDb();
 
-  console.log('Processing provider-owned webhook', {
+  logger.info('Processing provider-owned webhook', {
     webhookId: webhook.id,
     providerId: provider.id,
     providerType: provider.type,
   });
+
+  // Get SDK provider definition for webhook processing
+  const providerDef = getProviderDefinition(provider.type);
+  const secrets = getProviderSecrets(provider.encryptedConfig);
+
+  // Handle webhook validation (e.g., Slack URL verification, Discord PING)
+  if (providerDef?.webhookProcessor?.validateWebhook) {
+    try {
+      const validationResult = await providerDef.webhookProcessor.validateWebhook(
+        {
+          headers: webhookData.headers,
+          body: webhookData.body,
+          method: webhookData.method,
+          path: webhookData.path,
+        },
+        secrets
+      );
+
+      if (validationResult.challenge && validationResult.response) {
+        logger.info('Responding to webhook validation challenge', {
+          providerType: provider.type,
+        });
+        return json(validationResult.response, validationResult.statusCode ?? 200);
+      }
+    } catch (error) {
+      logger.error('Webhook validation failed', {
+        providerType: provider.type,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   // Load all triggers for this provider
   const triggerResults = await db
@@ -125,7 +171,7 @@ async function handleProviderWebhook(
     .innerJoin(workflows, eq(triggers.workflowId, workflows.id))
     .where(eq(triggers.providerId, provider.id));
 
-  console.log('Loaded triggers for provider', {
+  logger.debug('Loaded triggers for provider', {
     providerId: provider.id,
     triggerCount: triggerResults.length,
   });
@@ -134,10 +180,67 @@ async function handleProviderWebhook(
     return json({ message: 'No matching triggers for this event' }, 200);
   }
 
-  // Execute all matching triggers
+  // Use SDK webhook processor to filter matching triggers
+  let matchedTriggerIds: Set<string>;
+  let eventPayloads: Map<string, Record<string, unknown>>;
+
+  if (providerDef?.webhookProcessor?.processWebhook) {
+    // Convert triggers to SDK format
+    const sdkTriggers: SdkTriggerInfo[] = triggerResults.map(({ trigger }) => ({
+      id: trigger.id,
+      triggerType: trigger.triggerType,
+      input: (trigger.input as Record<string, unknown>) ?? {},
+      state: (trigger.state as Record<string, unknown>) ?? {},
+    }));
+
+    try {
+      const matches = await providerDef.webhookProcessor.processWebhook(
+        {
+          headers: webhookData.headers,
+          body: webhookData.body,
+          method: webhookData.method,
+          path: webhookData.path,
+        },
+        sdkTriggers,
+        secrets
+      );
+
+      matchedTriggerIds = new Set(matches.map((m) => m.triggerId));
+      eventPayloads = new Map(matches.map((m) => [m.triggerId, m.event]));
+
+      logger.info('SDK webhook processor matched triggers', {
+        providerType: provider.type,
+        totalTriggers: triggerResults.length,
+        matchedTriggers: matchedTriggerIds.size,
+      });
+    } catch (error) {
+      logger.error('SDK webhook processor failed, falling back to all triggers', {
+        providerType: provider.type,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Fallback: execute all triggers
+      matchedTriggerIds = new Set(triggerResults.map(({ trigger }) => trigger.id));
+      eventPayloads = new Map();
+    }
+  } else {
+    // No SDK processor, execute all triggers
+    matchedTriggerIds = new Set(triggerResults.map(({ trigger }) => trigger.id));
+    eventPayloads = new Map();
+  }
+
+  if (matchedTriggerIds.size === 0) {
+    return json({ message: 'No matching triggers for this event' }, 200);
+  }
+
+  // Execute matched triggers
   const results: Array<{ triggerId: string; executionId: string; status: string }> = [];
 
   for (const { trigger, workflow } of triggerResults) {
+    // Skip triggers that didn't match
+    if (!matchedTriggerIds.has(trigger.id)) {
+      continue;
+    }
+
     try {
       // Check execution limit
       const namespaceResult = await db
@@ -149,7 +252,7 @@ async function handleProviderWebhook(
       if (namespaceResult.length > 0 && namespaceResult[0].organizationId) {
         const limitCheck = await checkExecutionLimit(namespaceResult[0].organizationId);
         if (!limitCheck.allowed) {
-          console.warn('Execution limit reached', { workflowId: workflow.id });
+          logger.warn('Execution limit reached', { workflowId: workflow.id });
           continue;
         }
       }
@@ -160,6 +263,9 @@ async function handleProviderWebhook(
         triggerId: trigger.id,
       });
 
+      // Use normalized event from SDK processor if available
+      const eventData = eventPayloads.get(trigger.id) ?? webhookData.body;
+
       // Execute the trigger
       const result = await executeWebhookTrigger(
         trigger.id,
@@ -167,7 +273,7 @@ async function handleProviderWebhook(
           path: webhookData.path,
           method: webhookData.method,
           headers: webhookData.headers,
-          body: webhookData.body,
+          body: eventData,
           query: webhookData.query,
         },
         execution.id
@@ -179,7 +285,7 @@ async function handleProviderWebhook(
         status: result ? 'executed' : 'no_deployment',
       });
     } catch (error) {
-      console.error('Failed to execute trigger', { triggerId: trigger.id, error });
+      logger.error('Failed to execute trigger', { triggerId: trigger.id, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -199,7 +305,7 @@ async function handleTriggerWebhook(
 ): Promise<Response> {
   const db = getDb();
 
-  console.log('Processing trigger-owned webhook', {
+  logger.info('Processing trigger-owned webhook', {
     webhookId: webhook.id,
     triggerId: trigger.id,
     workflowId: workflow.id,
@@ -249,7 +355,7 @@ async function handleTriggerWebhook(
       }
     );
   } catch (error) {
-    console.error('Failed to publish dev webhook event', { error });
+    logger.error('Failed to publish dev webhook event', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Execute the trigger

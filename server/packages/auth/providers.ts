@@ -5,6 +5,8 @@
  * This is a self-contained package - no imports from server/services or server/utils.
  */
 
+import { logger } from '~/server/utils/logger';
+
 export interface AuthProvider {
   name: string;
   type: 'oidc' | 'workos' | 'password';
@@ -120,7 +122,7 @@ export class WorkOSProvider implements AuthProvider {
   async revokeSession(sessionId: string): Promise<void> {
     // WorkOS doesn't have a direct session revocation endpoint
     // This is a no-op for WorkOS
-    console.log('Session revocation not supported for WorkOS', { sessionId });
+    logger.debug('Session revocation not supported for WorkOS', { sessionId });
   }
 }
 

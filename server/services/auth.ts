@@ -13,6 +13,7 @@ import { users, apiKeys } from '~/server/db/schema';
 import { getJwtFromSessionCookie } from '~/server/utils/session';
 import { validateToken, type TokenUser } from '~/server/utils/jwt';
 import crypto from 'crypto';
+import { logger } from '~/server/utils/logger';
 
 export interface AuthenticatedUser {
   id: string;
@@ -162,7 +163,7 @@ export async function authenticateRequest(
     // Look up the user in the database
     return getUserFromToken(tokenUser);
   } catch (error) {
-    console.error('Authentication failed:', error);
+    logger.error('Authentication failed', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }

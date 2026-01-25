@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteWorkflow } from "@/lib/api";
 import { Workflow } from "@/types/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { handleApiError } from "@/lib/api";
+import { deleteWorkflow } from "@/lib/server/workflows";
 import { showSuccessNotification, showErrorNotification } from "@/stores/notificationStore";
 import { AlertTriangle } from "lucide-react";
 
@@ -24,7 +24,7 @@ export function DeleteWorkflowDialog({
 
   const deleteMutation = useMutation({
     mutationFn: async (workflowId: string) => {
-      return await deleteWorkflow(workflowId);
+      return await deleteWorkflow({ data: { workflowId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workflows", namespaceId] });

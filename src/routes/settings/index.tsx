@@ -32,7 +32,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { api, handleApiError } from "@/lib/api";
+import { handleApiError } from "@/lib/api";
+import { getConfig } from "@/lib/server/config";
+import {
+  getSubscription,
+  getUsage,
+  getPaymentMethod,
+  cancelSubscription,
+  upgradeSubscription,
+} from "@/lib/server/billing";
+import {
+  updateOrganization,
+  deleteOrganization,
+  setupSSO,
+} from "@/lib/server/organizations";
 import {
   Dialog,
   DialogContent,
@@ -91,34 +104,51 @@ function BillingSection({ organizationId }: { organizationId: string }) {
   const [cancelLoading, setCancelLoading] = useState(false);
   const { checkout } = Route.useSearch();
 
-  const { data: config } = useQuery<{ is_cloud: boolean }>({
+  const { data: config } = useQuery({
     queryKey: ["config"],
-    queryFn: () => api.get<{ is_cloud: boolean }>("/config"),
+    queryFn: () => getConfig(),
   });
 
-  const isBillingEnabled = config?.is_cloud ?? false;
+  const isBillingEnabled = config?.features.billing ?? false;
 
   const {
-    data: subscription,
+    data: subscriptionData,
     isLoading: subscriptionLoading,
     error: subscriptionError,
-  } = useQuery<SubscriptionData>({
+  } = useQuery({
     queryKey: ["subscription", organizationId],
-    queryFn: () =>
-      api.get<SubscriptionData>(`/organizations/${organizationId}/subscription`),
+    queryFn: () => getSubscription({ data: { organizationId } }),
     enabled: isBillingEnabled,
     refetchOnMount: checkout === "success" ? "always" : true,
   });
 
+  // Map the server function response to the expected format
+  const subscription: SubscriptionData | undefined = subscriptionData ? {
+    tier: subscriptionData.subscription.tier as "free" | "hobby" | "team",
+    status: subscriptionData.subscription.status as "active" | "past_due" | "canceled" | "incomplete",
+    current_period_end: subscriptionData.subscription.currentPeriodEnd,
+    grace_period_ends_at: null,
+    cancel_at_period_end: subscriptionData.subscription.cancelAtPeriodEnd,
+    has_active_pro: subscriptionData.plan.isPaid,
+  } : undefined;
+
   const {
-    data: usage,
+    data: usageData,
     isLoading: usageLoading,
     error: usageError,
-  } = useQuery<UsageData>({
+  } = useQuery({
     queryKey: ["usage", organizationId],
-    queryFn: () => api.get<UsageData>(`/organizations/${organizationId}/usage`),
+    queryFn: () => getUsage({ data: { organizationId } }),
     enabled: isBillingEnabled,
   });
+
+  // Map the server function response to the expected format
+  const usage: UsageData | undefined = usageData && subscriptionData ? {
+    workflows: usageData.workflows,
+    workflows_limit: subscriptionData.plan.workflowLimit,
+    executions_this_month: usageData.executionsThisMonth,
+    executions_limit: subscriptionData.plan.executionLimitPerMonth,
+  } : undefined;
 
   useEffect(() => {
     if (checkout === "success") {
@@ -135,13 +165,22 @@ function BillingSection({ organizationId }: { organizationId: string }) {
   }, [checkout, organizationId, queryClient, navigate]);
 
   const {
-    data: paymentMethod,
+    data: paymentMethodData,
     isLoading: paymentMethodLoading,
-  } = useQuery<PaymentMethodData>({
+  } = useQuery({
     queryKey: ["paymentMethod", organizationId],
-    queryFn: () => api.get<PaymentMethodData>(`/organizations/${organizationId}/payment-method`),
+    queryFn: () => getPaymentMethod({ data: { organizationId } }),
     enabled: isBillingEnabled && subscription?.has_active_pro,
   });
+
+  // Map the server function response to the expected format
+  const paymentMethod: PaymentMethodData | null = paymentMethodData ? {
+    payment_method_id: paymentMethodData.paymentMethodId,
+    brand: paymentMethodData.brand,
+    last4: paymentMethodData.last4,
+    exp_month: paymentMethodData.expMonth,
+    exp_year: paymentMethodData.expYear,
+  } : null;
 
   if (!isBillingEnabled) {
     return null;
@@ -227,7 +266,7 @@ function BillingSection({ organizationId }: { organizationId: string }) {
     setCancelLoading(true);
     setActionError(null);
     try {
-      await api.post(`/organizations/${organizationId}/subscription/cancel`);
+      await cancelSubscription({ data: { organizationId } });
       setShowCancelDialog(false);
       queryClient.invalidateQueries({ queryKey: ["subscription", organizationId] });
     } catch (err) {
@@ -249,10 +288,7 @@ function BillingSection({ organizationId }: { organizationId: string }) {
     setUpgradeLoading(true);
     setActionError(null);
     try {
-      await api.post<{ success: boolean; new_tier: string; message: string }>(
-        `/organizations/${organizationId}/upgrade`,
-        { target_plan: "team" }
-      );
+      await upgradeSubscription({ data: { organizationId, targetPlan: "team" } });
       // Reload the page to refresh subscription data
       window.location.reload();
     } catch (err) {
@@ -595,7 +631,7 @@ function DangerZone({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      return api.delete(`/organizations/${organizationId}`);
+      return deleteOrganization({ data: { organizationId } });
     },
     onSuccess: async () => {
       await fetchNamespaces();
@@ -734,11 +770,6 @@ interface AuthenticationSettingsProps {
 
 type SetupStep = "select" | "configure" | "complete";
 
-interface SSOSetupResponseExtended {
-  admin_portal_link: string;
-  has_workos_org: boolean;
-  features_available: string[];
-}
 
 function AuthenticationSettings({
   organizationId,
@@ -753,18 +784,18 @@ function AuthenticationSettings({
   const generateLinkMutation = useMutation({
     mutationFn: async (features: string[]) => {
       const currentUrl = window.location.href;
-      return api.post<SSOSetupResponseExtended>(
-        `/organizations/${organizationId}/sso/setup`,
-        {
-          return_url: currentUrl,
-          success_url: currentUrl,
+      return setupSSO({
+        data: {
+          organizationId,
+          returnUrl: currentUrl,
+          successUrl: currentUrl,
           features: features.length > 0 ? features : undefined,
-        }
-      );
+        },
+      });
     },
     onSuccess: (data) => {
-      if (data.admin_portal_link) {
-        setPortalLink(data.admin_portal_link);
+      if (data.url) {
+        setPortalLink(data.url);
         setSetupStep("configure");
       }
       setError(null);
@@ -1032,10 +1063,7 @@ function OtherTab({
 
   const updateMutation = useMutation({
     mutationFn: async (displayName: string) => {
-      return api.patch<{ displayName: string }>(
-        `/organizations/${organizationId}`,
-        { displayName: displayName }
-      );
+      return updateOrganization({ data: { organizationId, displayName } });
     },
     onSuccess: (data) => {
       setIsEditing(false);
@@ -1158,20 +1186,29 @@ function OrganizationSettings() {
     await fetchNamespaces();
   };
 
-  const { data: config } = useQuery<{ is_cloud: boolean }>({
+  const { data: configData } = useQuery({
     queryKey: ["config"],
-    queryFn: () => api.get<{ is_cloud: boolean }>("/config"),
+    queryFn: () => getConfig(),
   });
 
-  const isBillingEnabled = config?.is_cloud ?? false;
+  const isBillingEnabled = configData?.features.billing ?? false;
 
   // Fetch subscription data for access control across tabs
-  const { data: subscription } = useQuery<SubscriptionData>({
+  const { data: subscriptionRaw } = useQuery({
     queryKey: ["subscription", organization?.id],
-    queryFn: () =>
-      api.get<SubscriptionData>(`/organizations/${organization?.id}/subscription`),
+    queryFn: () => getSubscription({ data: { organizationId: organization!.id } }),
     enabled: isBillingEnabled && !!organization?.id,
   });
+
+  // Map the server function response to the expected format
+  const subscription: SubscriptionData | undefined = subscriptionRaw ? {
+    tier: subscriptionRaw.subscription.tier as "free" | "hobby" | "team",
+    status: subscriptionRaw.subscription.status as "active" | "past_due" | "canceled" | "incomplete",
+    current_period_end: subscriptionRaw.subscription.currentPeriodEnd,
+    grace_period_ends_at: null,
+    cancel_at_period_end: subscriptionRaw.subscription.cancelAtPeriodEnd,
+    has_active_pro: subscriptionRaw.plan.isPaid,
+  } : undefined;
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: "members", label: "Members", icon: <Users className="h-4 w-4" /> },

@@ -10,6 +10,7 @@ import { Hono } from 'hono';
 // import { serveStatic } from 'hono/serve-static';
 import path from 'node:path';
 import fs from 'node:fs';
+import { logger } from '~/server/utils/logger';
 
 /**
  * Convert AdminJS route path format to Hono format
@@ -113,9 +114,9 @@ export function buildRouter(admin: AdminJS, _options: BuildRouterOptions = {}): 
 
   // Initialize AdminJS (builds the frontend bundle)
   admin.initialize().then(() => {
-    console.log('AdminJS: bundle ready');
+    logger.info('AdminJS: bundle ready');
   }).catch((err) => {
-    console.error('AdminJS: bundle error', err);
+    logger.error('AdminJS: bundle error', { error: err instanceof Error ? err.message : String(err) });
   });
 
   // Serve static assets (prepend rootPath)
@@ -148,7 +149,7 @@ export function buildRouter(admin: AdminJS, _options: BuildRouterOptions = {}): 
         }
         return c.text('Asset not found', 404);
       } catch (error) {
-        console.error('Asset error:', error);
+        logger.error('Asset error', { error: error instanceof Error ? error.message : String(error) });
         return c.text('Asset error', 500);
       }
     });
@@ -213,7 +214,7 @@ export function buildRouter(admin: AdminJS, _options: BuildRouterOptions = {}): 
 
         return c.body(response);
       } catch (error) {
-        console.error(`AdminJS route error [${route.action}]:`, error);
+        logger.error('AdminJS route error', { action: route.action, error: error instanceof Error ? error.message : String(error) });
         return c.text(`Admin error: ${error}`, 500);
       }
     };
@@ -289,7 +290,7 @@ export function buildAuthenticatedRouter(
 
       return c.redirect(`${admin.options.rootPath}/login?error=Invalid+credentials`);
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error', { error: error instanceof Error ? error.message : String(error) });
       return c.redirect(`${admin.options.rootPath}/login?error=Login+failed`);
     }
   });

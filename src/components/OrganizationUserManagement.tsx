@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, handleApiError } from "@/lib/api";
-import { OrganizationRole, OrganizationMember, OrganizationUser, Invitation, InvitationCreate } from "@/types/api";
+import { OrganizationRole, OrganizationMember, OrganizationUser } from "@/types/api";
+import {
+  getOrganizationInvitations,
+  sendOrganizationInvitation,
+  revokeOrganizationInvitation,
+  type InvitationInfo,
+} from "@/lib/server/organizations";
 import { Loader } from "@/components/Loader";
 import { Users, Crown, Shield, User, Calendar, UserPlus, Trash2, Mail, Clock, X, ChevronDown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,19 +45,19 @@ export function OrganizationUserManagement({
     },
   });
 
-  // Fetch invitations
+  // Fetch invitations using server function
   const { data: invitationsData, isLoading: invitationsLoading } = useQuery({
     queryKey: ['organization-invitations', organizationId],
     queryFn: async () => {
-      const data = await api.get<Invitation[]>(`/organizations/${organizationId}/invitations`);
+      const data = await getOrganizationInvitations({ data: { organizationId } });
       return Array.isArray(data) ? data : [];
     },
   });
 
-  // Send invitation mutation
+  // Send invitation mutation using server function
   const sendInvitationMutation = useMutation({
-    mutationFn: async (data: InvitationCreate) => {
-      return api.post<Invitation>(`/organizations/${organizationId}/invitations`, data);
+    mutationFn: async (data: { email: string }) => {
+      return sendOrganizationInvitation({ data: { organizationId, email: data.email } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-invitations', organizationId] });
@@ -64,10 +70,10 @@ export function OrganizationUserManagement({
     },
   });
 
-  // Revoke invitation mutation
+  // Revoke invitation mutation using server function
   const revokeInvitationMutation = useMutation({
     mutationFn: async (invitationId: string) => {
-      return api.delete(`/organizations/${organizationId}/invitations/${invitationId}`);
+      return revokeOrganizationInvitation({ data: { organizationId, invitationId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-invitations', organizationId] });
@@ -100,8 +106,8 @@ export function OrganizationUserManagement({
   });
 
   const members = membersData || [];
-  const invitations = invitationsData || [];
-  const pendingInvitations = invitations.filter(inv => inv.state === "pending");
+  const invitations: InvitationInfo[] = invitationsData || [];
+  const pendingInvitations = invitations.filter((inv: InvitationInfo) => inv.state === "pending");
   const errorMessage = membersError ? handleApiError(membersError) : null;
 
   const handleSendInvitation = () => {

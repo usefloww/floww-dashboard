@@ -42,6 +42,7 @@ export const getCurrentUser = createServerFn({ method: 'GET' }).handler(async ()
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        isAdmin: user.isAdmin,
         createdAt: user.createdAt.toISOString(),
       };
 

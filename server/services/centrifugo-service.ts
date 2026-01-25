@@ -5,6 +5,8 @@
  * Used for streaming execution logs, webhook events, etc.
  */
 
+import { logger } from '~/server/utils/logger';
+
 export interface WorkflowMessage {
   type: string;
   workflowId: string;
@@ -58,27 +60,27 @@ class CentrifugoService {
       if (response.ok) {
         const result = await response.json();
         if (result.error) {
-          console.error(`Centrifugo API error: ${JSON.stringify(result.error)}`, {
+          logger.error('Centrifugo API error', {
             channel,
             error: result.error,
           });
           return false;
         }
 
-        console.log(`Successfully published to channel ${channel}`, {
+        logger.debug('Successfully published to channel', {
           channel,
           dataType: (data as Record<string, unknown>).type ?? 'unknown',
         });
         return true;
       } else {
-        console.error(`Failed to publish to channel ${channel}: HTTP ${response.status}`, {
+        logger.error('Failed to publish to channel', {
           channel,
           statusCode: response.status,
         });
         return false;
       }
     } catch (error) {
-      console.error('Error publishing to Centrifugo channel', {
+      logger.error('Error publishing to Centrifugo channel', {
         channel,
         error: String(error),
       });

@@ -9,6 +9,7 @@
  */
 
 import { WorkOS } from '@workos-inc/node';
+import { logger } from '~/server/utils/logger';
 
 // Lazy initialization to avoid issues with Vite SSR
 let _workos: WorkOS | null = null;
@@ -105,7 +106,7 @@ export async function revokeSession(accessToken: string): Promise<void> {
     }
   } catch (error) {
     // Don't fail logout if revocation fails
-    console.error('Failed to revoke WorkOS session:', error);
+    logger.error('Failed to revoke WorkOS session', { error: error instanceof Error ? error.message : String(error) });
   }
 }
 

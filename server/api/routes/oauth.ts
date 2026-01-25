@@ -8,6 +8,7 @@
 import { get, json, errorResponse } from '~/server/api/router';
 import { getOAuthProvider } from '~/server/services/oauth-service';
 import { getProvider, updateProvider } from '~/server/services/provider-service';
+import { logger } from '~/server/utils/logger';
 
 // Start OAuth authorization flow
 get('/oauth/:providerName/authorize', async ({ user, params, query, request }) => {
@@ -112,7 +113,7 @@ get('/oauth/:providerName/callback', async ({ params, query }) => {
     // Redirect to success page
     return Response.redirect('/settings/providers?oauth=success', 302);
   } catch (err) {
-    console.error('OAuth callback error:', err);
+    logger.error('OAuth callback error', { error: err instanceof Error ? err.message : String(err) });
     return Response.redirect(
       `/settings/providers?oauth=error&message=${encodeURIComponent(
         err instanceof Error ? err.message : 'Unknown error'

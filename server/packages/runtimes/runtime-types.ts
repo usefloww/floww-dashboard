@@ -5,6 +5,8 @@
  * This is a self-contained package.
  */
 
+import { logger } from '~/server/utils/logger';
+
 export interface RuntimeConfig {
   runtimeId: string;
   imageDigest: string;
@@ -133,10 +135,10 @@ export abstract class BaseRuntime implements Runtime {
   abstract teardownUnusedRuntimes(): Promise<void>;
 
   protected log(message: string, context?: Record<string, unknown>): void {
-    console.log(`[${this.type}] ${message}`, context ?? '');
+    logger.info(`[${this.type}] ${message}`, context);
   }
 
   protected error(message: string, context?: Record<string, unknown>): void {
-    console.error(`[${this.type}] ${message}`, context ?? '');
+    logger.error(`[${this.type}] ${message}`, context);
   }
 }

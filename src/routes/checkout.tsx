@@ -23,7 +23,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { api, handleApiError } from "@/lib/api";
+import { handleApiError } from "@/lib/api";
+import {
+  getSubscription,
+  createSubscriptionIntent,
+  verifyPayment,
+} from "@/lib/server/billing";
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
@@ -32,10 +37,6 @@ export const Route = createFileRoute("/checkout")({
   }),
 });
 
-interface SubscriptionIntentResponse {
-  subscription_id: string;
-  client_secret: string;
-}
 
 interface PlanDetails {
   id: "hobby" | "team";
@@ -108,16 +109,9 @@ function PaymentForm({
       // Verify payment status with backend to ensure invoice is paid
       // This ensures the subscription becomes active even if Stripe hasn't processed it yet
       try {
-        const verifyResponse = await api.post<{
-          status: string;
-          subscription_id: string;
-          invoice_status?: string;
-          payment_intent_status?: string;
-          message: string;
-          requires_action?: boolean;
-        }>(`/organizations/${organizationId}/subscription/verify-payment`);
+        const verifyResponse = await verifyPayment({ data: { organizationId } });
 
-        if (verifyResponse.requires_action) {
+        if (verifyResponse.requiresAction) {
           setError(
             "Payment requires additional authentication. Please complete the verification."
           );
@@ -127,7 +121,7 @@ function PaymentForm({
 
         if (verifyResponse.status !== "active" && verifyResponse.status !== "trialing") {
           // Payment might still be processing
-          if (verifyResponse.payment_intent_status === "processing") {
+          if (verifyResponse.paymentIntentStatus === "processing") {
             setError(
               "Payment is still processing. Your subscription will be activated shortly."
             );
@@ -288,12 +282,14 @@ function CheckoutContent({
       setError(null);
 
       try {
-        const response = await api.post<SubscriptionIntentResponse>(
-          `/organizations/${organizationId}/subscription/intent`,
-          { plan: plan.id }
-        );
+        const response = await createSubscriptionIntent({
+          data: {
+            organizationId,
+            planId: plan.id,
+          },
+        });
 
-        setClientSecret(response.client_secret);
+        setClientSecret(response.clientSecret);
       } catch (err) {
         setError(handleApiError(err));
         intentCreatedRef.current = false;
@@ -356,19 +352,18 @@ function CheckoutPage() {
 
   const planDetails = PLAN_DETAILS[plan];
 
-  const { data: subscription } = useQuery({
+  const { data: subscriptionData } = useQuery({
     queryKey: ["subscription", organization?.id],
-    queryFn: () =>
-      api.get<{ has_active_pro: boolean }>(`/organizations/${organization?.id}/subscription`),
+    queryFn: () => getSubscription({ data: { organizationId: organization!.id } }),
     enabled: !!organization?.id,
   });
 
   // Redirect if already subscribed
   useEffect(() => {
-    if (subscription?.has_active_pro) {
+    if (subscriptionData?.plan.isPaid) {
       navigate({ to: "/settings", search: { tab: "billing" } });
     }
-  }, [subscription, navigate]);
+  }, [subscriptionData, navigate]);
 
   if (!organization) {
     return (

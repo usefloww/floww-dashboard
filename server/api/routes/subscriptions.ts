@@ -11,6 +11,7 @@ import * as billingService from '~/server/services/billing-service';
 import * as stripeService from '~/server/services/stripe-service';
 import { getOrganization, getOrganizationMembership } from '~/server/services/organization-service';
 import { subscribeSchema, createPortalSessionSchema } from '~/server/api/schemas';
+import { logger } from '~/server/utils/logger';
 
 // Get current subscription
 get('/subscriptions', async (ctx) => {
@@ -96,7 +97,7 @@ post('/subscriptions/subscribe', async (ctx) => {
       clientSecret: result.clientSecret,
     });
   } catch (error) {
-    console.error('Subscription error:', error);
+    logger.error('Subscription error', { error: error instanceof Error ? error.message : String(error) });
     return errorResponse(
       error instanceof Error ? error.message : 'Failed to create subscription',
       400
@@ -133,7 +134,7 @@ post('/subscriptions/portal', async (ctx) => {
 
     return json({ url: result.url });
   } catch (error) {
-    console.error('Portal error:', error);
+    logger.error('Portal error', { error: error instanceof Error ? error.message : String(error) });
     return errorResponse(
       error instanceof Error ? error.message : 'Failed to create portal session',
       400
@@ -179,7 +180,7 @@ post('/billing/webhook', async (ctx) => {
 
     return json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error', { error: error instanceof Error ? error.message : String(error) });
     return errorResponse(
       error instanceof Error ? error.message : 'Webhook handler failed',
       400

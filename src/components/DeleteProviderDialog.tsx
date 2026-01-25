@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteProvider } from "@/lib/api";
 import { Provider } from "@/types/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { handleApiError } from "@/lib/api";
+import { deleteProvider } from "@/lib/server/providers";
 import { showSuccessNotification, showErrorNotification } from "@/stores/notificationStore";
 import { AlertTriangle } from "lucide-react";
 
@@ -24,7 +24,7 @@ export function DeleteProviderDialog({
 
   const deleteMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      return await deleteProvider(providerId);
+      return await deleteProvider({ data: { providerId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["providers", namespaceId] });

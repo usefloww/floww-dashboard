@@ -17,6 +17,7 @@ import { cleanupExpiredDeviceCodes } from '../services/device-code-service';
 import { cleanupRevokedTokens } from '../services/refresh-token-service';
 import { eq, lt, and } from 'drizzle-orm';
 import { runtimes, executionLogs } from '../db/schema';
+import { logger } from '~/server/utils/logger';
 
 /**
  * Job task definitions
@@ -25,13 +26,13 @@ import { runtimes, executionLogs } from '../db/schema';
 // Cleanup expired device codes - runs every 5 minutes
 export const cleanupDeviceCodes: Task = async (_payload, _helpers) => {
   const deleted = await cleanupExpiredDeviceCodes();
-  console.log(`Cleaned up ${deleted} expired device codes`);
+  logger.info('Cleaned up expired device codes', { count: deleted });
 };
 
 // Cleanup revoked refresh tokens - runs every hour
 export const cleanupRefreshTokens: Task = async (_payload, _helpers) => {
   const deleted = await cleanupRevokedTokens();
-  console.log(`Cleaned up ${deleted} revoked refresh tokens`);
+  logger.info('Cleaned up revoked refresh tokens', { count: deleted });
 };
 
 // Cleanup old execution logs - runs daily
@@ -42,7 +43,7 @@ export const cleanupExecutionLogs: Task = async (_payload, _helpers) => {
 
   const result = await db.delete(executionLogs).where(lt(executionLogs.timestamp, thirtyDaysAgo));
 
-  console.log(`Cleaned up old execution logs`, { count: result.length });
+  logger.info('Cleaned up old execution logs', { count: result.length });
 };
 
 // Cleanup unused runtimes - runs every 6 hours
@@ -69,7 +70,7 @@ export const cleanupUnusedRuntimes: Task = async (_payload, _helpers) => {
       .where(eq(runtimes.id, runtime.id));
   }
 
-  console.log(`Marked ${unused.length} unused runtimes for removal`);
+  logger.info('Marked unused runtimes for removal', { count: unused.length });
 };
 
 // Send webhook retry - triggered on failure
@@ -81,7 +82,7 @@ export const webhookRetry: Task = async (payload, helpers) => {
     attempt: number;
   };
 
-  console.log(`Retrying webhook ${webhookId}, attempt ${attempt}`);
+  logger.info('Retrying webhook', { webhookId, attempt });
 
   try {
     const response = await fetch(url, {
@@ -94,7 +95,7 @@ export const webhookRetry: Task = async (payload, helpers) => {
       throw new Error(`Webhook failed: ${response.status}`);
     }
 
-    console.log(`Webhook ${webhookId} succeeded on attempt ${attempt}`);
+    logger.info('Webhook succeeded', { webhookId, attempt });
   } catch (error) {
     if (attempt < 5) {
       // Schedule retry with exponential backoff
@@ -106,7 +107,7 @@ export const webhookRetry: Task = async (payload, helpers) => {
         { runAt: new Date(Date.now() + delay * 1000) }
       );
     } else {
-      console.error(`Webhook ${webhookId} failed after ${attempt} attempts`);
+      logger.error('Webhook failed after max attempts', { webhookId, attempt });
     }
   }
 };
@@ -119,7 +120,7 @@ export const processBillingEvent: Task = async (payload, _helpers) => {
     stripeEventId: string;
   };
 
-  console.log(`Processing billing event: ${eventType}`);
+  logger.info('Processing billing event', { eventType, stripeEventId });
 
   // Import billing service handlers dynamically to avoid circular deps
   const { handleCheckoutCompleted, handleSubscriptionUpdated, handlePaymentFailed } = await import(
@@ -137,7 +138,7 @@ export const processBillingEvent: Task = async (payload, _helpers) => {
       await handlePaymentFailed(eventData, stripeEventId);
       break;
     default:
-      console.log(`Unhandled billing event type: ${eventType}`);
+      logger.debug('Unhandled billing event type', { eventType });
   }
 };
 
@@ -154,7 +155,7 @@ export const syncWorkflowTriggers: Task = async (payload, _helpers) => {
     }>;
   };
 
-  console.log(`Syncing triggers for workflow ${workflowId}`);
+  logger.info('Syncing triggers for workflow', { workflowId, namespaceId });
 
   const { syncTriggers } = await import('../services/trigger-service');
   await syncTriggers(workflowId, namespaceId, triggersMetadata);
@@ -169,7 +170,7 @@ export const executeScheduledTrigger: Task = async (payload, _helpers) => {
     executionId: string;
   };
 
-  console.log(`Executing scheduled trigger ${triggerId}`);
+  logger.info('Executing scheduled trigger', { triggerId, cronExpression, executionId });
 
   const { executeCronTrigger } = await import('../services/trigger-execution-service');
   await executeCronTrigger(triggerId, cronExpression, new Date(scheduledTime), executionId);

@@ -10,6 +10,7 @@ import { Hono } from 'hono';
 import { getDb } from '../db';
 import * as schema from '../db/schema';
 import { buildRouter, buildAuthenticatedRouter } from './hono-adapter';
+import { logger } from '~/server/utils/logger';
 
 // Register the Drizzle adapter
 AdminJS.registerAdapter({ Database, Resource });
@@ -235,5 +236,5 @@ export async function createAdminRouter(config: AdminConfig): Promise<Hono> {
 export async function buildAdminBundle(config: AdminConfig): Promise<void> {
   const admin = await createAdmin(config);
   await admin.initialize();
-  console.log('AdminJS bundle built');
+  logger.info('AdminJS bundle built');
 }

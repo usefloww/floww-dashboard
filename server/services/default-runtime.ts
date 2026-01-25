@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import { getDb } from '~/server/db';
 import { configurations, runtimes } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
+import { logger } from '~/server/utils/logger';
 
 const DEFAULT_RUNTIME_CONFIG_KEY = 'default_runtime_id';
 
@@ -37,20 +38,20 @@ export async function prepareDefaultRuntime(): Promise<void> {
   const runtimeType = process.env.RUNTIME_TYPE ?? 'docker';
 
   if (!defaultRuntimeImage) {
-    console.log('No DEFAULT_RUNTIME_IMAGE configured, skipping default runtime setup');
+    logger.debug('No DEFAULT_RUNTIME_IMAGE configured, skipping default runtime setup');
     return;
   }
 
   // Only Lambda is supported for default runtime
   if (runtimeType !== 'lambda') {
-    console.log(`Default runtime only supported for Lambda, skipping. Current type: ${runtimeType}`);
+    logger.debug('Default runtime only supported for Lambda, skipping', { runtimeType });
     return;
   }
 
   const imageUri = defaultRuntimeImage;
   const configHash = generateConfigHashFromUri(imageUri);
 
-  console.log(`Preparing default runtime: ${imageUri} (hash: ${configHash})`);
+  logger.info('Preparing default runtime', { imageUri, configHash });
 
   const db = getDb();
 
@@ -62,7 +63,7 @@ export async function prepareDefaultRuntime(): Promise<void> {
     .limit(1);
 
   if (existingRuntime) {
-    console.log(`Default runtime already exists: ${existingRuntime.id} (status: ${existingRuntime.creationStatus})`);
+    logger.info('Default runtime already exists', { runtimeId: existingRuntime.id, status: existingRuntime.creationStatus });
     await setDefaultRuntimeId(existingRuntime.id);
 
     // If already completed, we're done
@@ -72,7 +73,7 @@ export async function prepareDefaultRuntime(): Promise<void> {
 
     // If failed, mark as in progress for retry
     if (existingRuntime.creationStatus === 'FAILED') {
-      console.log('Retrying failed default runtime creation');
+      logger.info('Retrying failed default runtime creation');
       await db
         .update(runtimes)
         .set({
@@ -98,7 +99,7 @@ export async function prepareDefaultRuntime(): Promise<void> {
     })
     .returning();
 
-  console.log(`Created default runtime record: ${runtime.id}`);
+  logger.info('Created default runtime record', { runtimeId: runtime.id });
 
   // Store the runtime ID as the default
   await setDefaultRuntimeId(runtime.id);
@@ -134,7 +135,7 @@ export async function setDefaultRuntimeId(runtimeId: string): Promise<void> {
     });
   }
 
-  console.log(`Default runtime ID stored in configuration: ${runtimeId}`);
+  logger.debug('Default runtime ID stored in configuration', { runtimeId });
 }
 
 /**

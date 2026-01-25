@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { api } from "@/lib/api";
+import { getConfig } from "@/lib/server/config";
+import { getSubscription } from "@/lib/server/billing";
 
 export const Route = createFileRoute("/upgrade")({
   component: UpgradePage,
@@ -76,17 +77,23 @@ function UpgradePage() {
   const { currentNamespace } = useNamespaceStore();
   const organization = currentNamespace?.organization;
 
-  const { data: config } = useQuery<{ is_cloud: boolean }>({
+  const { data: config } = useQuery({
     queryKey: ["config"],
-    queryFn: () => api.get<{ is_cloud: boolean }>("/config"),
+    queryFn: () => getConfig(),
   });
 
-  const { data: subscription, isLoading } = useQuery<SubscriptionData>({
+  const { data: subscriptionData, isLoading } = useQuery({
     queryKey: ["subscription", organization?.id],
-    queryFn: () =>
-      api.get<SubscriptionData>(`/organizations/${organization?.id}/subscription`),
-    enabled: !!organization?.id && config?.is_cloud,
+    queryFn: () => getSubscription({ data: { organizationId: organization!.id } }),
+    enabled: !!organization?.id && config?.features.billing,
   });
+
+  // Map the server function response to the expected format
+  const subscription: SubscriptionData | undefined = subscriptionData ? {
+    tier: subscriptionData.subscription.tier as "free" | "hobby" | "team",
+    status: subscriptionData.subscription.status,
+    has_active_pro: subscriptionData.plan.isPaid,
+  } : undefined;
 
   const isOnFreePlan = subscription && !subscription.has_active_pro;
   const hasPaidPlan = subscription?.has_active_pro;

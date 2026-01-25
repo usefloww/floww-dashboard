@@ -15,6 +15,7 @@
 
 import { get, json, errorResponse } from '~/server/api/router';
 import { createRegistryProxy } from '~/server/packages/registry-proxy';
+import { logger } from '~/server/utils/logger';
 
 // Get proxy instance
 const proxy = createRegistryProxy();
@@ -46,7 +47,7 @@ get('/v2/:repository/tags/list', async ({ user, params }) => {
     const tagList = await proxy.listTags(repository);
     return json(tagList);
   } catch (error) {
-    console.error('Failed to list tags:', error);
+    logger.error('Failed to list tags', { repository, error: error instanceof Error ? error.message : String(error) });
     return errorResponse('Failed to list tags', 500);
   }
 });
@@ -75,7 +76,7 @@ get('/v2/:repository/manifests/:reference', async ({ user, params, request }) =>
 
     return json(manifest);
   } catch (error) {
-    console.error('Failed to get manifest:', error);
+    logger.error('Failed to get manifest', { repository, reference, error: error instanceof Error ? error.message : String(error) });
     return errorResponse('Manifest not found', 404);
   }
 });
@@ -97,7 +98,7 @@ get('/v2/:repository/blobs/:digest', async ({ user, params }) => {
       },
     });
   } catch (error) {
-    console.error('Failed to get blob:', error);
+    logger.error('Failed to get blob', { repository, digest, error: error instanceof Error ? error.message : String(error) });
     return errorResponse('Blob not found', 404);
   }
 });
@@ -112,7 +113,7 @@ get('/v2/:repository/check/:reference', async ({ user, params }) => {
     const exists = await proxy.imageExists(repository, reference);
     return json({ exists });
   } catch (error) {
-    console.error('Failed to check image:', error);
+    logger.error('Failed to check image', { repository, reference, error: error instanceof Error ? error.message : String(error) });
     return json({ exists: false });
   }
 });

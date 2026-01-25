@@ -55,7 +55,7 @@ const SYSTEM_PROMPT = `You are an expert TypeScript developer specializing in au
 Your task is to generate workflow code using the Floww SDK.
 
 Key patterns to follow:
-1. Import from '@floww/sdk' for workflow primitives
+1. Import from 'floww' for workflow primitives
 2. Use async/await for all async operations
 3. Handle errors gracefully with try/catch
 4. Add JSDoc comments for complex logic
@@ -75,7 +75,7 @@ Available provider integrations:
 
 Example workflow structure:
 \`\`\`typescript
-import { defineWorkflow, trigger, action } from '@floww/sdk';
+import { defineWorkflow, trigger, action } from 'floww';
 
 export default defineWorkflow({
   name: 'My Workflow',

@@ -9,6 +9,7 @@ import { eq, lt } from 'drizzle-orm';
 import { getDb } from '~/server/db';
 import { deviceCodes, type DeviceCode } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
+import { logger } from '~/server/utils/logger';
 
 export type DeviceCodeStatus = 'pending' | 'approved' | 'denied' | 'expired';
 
@@ -83,7 +84,7 @@ export async function createDeviceAuthorization(): Promise<DeviceAuthorizationDa
     expiresAt,
   });
 
-  console.log('Created device authorization', { userCode, expiresAt: expiresAt.toISOString() });
+  logger.info('Created device authorization', { userCode, expiresAt: expiresAt.toISOString() });
 
   return {
     deviceCode,
@@ -131,7 +132,7 @@ export async function approveDeviceCode(userCode: string, userId: string): Promi
 
   const record = await getDeviceCodeByUserCode(userCode);
   if (!record) {
-    console.warn('Device code not found', { userCode });
+    logger.warn('Device code not found', { userCode });
     return false;
   }
 
@@ -141,13 +142,13 @@ export async function approveDeviceCode(userCode: string, userId: string): Promi
       .update(deviceCodes)
       .set({ status: 'expired' })
       .where(eq(deviceCodes.id, record.id));
-    console.warn('Device code expired', { userCode });
+    logger.warn('Device code expired', { userCode });
     return false;
   }
 
   // Check if already used
   if (record.status !== 'pending') {
-    console.warn('Device code already used', { userCode, status: record.status });
+    logger.warn('Device code already used', { userCode, status: record.status });
     return false;
   }
 
@@ -157,7 +158,7 @@ export async function approveDeviceCode(userCode: string, userId: string): Promi
     .set({ status: 'approved', userId })
     .where(eq(deviceCodes.id, record.id));
 
-  console.log('Device code approved', { userCode, userId });
+  logger.info('Device code approved', { userCode, userId });
   return true;
 }
 
@@ -177,7 +178,7 @@ export async function denyDeviceCode(userCode: string): Promise<boolean> {
     .set({ status: 'denied' })
     .where(eq(deviceCodes.id, record.id));
 
-  console.log('Device code denied', { userCode });
+  logger.info('Device code denied', { userCode });
   return true;
 }
 
@@ -214,7 +215,7 @@ export async function deleteDeviceCode(deviceCode: string): Promise<void> {
 
   await db.delete(deviceCodes).where(eq(deviceCodes.deviceCode, deviceCode));
 
-  console.log('Device code deleted', { deviceCode: deviceCode.slice(0, 10) + '...' });
+  logger.debug('Device code deleted', { deviceCode: deviceCode.slice(0, 10) + '...' });
 }
 
 /**
@@ -235,6 +236,6 @@ export async function cleanupExpiredDeviceCodes(): Promise<number> {
     await db.delete(deviceCodes).where(eq(deviceCodes.id, code.id));
   }
 
-  console.log('Cleaned up expired device codes', { count: expiredCodes.length });
+  logger.info('Cleaned up expired device codes', { count: expiredCodes.length });
   return expiredCodes.length;
 }

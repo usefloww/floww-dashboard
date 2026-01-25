@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, handleApiError } from "@/lib/api";
-import { ServiceAccount, ServiceAccountCreate } from "@/types/api";
+import { handleApiError } from "@/lib/api";
+import { createServiceAccount } from "@/lib/server/serviceAccounts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,8 +24,8 @@ export function CreateServiceAccountModal({
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
-    mutationFn: async (data: ServiceAccountCreate) => {
-      return await api.post<ServiceAccount>("/service_accounts", data);
+    mutationFn: async (data: { organizationId: string; name: string }) => {
+      return await createServiceAccount({ data: { organizationId: data.organizationId, name: data.name } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-accounts', organizationId] });

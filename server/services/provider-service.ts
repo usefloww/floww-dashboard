@@ -16,6 +16,12 @@ import {
 } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { encryptSecret, decryptSecret } from '~/server/utils/encryption';
+import {
+  getProviderDefinition,
+  getAllProviderDefinitions,
+  getProviderTypes,
+  type SetupStep,
+} from 'floww/providers/server';
 
 export interface ProviderInfo {
   id: string;
@@ -275,4 +281,53 @@ export async function hasProviderAccess(userId: string, providerId: string): Pro
     .limit(1);
 
   return result.length > 0;
+}
+
+// ============================================================================
+// SDK Provider Definition Functions
+// ============================================================================
+
+export interface ProviderTypeInfo {
+  type: string;
+  setupSteps: SetupStep[];
+  hasTriggers: boolean;
+  triggerTypes: string[];
+}
+
+/**
+ * Get setup steps for a provider type from the SDK
+ */
+export function getProviderSetupSteps(providerType: string): SetupStep[] {
+  const providerDef = getProviderDefinition(providerType);
+  return providerDef?.setupSteps ?? [];
+}
+
+/**
+ * Get information about all available provider types
+ */
+export function getAvailableProviderTypes(): ProviderTypeInfo[] {
+  const allDefs = getAllProviderDefinitions();
+  
+  return Object.entries(allDefs).map(([type, def]) => ({
+    type,
+    setupSteps: def.setupSteps,
+    hasTriggers: Object.keys(def.triggerDefinitions).length > 0,
+    triggerTypes: Object.keys(def.triggerDefinitions),
+  }));
+}
+
+/**
+ * Get list of provider type names
+ */
+export function getProviderTypeList(): string[] {
+  return getProviderTypes();
+}
+
+/**
+ * Check if a provider type requires setup (has non-empty setup steps)
+ */
+export function providerRequiresSetup(providerType: string): boolean {
+  const steps = getProviderSetupSteps(providerType);
+  return steps.some((step) => step.type !== 'webhook' && 
+    ((step.type === 'value' || step.type === 'secret') && step.required));
 }

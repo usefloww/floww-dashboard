@@ -25,6 +25,7 @@ import {
   type UserCode,
   type RuntimePayload,
 } from '~/server/packages/runtimes';
+import { logger } from '~/server/utils/logger';
 
 export interface TriggerPayload {
   trigger: {
@@ -237,7 +238,7 @@ export async function executeTrigger(
   // Check if workflow is active
   if (workflow.active === false) {
     await updateExecutionNoDeployment(executionId);
-    console.warn('Workflow is inactive, skipping trigger execution', {
+    logger.warn('Workflow is inactive, skipping trigger execution', {
       triggerId,
       workflowId: workflow.id,
       executionId,
@@ -254,7 +255,7 @@ export async function executeTrigger(
   const deploymentResult = await getActiveDeployment(workflow.id);
   if (!deploymentResult) {
     await updateExecutionNoDeployment(executionId);
-    console.warn('No active deployment found for trigger', {
+    logger.debug('No active deployment found for trigger', {
       triggerId,
       workflowId: workflow.id,
       executionId,
@@ -297,7 +298,7 @@ export async function executeTrigger(
   const imageDigest = imageHash ?? imageUri;
 
   if (!imageDigest) {
-    console.error('Runtime config missing image_uri or image_hash', {
+    logger.error('Runtime config missing image_uri or image_hash', {
       runtimeId: runtime.id,
       deploymentId: deployment.id,
       executionId,
@@ -335,7 +336,7 @@ export async function executeTrigger(
 
   // Invoke the runtime
   try {
-    console.log('Invoking runtime with payload', {
+    logger.info('Invoking runtime with payload', {
       triggerId,
       workflowId: workflow.id,
       executionId,
@@ -345,11 +346,11 @@ export async function executeTrigger(
 
     await getRuntime().invokeTrigger(triggerId, runtimeConfig, userCode, runtimePayload);
   } catch (error) {
-    console.error('Runtime invocation failed', {
+    logger.error('Runtime invocation failed', {
       triggerId,
       workflowId: workflow.id,
       executionId,
-      error,
+      error: error instanceof Error ? error.message : String(error),
     });
     return {
       triggerId,

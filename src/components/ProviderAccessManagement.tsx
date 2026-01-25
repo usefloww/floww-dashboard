@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, handleApiError } from "@/lib/api";
+import { handleApiError } from "@/lib/api";
+import { AccessRole } from "@/types/api";
 import {
-  AccessRole,
-  ProviderAccessEntry,
-  ProviderAccessListResponse,
-  OrganizationMember,
-} from "@/types/api";
+  getProviderAccess,
+  grantProviderAccess,
+  updateProviderAccessRole,
+  revokeProviderAccess,
+  type ProviderAccessEntry,
+} from "@/lib/server/access";
+import { getOrganizationMembers, type OrganizationMemberInfo } from "@/lib/server/organizations";
 import { Loader } from "@/components/Loader";
 import {
   Users,
@@ -71,9 +74,7 @@ export function ProviderAccessManagement({
   } = useQuery({
     queryKey: ["provider-access", providerId],
     queryFn: async () => {
-      const data = await api.get<ProviderAccessListResponse>(
-        `/access/providers/${providerId}/users`
-      );
+      const data = await getProviderAccess({ data: { providerId } });
       return data.results || [];
     },
     enabled: open,
@@ -83,10 +84,8 @@ export function ProviderAccessManagement({
   const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ["organization-members", organizationId],
     queryFn: async () => {
-      const data = await api.get<OrganizationMember[]>(
-        `/organizations/${organizationId}/members`
-      );
-      return Array.isArray(data) ? data : [];
+      const data = await getOrganizationMembers({ data: { organizationId } });
+      return data.results;
     },
     enabled: open && showAddUserModal,
   });
@@ -94,10 +93,13 @@ export function ProviderAccessManagement({
   // Grant access mutation
   const grantAccessMutation = useMutation({
     mutationFn: async (data: { userId: string; role: AccessRole }) => {
-      return api.post<ProviderAccessEntry>(
-        `/access/providers/${providerId}/users`,
-        data
-      );
+      return grantProviderAccess({
+        data: {
+          providerId,
+          userId: data.userId,
+          role: data.role === AccessRole.OWNER ? 'owner' : 'user',
+        },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -116,8 +118,12 @@ export function ProviderAccessManagement({
   // Update role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async (data: { userId: string; role: AccessRole }) => {
-      return api.patch(`/access/providers/${providerId}/users/${data.userId}`, {
-        role: data.role,
+      return updateProviderAccessRole({
+        data: {
+          providerId,
+          userId: data.userId,
+          role: data.role === AccessRole.OWNER ? 'owner' : 'user',
+        },
       });
     },
     onSuccess: () => {
@@ -130,7 +136,7 @@ export function ProviderAccessManagement({
   // Revoke access mutation
   const revokeAccessMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return api.delete(`/access/providers/${providerId}/users/${userId}`);
+      return revokeProviderAccess({ data: { providerId, userId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -144,14 +150,14 @@ export function ProviderAccessManagement({
     },
   });
 
-  const accessList = accessData || [];
-  const members = membersData || [];
+  const accessList: ProviderAccessEntry[] = accessData || [];
+  const members: OrganizationMemberInfo[] = membersData || [];
   const errorMessage = accessError ? handleApiError(accessError) : null;
 
   // Filter out users who already have access
-  const existingUserIds = new Set(accessList.map((a) => a.userId));
+  const existingUserIds = new Set(accessList.map((a: ProviderAccessEntry) => a.userId));
   const availableMembers = members.filter(
-    (m) => !existingUserIds.has(m.userId)
+    (m: OrganizationMemberInfo) => !existingUserIds.has(m.userId)
   );
 
   const handleGrantAccess = () => {
@@ -168,10 +174,12 @@ export function ProviderAccessManagement({
     }
   };
 
-  const getRoleIcon = (role: AccessRole) => {
+  const getRoleIcon = (role: string) => {
     switch (role) {
+      case 'owner':
       case AccessRole.OWNER:
         return <Crown className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
+      case 'user':
       case AccessRole.USER:
         return <User className="h-4 w-4 text-muted-foreground" />;
       default:
@@ -179,10 +187,12 @@ export function ProviderAccessManagement({
     }
   };
 
-  const getRoleColor = (role: AccessRole) => {
+  const getRoleColor = (role: string) => {
     switch (role) {
+      case 'owner':
       case AccessRole.OWNER:
         return "text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800/50";
+      case 'user':
       case AccessRole.USER:
         return "text-foreground bg-muted border-border";
       default:
@@ -385,9 +395,9 @@ export function ProviderAccessManagement({
                     ) : (
                       availableMembers.map((member) => (
                         <SelectItem key={member.userId} value={member.userId}>
-                          {member.user.firstName && member.user.lastName
+                          {member.user?.firstName && member.user?.lastName
                             ? `${member.user.firstName} ${member.user.lastName}`
-                            : member.user.email || member.userId}
+                            : member.user?.email || member.userId}
                         </SelectItem>
                       ))
                     )}
