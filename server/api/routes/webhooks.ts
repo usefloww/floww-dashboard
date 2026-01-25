@@ -1,14 +1,15 @@
 /**
- * Webhooks API Routes
+ * Webhook Handler
  *
  * Public webhook receiver for all HTTP methods.
  * No authentication required - webhooks are public endpoints.
  *
- * POST/GET/PUT/DELETE /webhook/:path - Catch-all webhook handler
+ * Routes are registered directly in src/server.ts at /webhook/:path
+ * (not under /api/ prefix)
  */
 
 import { eq, and } from 'drizzle-orm';
-import { get, post, put, del, json } from '~/server/api/router';
+import { json } from '~/server/api/router';
 import { getDb } from '~/server/db';
 import {
   incomingWebhooks,
@@ -34,7 +35,7 @@ interface WebhookData {
   query: Record<string, string>;
 }
 
-async function handleWebhook(request: Request, path: string): Promise<Response> {
+export async function handleWebhook(request: Request, path: string): Promise<Response> {
   const db = getDb();
 
   // Normalize path to always have leading slash and include /webhook/ prefix
@@ -385,8 +386,5 @@ async function handleTriggerWebhook(
   });
 }
 
-// Register webhook routes - no auth required
-get('/webhook/:path', async ({ params, request }) => handleWebhook(request, params.path), false);
-post('/webhook/:path', async ({ params, request }) => handleWebhook(request, params.path), false);
-put('/webhook/:path', async ({ params, request }) => handleWebhook(request, params.path), false);
-del('/webhook/:path', async ({ params, request }) => handleWebhook(request, params.path), false);
+// Note: Webhook routes are handled directly in src/server.ts at /webhook/:path
+// They are NOT under /api/ prefix - webhooks are accessed at /webhook/:path directly

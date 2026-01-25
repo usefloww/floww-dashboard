@@ -219,6 +219,13 @@ const serverEntry: ServerEntry = {
           return handleAuthLogout(request);
         }
 
+        // Handle webhook routes (not under /api/ - webhooks are public endpoints)
+        if (url.pathname.startsWith("/webhook/")) {
+          const { handleWebhook } = await import("~/server/api/routes/webhooks");
+          const path = url.pathname.slice("/webhook".length); // Get everything after /webhook
+          return handleWebhook(request, path);
+        }
+
         // Handle API routes
         if (url.pathname.startsWith("/api/")) {
           const apiResponse = await handleApiRequest(request);

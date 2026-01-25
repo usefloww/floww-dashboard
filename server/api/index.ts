@@ -33,7 +33,7 @@ import './routes/runtimes';
 import './routes/secrets';
 import './routes/subscriptions';
 import './routes/namespaces';
-import './routes/webhooks';
+// Note: webhooks are handled directly in src/server.ts at /webhook/:path (not under /api/)
 import './routes/device-auth';
 import './routes/admin-auth';
 import './routes/oauth';
