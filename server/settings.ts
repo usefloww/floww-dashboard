@@ -37,7 +37,8 @@ function loadDatabaseConfig(): z.infer<typeof DatabaseConfigSchema> {
   // If DATABASE_URL is provided, use it; otherwise construct from parts
   let databaseUrl = dbUrl;
   if (!databaseUrl && dbPassword && dbHost) {
-    databaseUrl = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+    const sslMode = getEnvWithSecret('DATABASE_SSL') || 'require';
+    databaseUrl = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}?sslmode=${sslMode}`;
   }
   databaseUrl = databaseUrl || 'postgresql://admin:secret@localhost:5432/postgres';
 
