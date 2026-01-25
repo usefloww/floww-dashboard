@@ -9,7 +9,7 @@
     "build": "tsc -b && NODE_OPTIONS='--max-old-space-size=8192' vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "bun run .output/server/index.mjs",
+    "start": "node dist/server/server.js",
     "prepare": "husky",
     "test": "vitest",
     "test:ci": "vitest run --coverage",

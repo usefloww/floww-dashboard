@@ -5,8 +5,6 @@ import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from "@vitejs/plugin-react";
 import path from 'path';
 
-import {nitro} from 'nitro/vite'
-
 // Heavy client-only packages that should be externalized from SSR
 const clientOnlyPackages = [
   '@llamaindex/chat-ui',
@@ -22,7 +20,6 @@ export default defineConfig({
   plugins: [
     tsConfigPaths(),
     tanstackStart(),
-    nitro(),
     viteReact(),
     tailwindcss(),
   ],

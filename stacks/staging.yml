@@ -75,6 +75,7 @@ services:
     environment:
       # Non-sensitive configuration
       - NODE_ENV=staging
+      - ENABLE_WORKER=true
       - AUTH_TYPE=workos
       - AUTH_CLIENT_ID=client_01K6QQP8Q721ZX1YM1PBV3EWMR
       - AUTH_ISSUER_URL=https://great-gradient-36-staging.authkit.app
@@ -140,49 +141,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-
-  # Background job worker
-  worker:
-    image: ${REGISTRY:-ghcr.io}/usefloww/floww-dashboard:${IMAGE_TAG:-latest}
-    command: ["pnpm", "worker"]
-
-    networks:
-      - traefik-staging-net
-
-    secrets:
-      - staging_backend_database_password
-      - staging_backend_encryption_key
-      - staging_backend_session_secret_key
-      - backend_sentry_dsn
-
-    environment:
-      - NODE_ENV=staging
-      - DATABASE_USER=postgres
-      - DATABASE_HOST=floww.cklmackcedxs.us-east-1.rds.amazonaws.com
-      - DATABASE_PORT=5432
-      - DATABASE_NAME=postgres_staging
-      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-5}
-      - SENTRY_ENVIRONMENT=staging
-
-      # Secret file paths
-      - DATABASE_PASSWORD_FILE=/run/secrets/staging_backend_database_password
-      - ENCRYPTION_KEY_FILE=/run/secrets/staging_backend_encryption_key
-      - SESSION_SECRET_KEY_FILE=/run/secrets/staging_backend_session_secret_key
-      - SENTRY_DSN_FILE=/run/secrets/backend_sentry_dsn
-
-    deploy:
-      mode: replicated
-      replicas: 1
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 128M
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 3
-        window: 120s
 
 secrets:
   staging_backend_auth_client_secret:
