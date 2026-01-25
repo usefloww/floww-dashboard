@@ -10,9 +10,10 @@ import { getDb } from '~/server/db';
 import { organizations, namespaces, subscriptions, users, organizationMembers } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
-const SINGLE_ORG_MODE = process.env.SINGLE_ORG_MODE === 'true';
-const DEFAULT_ORG_NAME = process.env.DEFAULT_ORG_NAME ?? 'Default Organization';
+const SINGLE_ORG_MODE = settings.general.SINGLE_ORG_MODE;
+const DEFAULT_ORG_NAME = settings.general.SINGLE_ORG_DISPLAY_NAME;
 
 // Cache for default organization ID
 let defaultOrgIdCache: string | null = null;

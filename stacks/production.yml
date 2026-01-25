@@ -1,55 +1,87 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # Main web application
   app:
-    image: ${REGISTRY:-ghcr.io}/floww/dashboard:${VERSION:-latest}
+    image: ${REGISTRY:-ghcr.io}/usefloww/floww-dashboard:${IMAGE_TAG:-latest}
+
+    networks:
+      - traefik-net
+
+    secrets:
+      - backend_auth_client_secret
+      - backend_database_password
+      - backend_encryption_key
+      - backend_session_secret_key
+      - backend_workflow_jwt_secret
+      - backend_centrifugo_api_key
+      - backend_centrifugo_jwt_secret
+      - backend_sentry_dsn
+      - backend_stripe_secret_key
+      - backend_stripe_webhook_secret
+
+    environment:
+      # Non-sensitive configuration
+      - NODE_ENV=production
+      - AUTH_TYPE=workos
+      - AUTH_CLIENT_ID=client_01K6QQP8Q721ZX1YM1PBV3EWMR
+      - AUTH_ISSUER_URL=https://great-gradient-36-staging.authkit.app
+      - WORKOS_CLIENT_ID=client_01K6QQP8Q721ZX1YM1PBV3EWMR
+      - DATABASE_USER=postgres
+      - DATABASE_HOST=floww.cklmackcedxs.us-east-1.rds.amazonaws.com
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=postgres
+      - CENTRIFUGO_PUBLIC_URL=https://app.usefloww.dev
+      - BACKEND_URL=https://app.usefloww.dev
+      - PUBLIC_API_URL=https://app.usefloww.dev
+      - IS_CLOUD=true
+      - SENTRY_ENVIRONMENT=production
+      - STRIPE_PUBLISHABLE_KEY=pk_live_51SToIG9QR0ekoyxExl6rbZdjKrPubJFpPMe2dCiG7BxsVrJuQ04GP5QsMWQwg1L1s1tz255LV0JQMw2izZfHyeKZ00stQnGCze
+      - STRIPE_PRICE_ID_HOBBY=price_1SjjFK9QR0ekoyxEJlYJwPmb
+      - STRIPE_PRICE_ID_TEAM=price_1SjjFK9QR0ekoyxEJKp9zl6q
+
+      # Secret file paths (read by settings.ts via *_FILE env vars)
+      - AUTH_CLIENT_SECRET_FILE=/run/secrets/backend_auth_client_secret
+      - DATABASE_PASSWORD_FILE=/run/secrets/backend_database_password
+      - ENCRYPTION_KEY_FILE=/run/secrets/backend_encryption_key
+      - SESSION_SECRET_KEY_FILE=/run/secrets/backend_session_secret_key
+      - WORKFLOW_JWT_SECRET_FILE=/run/secrets/backend_workflow_jwt_secret
+      - CENTRIFUGO_API_KEY_FILE=/run/secrets/backend_centrifugo_api_key
+      - CENTRIFUGO_JWT_SECRET_FILE=/run/secrets/backend_centrifugo_jwt_secret
+      - SENTRY_DSN_FILE=/run/secrets/backend_sentry_dsn
+      - STRIPE_SECRET_KEY_FILE=/run/secrets/backend_stripe_secret_key
+      - STRIPE_WEBHOOK_SECRET_FILE=/run/secrets/backend_stripe_webhook_secret
+
     deploy:
+      mode: replicated
       replicas: 2
       update_config:
         parallelism: 1
         delay: 10s
-        order: start-first
         failure_action: rollback
+        order: start-first
       rollback_config:
         parallelism: 1
-        delay: 10s
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
       resources:
         limits:
-          cpus: '1'
           memory: 1G
         reservations:
-          cpus: '0.25'
           memory: 256M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.floww-dashboard.rule=Host(`${DOMAIN:-dashboard.floww.io}`)"
+        - "traefik.http.routers.floww-dashboard.rule=Host(`app.usefloww.dev`)"
         - "traefik.http.routers.floww-dashboard.entrypoints=websecure"
-        - "traefik.http.routers.floww-dashboard.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.floww-dashboard.tls.certresolver=myresolver"
         - "traefik.http.services.floww-dashboard.loadbalancer.server.port=3000"
         - "traefik.http.services.floww-dashboard.loadbalancer.healthcheck.path=/health"
         - "traefik.http.services.floww-dashboard.loadbalancer.healthcheck.interval=30s"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - AUTH_TYPE=${AUTH_TYPE:-workos}
-      - AUTH_CLIENT_ID=${AUTH_CLIENT_ID}
-      - AUTH_CLIENT_SECRET=${AUTH_CLIENT_SECRET}
-      - WORKOS_API_KEY=${WORKOS_API_KEY}
-      - WORKOS_CLIENT_ID=${WORKOS_CLIENT_ID}
-      - JWT_SECRET=${JWT_SECRET}
-      - SESSION_SECRET=${SESSION_SECRET}
-      - CENTRIFUGO_URL=${CENTRIFUGO_URL:-http://centrifugo:8000}
-      - CENTRIFUGO_API_KEY=${CENTRIFUGO_API_KEY}
-      - CENTRIFUGO_SECRET=${CENTRIFUGO_SECRET}
-      - IS_CLOUD=${IS_CLOUD:-false}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - SENTRY_DSN=${SENTRY_DSN}
-    networks:
-      - floww-network
-      - traefik-public
+
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -59,60 +91,71 @@ services:
 
   # Background job worker
   worker:
-    image: ${REGISTRY:-ghcr.io}/floww/dashboard:${VERSION:-latest}
+    image: ${REGISTRY:-ghcr.io}/usefloww/floww-dashboard:${IMAGE_TAG:-latest}
     command: ["node", "dist/server/jobs/worker.js"]
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
+
+    networks:
+      - traefik-net
+
+    secrets:
+      - backend_database_password
+      - backend_encryption_key
+      - backend_session_secret_key
+      - backend_sentry_dsn
+
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DATABASE_USER=postgres
+      - DATABASE_HOST=floww.cklmackcedxs.us-east-1.rds.amazonaws.com
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=postgres
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-5}
-      - SENTRY_DSN=${SENTRY_DSN}
-    networks:
-      - floww-network
+      - SENTRY_ENVIRONMENT=production
 
-  # Centrifugo WebSocket server
-  centrifugo:
-    image: centrifugo/centrifugo:v5
+      # Secret file paths
+      - DATABASE_PASSWORD_FILE=/run/secrets/backend_database_password
+      - ENCRYPTION_KEY_FILE=/run/secrets/backend_encryption_key
+      - SESSION_SECRET_KEY_FILE=/run/secrets/backend_session_secret_key
+      - SENTRY_DSN_FILE=/run/secrets/backend_sentry_dsn
+
     deploy:
+      mode: replicated
       replicas: 1
       resources:
         limits:
-          cpus: '0.5'
-          memory: 256M
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.floww-centrifugo.rule=Host(`${CENTRIFUGO_DOMAIN:-ws.floww.io}`)"
-        - "traefik.http.routers.floww-centrifugo.entrypoints=websecure"
-        - "traefik.http.routers.floww-centrifugo.tls.certresolver=letsencrypt"
-        - "traefik.http.services.floww-centrifugo.loadbalancer.server.port=8000"
-    environment:
-      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY}
-      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_SECRET}
-      CENTRIFUGO_ADMIN_ENABLED: "false"
-    command: centrifugo --config=/etc/centrifugo/config.json
-    configs:
-      - source: centrifugo_config
-        target: /etc/centrifugo/config.json
-    networks:
-      - floww-network
-      - traefik-public
+          memory: 512M
+        reservations:
+          memory: 128M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
 
-configs:
-  centrifugo_config:
-    file: ./centrifugo/config.json
+secrets:
+  backend_auth_client_secret:
+    external: true
+  backend_database_password:
+    external: true
+  backend_encryption_key:
+    external: true
+  backend_session_secret_key:
+    external: true
+  backend_workflow_jwt_secret:
+    external: true
+  backend_centrifugo_api_key:
+    external: true
+  backend_centrifugo_jwt_secret:
+    external: true
+  backend_sentry_dsn:
+    external: true
+  backend_stripe_secret_key:
+    external: true
+    name: backend_stripe_secret_key_v2
+  backend_stripe_webhook_secret:
+    external: true
+    name: backend_stripe_webhook_secret_v2
 
 networks:
-  floww-network:
-    driver: overlay
-    attachable: true
-  traefik-public:
+  traefik-net:
     external: true

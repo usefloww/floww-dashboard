@@ -10,13 +10,14 @@
 
 import { WorkOS } from '@workos-inc/node';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 // Lazy initialization to avoid issues with Vite SSR
 let _workos: WorkOS | null = null;
 
 function getWorkOS(): WorkOS {
   if (!_workos) {
-    const apiKey = process.env.WORKOS_API_KEY;
+    const apiKey = settings.auth.WORKOS_API_KEY;
     if (!apiKey) {
       throw new Error('WORKOS_API_KEY not configured');
     }
@@ -34,7 +35,7 @@ export function getAuthorizationUrl(
   prompt?: string
 ): string {
   const workos = getWorkOS();
-  const clientId = process.env.WORKOS_CLIENT_ID;
+  const clientId = settings.auth.WORKOS_CLIENT_ID;
 
   if (!clientId) {
     throw new Error('WORKOS_CLIENT_ID not configured');
@@ -61,7 +62,7 @@ export function getAuthorizationUrl(
  */
 export async function exchangeCodeForToken(code: string) {
   const workos = getWorkOS();
-  const clientId = process.env.WORKOS_CLIENT_ID;
+  const clientId = settings.auth.WORKOS_CLIENT_ID;
 
   if (!clientId) {
     throw new Error('WORKOS_CLIENT_ID not configured');
@@ -114,7 +115,7 @@ export async function revokeSession(accessToken: string): Promise<void> {
  * Get the JWKS URL for token validation
  */
 export function getJwksUrl(): string {
-  const clientId = process.env.WORKOS_CLIENT_ID;
+  const clientId = settings.auth.WORKOS_CLIENT_ID;
   if (!clientId) {
     throw new Error('WORKOS_CLIENT_ID not configured');
   }
@@ -125,7 +126,7 @@ export function getJwksUrl(): string {
  * Get the expected issuer for JWT validation
  */
 export function getIssuer(): string {
-  const clientId = process.env.WORKOS_CLIENT_ID;
+  const clientId = settings.auth.WORKOS_CLIENT_ID;
   if (!clientId) {
     throw new Error('WORKOS_CLIENT_ID not configured');
   }

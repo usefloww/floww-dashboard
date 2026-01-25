@@ -3,11 +3,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 
-// Load environment variables from .env.local first, then .env
+// Load environment variables from .env
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
-dotenv.config({ path: path.join(rootDir, '.env.local') });
 dotenv.config({ path: path.join(rootDir, '.env') });
+
+// Initialize settings early (must be imported after dotenv.config)
+// This ensures settings are loaded before any other modules that depend on them
+import '~/server/settings';
+import { settings } from '~/server/settings';
+import { getEnvWithSecret } from '~/server/utils/docker-secrets';
 
 import handler, { type ServerEntry } from "@tanstack/react-start/server-entry";
 import { createServer } from "node:http";
@@ -29,7 +34,7 @@ async function handleAuthLogin(request: Request): Promise<Response> {
   const nextUrl = url.searchParams.get("next") || "/";
   const prompt = url.searchParams.get("prompt") || undefined;
 
-  const authType = process.env.AUTH_TYPE || "workos";
+  const authType = settings.auth.AUTH_TYPE;
 
   // If auth is disabled, redirect directly
   if (authType === "none") {
@@ -72,7 +77,7 @@ async function handleAuthCallback(request: Request): Promise<Response> {
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
-  const authType = process.env.AUTH_TYPE || "workos";
+  const authType = settings.auth.AUTH_TYPE;
 
   // If auth is disabled, redirect to home
   if (authType === "none") {
@@ -147,7 +152,7 @@ async function handleAuthLogout(request: Request): Promise<Response> {
   const { getJwtFromSessionCookie } = await import("~/server/utils/session");
   const { revokeSession } = await import("~/server/auth/workos");
 
-  const authType = process.env.AUTH_TYPE || "workos";
+  const authType = settings.auth.AUTH_TYPE;
 
   // Try to revoke the session
   const cookies = request.headers.get("cookie");
@@ -223,14 +228,14 @@ const serverEntry: ServerEntry = {
         }
 
         // Handle admin panel routes (if enabled)
-        if (url.pathname.startsWith("/admin") && process.env.ENABLE_ADMIN === "true") {
+        if (url.pathname.startsWith("/admin") && settings.general.ENABLE_ADMIN) {
           try {
             const { createAdminRouter } = await import("~/server/admin");
             const adminRouter = await createAdminRouter({
               rootPath: "/admin",
-              credentials: process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD ? {
-                email: process.env.ADMIN_EMAIL,
-                password: process.env.ADMIN_PASSWORD,
+              credentials: settings.general.ADMIN_EMAIL && settings.general.ADMIN_PASSWORD ? {
+                email: settings.general.ADMIN_EMAIL,
+                password: settings.general.ADMIN_PASSWORD,
               } : undefined,
             });
             return adminRouter.fetch(request);
@@ -261,10 +266,10 @@ const isMainModule = (() => {
 })();
 
 if (isMainModule) {
-  const PORT = process.env.PORT || 3000;
-  const HOST = process.env.HOST || "0.0.0.0";
-  const ENABLE_WORKER = process.env.ENABLE_WORKER === "true";
-  const WORKER_ONLY = process.env.WORKER_ONLY === "true";
+  const PORT = parseInt(getEnvWithSecret('PORT') || '3000', 10);
+  const HOST = getEnvWithSecret('HOST') || "0.0.0.0";
+  const ENABLE_WORKER = settings.worker.ENABLE_WORKER;
+  const WORKER_ONLY = settings.worker.WORKER_ONLY;
 
   // If running as worker-only mode, just start the worker
   if (WORKER_ONLY) {

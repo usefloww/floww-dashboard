@@ -1,13 +1,14 @@
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
+import { settings } from '../settings';
 
 // Lazy initialization to avoid issues with Vite SSR
 let _client: postgres.Sql | null = null;
 let _db: PostgresJsDatabase<typeof schema> | null = null;
 
 function getConnectionString(): string {
-  return process.env.DATABASE_URL || 'postgresql://admin:secret@localhost:5432/postgres';
+  return settings.database.DATABASE_URL;
 }
 
 /**

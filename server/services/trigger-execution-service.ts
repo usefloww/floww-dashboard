@@ -78,7 +78,8 @@ export function buildTriggerPayload(params: {
   authToken: string;
   executionId: string;
 }): TriggerPayload {
-  const backendUrl = process.env.PUBLIC_API_URL ?? 'http://localhost:3000';
+  const { settings } = require('~/server/settings');
+  const backendUrl = settings.general.PUBLIC_API_URL ?? 'http://localhost:3000';
 
   return {
     trigger: {

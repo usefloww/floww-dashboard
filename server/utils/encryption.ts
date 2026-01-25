@@ -6,16 +6,13 @@
  */
 
 import crypto from 'crypto';
-
+import { settings } from '../settings';
 
 /**
- * Get the encryption key from environment
+ * Get the encryption key from settings
  */
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
-  if (!key) {
-    throw new Error('ENCRYPTION_KEY environment variable is not set');
-  }
+  const key = settings.database.ENCRYPTION_KEY;
   // Fernet keys are base64url encoded 32-byte keys
   return Buffer.from(key, 'base64url');
 }

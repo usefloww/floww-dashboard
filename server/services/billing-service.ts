@@ -40,10 +40,12 @@ const PLAN_NAMES: Record<SubscriptionTier, string> = {
   team: 'Team',
 };
 
+import { settings } from '~/server/settings';
+
 // Settings from environment
-const IS_CLOUD = process.env.IS_CLOUD === 'true';
-const TRIAL_PERIOD_DAYS = parseInt(process.env.TRIAL_PERIOD_DAYS ?? '14', 10);
-const GRACE_PERIOD_DAYS = parseInt(process.env.GRACE_PERIOD_DAYS ?? '7', 10);
+const IS_CLOUD = settings.general.IS_CLOUD;
+const TRIAL_PERIOD_DAYS = settings.stripe.TRIAL_PERIOD_DAYS;
+const GRACE_PERIOD_DAYS = settings.stripe.GRACE_PERIOD_DAYS;
 
 function isSubscriptionActive(subscription: Subscription): boolean {
   if (subscription.tier === 'free') {
@@ -471,8 +473,8 @@ export async function handleSubscriptionCreated(
   const items = ((eventData.items as Record<string, unknown>)?.data ?? []) as Array<{
     price?: { id?: string };
   }>;
-  const priceIdHobby = process.env.STRIPE_PRICE_ID_HOBBY;
-  const priceIdTeam = process.env.STRIPE_PRICE_ID_TEAM;
+  const priceIdHobby = settings.stripe.STRIPE_PRICE_ID_HOBBY;
+  const priceIdTeam = settings.stripe.STRIPE_PRICE_ID_TEAM;
 
   for (const item of items) {
     const priceId = item.price?.id;

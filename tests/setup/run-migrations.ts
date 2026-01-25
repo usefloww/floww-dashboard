@@ -4,15 +4,13 @@
  */
 
 import dotenv from 'dotenv';
-import { existsSync } from 'fs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import path from 'path';
 
 // Load environment variables
-const envFile = existsSync('.env.local') ? '.env.local' : '.env';
-dotenv.config({ path: envFile });
+dotenv.config({ path: '.env' });
 
 const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL || 'postgresql://admin:secret@localhost:5432/floww_test';

@@ -6,6 +6,7 @@
 
 import * as jose from 'jose';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 // Cache for JWKS
 let jwksCache: jose.JSONWebKeySet | null = null;
@@ -47,7 +48,7 @@ export interface TokenUser {
  * Validate a WorkOS JWT token
  */
 export async function validateWorkOsToken(token: string): Promise<TokenUser> {
-  const clientId = process.env.WORKOS_CLIENT_ID;
+  const clientId = settings.auth.WORKOS_CLIENT_ID;
   if (!clientId) {
     throw new Error('WORKOS_CLIENT_ID not configured');
   }
@@ -83,7 +84,7 @@ export async function validateWorkOsToken(token: string): Promise<TokenUser> {
  * Validate a password auth JWT token (HS256)
  */
 export async function validatePasswordAuthToken(token: string): Promise<TokenUser> {
-  const secret = process.env.WORKFLOW_JWT_SECRET || process.env.SESSION_SECRET_KEY;
+  const secret = settings.auth.WORKFLOW_JWT_SECRET || settings.database.SESSION_SECRET_KEY;
   if (!secret) {
     throw new Error('JWT secret not configured');
   }
@@ -114,7 +115,7 @@ export async function validatePasswordAuthToken(token: string): Promise<TokenUse
  * Validate a JWT token (auto-detects auth type)
  */
 export async function validateToken(token: string): Promise<TokenUser> {
-  const authType = process.env.AUTH_TYPE || 'workos';
+  const authType = settings.auth.AUTH_TYPE;
 
   if (authType === 'password') {
     return validatePasswordAuthToken(token);
@@ -128,7 +129,7 @@ export async function validateToken(token: string): Promise<TokenUser> {
  * Create a JWT token for password auth
  */
 export async function createJwt(payload: { sub: string; [key: string]: unknown }): Promise<string> {
-  const secret = process.env.WORKFLOW_JWT_SECRET || process.env.SESSION_SECRET_KEY;
+  const secret = settings.auth.WORKFLOW_JWT_SECRET || settings.database.SESSION_SECRET_KEY;
   if (!secret) {
     throw new Error('JWT secret not configured');
   }
@@ -149,7 +150,7 @@ export async function createJwt(payload: { sub: string; [key: string]: unknown }
  * Verify a JWT token for password auth
  */
 export async function verifyJwt(token: string): Promise<jose.JWTPayload> {
-  const secret = process.env.WORKFLOW_JWT_SECRET || process.env.SESSION_SECRET_KEY;
+  const secret = settings.auth.WORKFLOW_JWT_SECRET || settings.database.SESSION_SECRET_KEY;
   if (!secret) {
     throw new Error('JWT secret not configured');
   }

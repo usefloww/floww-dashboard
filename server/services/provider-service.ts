@@ -126,7 +126,8 @@ export async function createProvider(
 
   // For Slack providers, create a webhook
   if (params.type === 'slack') {
-    const publicApiUrl = process.env.PUBLIC_API_URL ?? 'http://localhost:3000';
+    const { settings } = require('~/server/settings');
+    const publicApiUrl = settings.general.PUBLIC_API_URL ?? 'http://localhost:3000';
     
     // Generate webhook path if not provided
     if (!config.webhook_url) {

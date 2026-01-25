@@ -1,34 +1,4 @@
 services:
-  # Dashboard application (development)
-  # app:
-  #   container_name: floww-dashboard-app
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.dev
-  #   volumes:
-  #     # Source code directories (hot reload)
-  #     - ./src:/app/src
-  #     - ./server:/app/server
-  #     - ./public:/app/public
-  #     # Config files
-  #     - ./vite.config.ts:/app/vite.config.ts
-  #     - ./tsconfig.json:/app/tsconfig.json
-  #     - ./tsconfig.app.json:/app/tsconfig.app.json
-  #     - ./tsconfig.node.json:/app/tsconfig.node.json
-  #     - ./drizzle.config.ts:/app/drizzle.config.ts
-  #     - ./tailwind.config.cjs:/app/tailwind.config.cjs
-  #     - ./components.json:/app/components.json
-  #   command: pnpm dev --host 0.0.0.0
-  #   environment:
-  #     - NODE_ENV=development
-  #   env_file:
-  #     - .env.docker
-  #   ports:
-  #     - "5173:5173"
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-
   # Run database migrations
   migrations:
     container_name: floww-dashboard-migrations
@@ -41,7 +11,9 @@ services:
       - ./drizzle.config.ts:/app/drizzle.config.ts
     command: pnpm db:push
     env_file:
-      - .env.docker
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://admin:secret@db:5432/postgres
     depends_on:
       db:
         condition: service_healthy

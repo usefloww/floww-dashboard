@@ -6,6 +6,7 @@
  */
 
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 export interface AuthProvider {
   name: string;
@@ -48,8 +49,8 @@ export class WorkOSProvider implements AuthProvider {
   private apiUrl = 'https://api.workos.com';
 
   constructor() {
-    this.clientId = process.env.AUTH_CLIENT_ID ?? '';
-    this.clientSecret = process.env.AUTH_CLIENT_SECRET ?? '';
+    this.clientId = settings.auth.AUTH_CLIENT_ID ?? '';
+    this.clientSecret = settings.auth.AUTH_CLIENT_SECRET ?? '';
   }
 
   getAuthorizationUrl(redirectUri: string, state: string, prompt?: string): string {
@@ -141,8 +142,8 @@ export class OIDCProvider implements AuthProvider {
   constructor(name: string, issuerUrl: string) {
     this.name = name;
     this.issuerUrl = issuerUrl;
-    this.clientId = process.env.AUTH_CLIENT_ID ?? '';
-    this.clientSecret = process.env.AUTH_CLIENT_SECRET ?? '';
+    this.clientId = settings.auth.AUTH_CLIENT_ID ?? '';
+    this.clientSecret = settings.auth.AUTH_CLIENT_SECRET ?? '';
   }
 
   private async getDiscovery(): Promise<Record<string, unknown>> {
@@ -238,13 +239,13 @@ export class OIDCProvider implements AuthProvider {
  * Get the configured auth provider
  */
 export function getAuthProvider(): AuthProvider {
-  const authType = process.env.AUTH_TYPE ?? 'workos';
+  const authType = settings.auth.AUTH_TYPE;
 
   switch (authType) {
     case 'workos':
       return new WorkOSProvider();
     case 'oidc':
-      const issuerUrl = process.env.AUTH_ISSUER_URL;
+      const issuerUrl = settings.auth.AUTH_ISSUER_URL;
       if (!issuerUrl) {
         throw new Error('AUTH_ISSUER_URL is required for OIDC');
       }

@@ -451,7 +451,8 @@ export async function syncTriggers(
   newTriggersMetadata: TriggerMetadata[]
 ): Promise<WebhookInfo[]> {
   const db = getDb();
-  const publicApiUrl = process.env.PUBLIC_API_URL ?? 'http://localhost:3000';
+  const { settings } = require('~/server/settings');
+  const publicApiUrl = settings.general.PUBLIC_API_URL ?? 'http://localhost:3000';
 
   // Ensure builtin provider exists
   await ensureProviderExists(namespaceId, 'builtin', 'default');

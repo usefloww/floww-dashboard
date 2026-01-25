@@ -20,10 +20,11 @@ import { createJwt } from '~/server/utils/jwt';
 import { createSessionCookie, clearSessionCookie } from '~/server/utils/session';
 import * as bcrypt from 'bcrypt';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
-const authType = process.env.AUTH_TYPE ?? 'workos';
-const workosClientId = process.env.WORKOS_CLIENT_ID;
-const workosApiKey = process.env.WORKOS_API_KEY;
+const authType = settings.auth.AUTH_TYPE;
+const workosClientId = settings.auth.WORKOS_CLIENT_ID;
+const workosApiKey = settings.auth.WORKOS_API_KEY;
 
 // Login redirect
 get('/auth/login', async ({ query, request }) => {

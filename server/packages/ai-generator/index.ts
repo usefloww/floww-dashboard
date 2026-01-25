@@ -4,6 +4,8 @@
  * Provides AI-assisted workflow generation using various LLM providers.
  */
 
+import { settings } from '~/server/settings';
+
 export interface GenerationRequest {
   prompt: string;
   existingCode?: string;
@@ -101,9 +103,9 @@ export class OpenAIProvider implements AIProvider {
   private defaultModel: string;
 
   constructor() {
-    this.apiKey = process.env.OPENAI_API_KEY ?? '';
-    this.baseUrl = process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1';
-    this.defaultModel = process.env.AI_MODEL ?? 'gpt-4-turbo-preview';
+    this.apiKey = settings.ai.OPENAI_API_KEY ?? '';
+    this.baseUrl = settings.ai.OPENAI_BASE_URL ?? 'https://api.openai.com/v1';
+    this.defaultModel = settings.ai.AI_MODEL ?? 'gpt-4-turbo-preview';
   }
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
@@ -256,9 +258,9 @@ export class AnthropicProvider implements AIProvider {
   private defaultModel: string;
 
   constructor() {
-    this.apiKey = process.env.ANTHROPIC_API_KEY ?? '';
+    this.apiKey = settings.ai.ANTHROPIC_API_KEY ?? '';
     this.baseUrl = 'https://api.anthropic.com/v1';
-    this.defaultModel = process.env.AI_MODEL ?? 'claude-3-sonnet-20240229';
+    this.defaultModel = settings.ai.AI_MODEL ?? 'claude-3-sonnet-20240229';
   }
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
@@ -317,7 +319,7 @@ export class AnthropicProvider implements AIProvider {
  * Get the configured AI provider
  */
 export function getAIProvider(): AIProvider {
-  const providerType = process.env.AI_PROVIDER ?? 'openai';
+  const providerType = settings.ai.AI_PROVIDER ?? 'openai';
 
   switch (providerType) {
     case 'openai':

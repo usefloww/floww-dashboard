@@ -1,17 +1,56 @@
 version: "3.8"
 
 services:
-  floww-dashboard:
-    image: "ghcr.io/usefloww/floww-dashboard:latest"
+  # Main web application
+  app:
+    image: ${REGISTRY:-ghcr.io}/usefloww/floww-dashboard:${IMAGE_TAG:-latest}
 
     networks:
       - traefik-staging-net
 
+    secrets:
+      - staging_backend_auth_client_secret
+      - staging_backend_database_password
+      - staging_backend_encryption_key
+      - staging_backend_session_secret_key
+      - staging_backend_workflow_jwt_secret
+      - staging_backend_centrifugo_api_key
+      - staging_backend_centrifugo_jwt_secret
+      - backend_sentry_dsn
+      - staging_backend_stripe_secret_key
+      - staging_backend_stripe_webhook_secret
+
     environment:
+      # Non-sensitive configuration
       - NODE_ENV=staging
-      - PORT=8080
-      - HOST=0.0.0.0
-      - BACKEND_URL=http://floww-backend-staging_app:8000
+      - AUTH_TYPE=workos
+      - AUTH_CLIENT_ID=client_01K6QQP8Q721ZX1YM1PBV3EWMR
+      - AUTH_ISSUER_URL=https://great-gradient-36-staging.authkit.app
+      - WORKOS_CLIENT_ID=client_01K6QQP8Q721ZX1YM1PBV3EWMR
+      - DATABASE_USER=postgres
+      - DATABASE_HOST=floww.cklmackcedxs.us-east-1.rds.amazonaws.com
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=postgres_staging
+      - CENTRIFUGO_PUBLIC_URL=https://app.flow.toondn.app
+      - BACKEND_URL=https://app.flow.toondn.app
+      - PUBLIC_API_URL=https://app.flow.toondn.app
+      - IS_CLOUD=true
+      - SENTRY_ENVIRONMENT=staging
+      - STRIPE_PUBLISHABLE_KEY=pk_test_51SToIL6Sf2jh0J7U2zK8kB10riNkBMYt0l29srRSjhDcH0fVq1wkvJsz5NVrrHAKJuikDg5ZmOeAKFv2AkghqR0h006yNZRHDx
+      - STRIPE_PRICE_ID_HOBBY=price_1SjjFK9QR0ekoyxEJlYJwPmb
+      - STRIPE_PRICE_ID_TEAM=price_1SjjFK9QR0ekoyxEJKp9zl6q
+
+      # Secret file paths (read by settings.ts via *_FILE env vars)
+      - AUTH_CLIENT_SECRET_FILE=/run/secrets/staging_backend_auth_client_secret
+      - DATABASE_PASSWORD_FILE=/run/secrets/staging_backend_database_password
+      - ENCRYPTION_KEY_FILE=/run/secrets/staging_backend_encryption_key
+      - SESSION_SECRET_KEY_FILE=/run/secrets/staging_backend_session_secret_key
+      - WORKFLOW_JWT_SECRET_FILE=/run/secrets/staging_backend_workflow_jwt_secret
+      - CENTRIFUGO_API_KEY_FILE=/run/secrets/staging_backend_centrifugo_api_key
+      - CENTRIFUGO_JWT_SECRET_FILE=/run/secrets/staging_backend_centrifugo_jwt_secret
+      - SENTRY_DSN_FILE=/run/secrets/backend_sentry_dsn
+      - STRIPE_SECRET_KEY_FILE=/run/secrets/staging_backend_stripe_secret_key
+      - STRIPE_WEBHOOK_SECRET_FILE=/run/secrets/staging_backend_stripe_webhook_secret
 
     deploy:
       mode: replicated
@@ -39,14 +78,79 @@ services:
         - "traefik.http.routers.floww-dashboard-staging.rule=Host(`app.flow.toondn.app`)"
         - "traefik.http.routers.floww-dashboard-staging.entrypoints=websecure"
         - "traefik.http.routers.floww-dashboard-staging.tls.certresolver=myresolver"
-        - "traefik.http.services.floww-dashboard-staging.loadbalancer.server.port=8080"
+        - "traefik.http.services.floww-dashboard-staging.loadbalancer.server.port=3000"
 
-    # healthcheck:
-    #   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 20s
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Background job worker
+  worker:
+    image: ${REGISTRY:-ghcr.io}/usefloww/floww-dashboard:${IMAGE_TAG:-latest}
+    command: ["node", "dist/server/jobs/worker.js"]
+
+    networks:
+      - traefik-staging-net
+
+    secrets:
+      - staging_backend_database_password
+      - staging_backend_encryption_key
+      - staging_backend_session_secret_key
+      - backend_sentry_dsn
+
+    environment:
+      - NODE_ENV=staging
+      - DATABASE_USER=postgres
+      - DATABASE_HOST=floww.cklmackcedxs.us-east-1.rds.amazonaws.com
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=postgres_staging
+      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-5}
+      - SENTRY_ENVIRONMENT=staging
+
+      # Secret file paths
+      - DATABASE_PASSWORD_FILE=/run/secrets/staging_backend_database_password
+      - ENCRYPTION_KEY_FILE=/run/secrets/staging_backend_encryption_key
+      - SESSION_SECRET_KEY_FILE=/run/secrets/staging_backend_session_secret_key
+      - SENTRY_DSN_FILE=/run/secrets/backend_sentry_dsn
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+secrets:
+  staging_backend_auth_client_secret:
+    external: true
+  staging_backend_database_password:
+    external: true
+  staging_backend_encryption_key:
+    external: true
+  staging_backend_session_secret_key:
+    external: true
+  staging_backend_workflow_jwt_secret:
+    external: true
+  staging_backend_centrifugo_api_key:
+    external: true
+  staging_backend_centrifugo_jwt_secret:
+    external: true
+  backend_sentry_dsn:
+    external: true
+  staging_backend_stripe_secret_key:
+    external: true
+  staging_backend_stripe_webhook_secret:
+    external: true
 
 networks:
   traefik-staging-net:

@@ -6,6 +6,7 @@
  */
 
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 export interface WorkflowMessage {
   type: string;
@@ -27,15 +28,13 @@ export interface WebhookEventData {
 
 class CentrifugoService {
   private apiKey: string;
-  private host: string;
-  private port: string;
   private baseUrl: string;
 
   constructor() {
-    this.apiKey = process.env.CENTRIFUGO_API_KEY ?? '';
-    this.host = process.env.CENTRIFUGO_HOST ?? 'localhost';
-    this.port = process.env.CENTRIFUGO_PORT ?? '8000';
-    this.baseUrl = `http://${this.host}:${this.port}`;
+    this.apiKey = settings.centrifugo.CENTRIFUGO_API_KEY;
+    // Parse the public URL to get the base URL (remove protocol if needed for internal use)
+    const publicUrl = new URL(settings.centrifugo.CENTRIFUGO_PUBLIC_URL);
+    this.baseUrl = `${publicUrl.protocol}//${publicUrl.host}`;
   }
 
   /**
@@ -157,7 +156,7 @@ class CentrifugoService {
    * Uses HMAC-SHA256 for token generation
    */
   generateConnectionToken(userId: string, expiresInSeconds: number = 3600): string {
-    const secret = process.env.CENTRIFUGO_TOKEN_HMAC_SECRET ?? this.apiKey;
+    const secret = settings.centrifugo.CENTRIFUGO_JWT_SECRET;
     
     // Note: In production, use a proper JWT library
     // This is a simplified implementation
@@ -183,7 +182,7 @@ class CentrifugoService {
     channel: string,
     expiresInSeconds: number = 3600
   ): string {
-    const secret = process.env.CENTRIFUGO_TOKEN_HMAC_SECRET ?? this.apiKey;
+    const secret = settings.centrifugo.CENTRIFUGO_JWT_SECRET;
     
     const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
     const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;

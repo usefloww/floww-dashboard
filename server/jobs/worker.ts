@@ -7,6 +7,8 @@
 import { run, Runner, makeWorkerUtils, WorkerUtils } from 'graphile-worker';
 import { taskList, cronJobs } from './index';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
+import { getEnvWithSecret } from '~/server/utils/docker-secrets';
 
 let workerInstance: Runner | null = null;
 let workerUtils: WorkerUtils | null = null;
@@ -15,7 +17,7 @@ let workerUtils: WorkerUtils | null = null;
  * Get the database connection string
  */
 function getDatabaseUrl(): string {
-  return process.env.DATABASE_URL ?? 'postgresql://localhost:5432/floww';
+  return settings.database.DATABASE_URL;
 }
 
 /**
@@ -60,7 +62,7 @@ export async function startWorker(): Promise<Runner> {
     taskList,
     // Cron tasks are scheduled separately
     crontabFile: undefined, // We use programmatic crons
-    concurrency: parseInt(process.env.WORKER_CONCURRENCY ?? '5', 10),
+    concurrency: parseInt(getEnvWithSecret('WORKER_CONCURRENCY') ?? '5', 10),
     pollInterval: 1000, // Check for jobs every second
     noHandleSignals: false, // Handle SIGINT/SIGTERM
   });

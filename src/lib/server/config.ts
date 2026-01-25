@@ -1,4 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
+import { settings } from '~/server/settings';
+import { getEnvWithSecret } from '~/server/utils/docker-secrets';
 
 export interface AppConfig {
   auth: {
@@ -23,16 +25,16 @@ export interface AppConfig {
 export const getConfig = createServerFn({ method: 'GET' }).handler(async (): Promise<AppConfig> => {
   return {
     auth: {
-      type: process.env.AUTH_TYPE ?? 'workos',
-      enabled: process.env.AUTH_TYPE !== 'none',
+      type: settings.auth.AUTH_TYPE,
+      enabled: settings.auth.AUTH_TYPE !== 'none',
     },
     features: {
-      billing: process.env.IS_CLOUD === 'true',
-      singleOrg: process.env.SINGLE_ORG_MODE === 'true',
+      billing: settings.general.IS_CLOUD,
+      singleOrg: settings.general.SINGLE_ORG_MODE,
     },
     limits: {
-      maxWorkflows: parseInt(process.env.MAX_WORKFLOWS ?? '100', 10),
-      maxExecutionsPerMonth: parseInt(process.env.MAX_EXECUTIONS_PER_MONTH ?? '10000', 10),
+      maxWorkflows: parseInt(getEnvWithSecret('MAX_WORKFLOWS') ?? '100', 10),
+      maxExecutionsPerMonth: parseInt(getEnvWithSecret('MAX_EXECUTIONS_PER_MONTH') ?? '10000', 10),
     },
     version: process.env.npm_package_version ?? '0.0.0',
   };
@@ -42,5 +44,5 @@ export const getConfig = createServerFn({ method: 'GET' }).handler(async (): Pro
  * Helper to check if billing features are enabled
  */
 export const isBillingEnabled = createServerFn({ method: 'GET' }).handler(async (): Promise<boolean> => {
-  return process.env.IS_CLOUD === 'true';
+  return settings.general.IS_CLOUD;
 });

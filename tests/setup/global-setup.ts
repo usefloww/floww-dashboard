@@ -9,11 +9,9 @@
  */
 
 import dotenv from 'dotenv';
-import { existsSync } from 'fs';
 
-// Load environment variables from .env.local (for local dev) or .env
-const envFile = existsSync('.env.local') ? '.env.local' : '.env';
-dotenv.config({ path: envFile });
+// Load environment variables from .env
+dotenv.config({ path: '.env' });
 
 import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';

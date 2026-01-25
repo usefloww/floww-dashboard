@@ -6,11 +6,12 @@
  */
 
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 // Check if Sentry should be enabled
-const SENTRY_DSN = process.env.SENTRY_DSN;
-const SENTRY_ENVIRONMENT = process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development';
-const SENTRY_RELEASE = process.env.SENTRY_RELEASE ?? process.env.npm_package_version;
+const SENTRY_DSN = settings.general.SENTRY_DSN;
+const SENTRY_ENVIRONMENT = settings.general.SENTRY_ENVIRONMENT ?? 'development';
+const SENTRY_RELEASE = settings.general.SENTRY_RELEASE;
 
 // Lazy-loaded Sentry instance
 let sentryInstance: typeof import('@sentry/node') | null = null;
@@ -31,8 +32,8 @@ export async function initSentry(): Promise<void> {
       dsn: SENTRY_DSN,
       environment: SENTRY_ENVIRONMENT,
       release: SENTRY_RELEASE,
-      tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE ?? '0.1'),
-      profilesSampleRate: parseFloat(process.env.SENTRY_PROFILES_SAMPLE_RATE ?? '0.1'),
+      tracesSampleRate: settings.general.SENTRY_TRACES_SAMPLE_RATE ?? 0.1,
+      profilesSampleRate: settings.general.SENTRY_PROFILES_SAMPLE_RATE ?? 0.1,
     });
 
     sentryInstance = Sentry;

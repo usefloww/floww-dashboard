@@ -10,6 +10,7 @@
 
 import crypto from 'crypto';
 import { logger } from '~/server/utils/logger';
+import { settings } from '~/server/settings';
 
 /**
  * Encode data as URL-safe base64 (RFC 4648)
@@ -94,7 +95,7 @@ export function createSessionCookie(
   jwtToken: string,
   secretKey?: string
 ): string {
-  const key = secretKey || process.env.SESSION_SECRET_KEY;
+  const key = secretKey || settings.database.SESSION_SECRET_KEY;
   if (!key) {
     throw new Error('SESSION_SECRET_KEY not configured');
   }
@@ -191,7 +192,7 @@ export function getJwtFromSessionCookie(
   cookieValue: string,
   secretKey?: string
 ): string | null {
-  const key = secretKey || process.env.SESSION_SECRET_KEY;
+  const key = secretKey || settings.database.SESSION_SECRET_KEY;
   if (!key) {
     logger.error('SESSION_SECRET_KEY not configured');
     return null;
