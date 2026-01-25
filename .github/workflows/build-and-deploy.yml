@@ -87,7 +87,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
+            type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
@@ -133,7 +133,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
+            type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
@@ -175,6 +175,7 @@ jobs:
       - name: Deploy to Staging Swarm
         env:
           DOCKER_HOST: ssh://${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}
+          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           docker stack deploy -c stacks/staging.yml floww-dashboard-staging --with-registry-auth
 
@@ -209,5 +210,6 @@ jobs:
       - name: Deploy to Production Swarm
         env:
           DOCKER_HOST: ssh://${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}
+          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           docker stack deploy -c stacks/production.yml floww-dashboard --with-registry-auth
