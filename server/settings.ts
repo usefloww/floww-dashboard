@@ -133,7 +133,7 @@ function loadStripeConfig(): z.infer<typeof StripeConfigSchema> {
 const GeneralConfigSchema = z.object({
   BACKEND_URL: z.string().url().default('http://localhost:8000'),
   PUBLIC_API_URL: z.preprocess((val) => (val === '' ? undefined : val), z.string().url().optional()),
-  ENABLE_ADMIN: z.boolean().default(false),
+  ENABLE_ADMIN: z.boolean().default(true),
   ADMIN_EMAIL: z.preprocess((val) => (val === '' ? undefined : val), z.string().email().optional()),
   ADMIN_PASSWORD: z.string().optional(),
   SINGLE_ORG_MODE: z.boolean().default(false),
@@ -157,7 +157,7 @@ function loadGeneralConfig(): z.infer<typeof GeneralConfigSchema> {
   return {
     BACKEND_URL: getEnvWithSecret('BACKEND_URL') || 'http://localhost:8000',
     PUBLIC_API_URL: getEnvWithSecret('PUBLIC_API_URL'),
-    ENABLE_ADMIN: enableAdmin === 'true' || enableAdmin === '1',
+    ENABLE_ADMIN: enableAdmin !== 'false' && enableAdmin !== '0',
     ADMIN_EMAIL: getEnvWithSecret('ADMIN_EMAIL'),
     ADMIN_PASSWORD: getEnvWithSecret('ADMIN_PASSWORD'),
     SINGLE_ORG_MODE: singleOrgMode === 'true' || singleOrgMode === '1',

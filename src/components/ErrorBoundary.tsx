@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import * as Sentry from '@sentry/react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -25,13 +26,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState({ error, errorInfo });
 
+    // Report error to Sentry
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+
     // Log error to console in development
     if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
-
-    // In production, you would send this to an error reporting service
-    // like Sentry (configured in your app entry point)
   }
 
   handleReload = () => {

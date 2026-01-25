@@ -3,6 +3,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from '@tailwindcss/vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from "@vitejs/plugin-react";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import path from 'path';
 
 // Heavy client-only packages that should be externalized from SSR
@@ -22,6 +23,14 @@ export default defineConfig({
     tanstackStart(),
     viteReact(),
     tailwindcss(),
+    // Sentry source map upload (only for production builds with auth token)
+    ...(process.env.SENTRY_AUTH_TOKEN ? [
+      sentryVitePlugin({
+        org: process.env.SENTRY_ORG || 'floww',
+        project: process.env.SENTRY_PROJECT || 'floww-dashboard',
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+      })
+    ] : []),
   ],
   ssr: {
     // Externalize heavy client-only packages and native modules from SSR

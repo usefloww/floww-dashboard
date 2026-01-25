@@ -22,7 +22,8 @@ import {
 } from "./serverUtils";
 import { handleApiRequest } from "~/server/api";
 import { startWorker, stopWorker, isWorkerRunning, initWorkerUtils } from "~/server/jobs/worker";
-import { logger, runWithRequestContext } from "~/server/utils/logger";
+import { logger, runWithRequestContext, logAccess } from "~/server/utils/logger";
+import { initSentry, captureException, flush as flushSentry } from "~/server/utils/sentry";
 
 // Auth handlers (lazy loaded to avoid SSR issues)
 async function handleAuthLogin(request: Request): Promise<Response> {
@@ -278,6 +279,9 @@ if (isMainModule) {
   const ENABLE_WORKER = settings.worker.ENABLE_WORKER;
   const WORKER_ONLY = settings.worker.WORKER_ONLY;
 
+  // Initialize Sentry early for error tracking
+  await initSentry();
+
   // If running as worker-only mode, just start the worker
   if (WORKER_ONLY) {
     (async () => {
@@ -304,10 +308,25 @@ if (isMainModule) {
     }
 
   const server = createServer(async (req, res) => {
-    try {
-      const urlPath = req.url || "/";
-      const pathname = urlPath.split("?")[0].split("#")[0];
+    const startTime = Date.now();
+    const urlPath = req.url || "/";
+    const pathname = urlPath.split("?")[0].split("#")[0];
+    const method = req.method || "GET";
 
+    // Log access when response finishes
+    res.on('finish', () => {
+      const duration = Date.now() - startTime;
+      logAccess({
+        method,
+        path: pathname,
+        status: res.statusCode,
+        duration,
+        ip: req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      });
+    });
+
+    try {
       // Handle health check endpoint directly
       if (pathname === "/health") {
         res.statusCode = 200;
@@ -317,7 +336,7 @@ if (isMainModule) {
       }
 
       // Try to serve static files first
-      const staticPath = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
+      const staticPath = pathname.startsWith("/") ? pathname.slice(1) : pathname;
 
       if (
         staticPath.startsWith("assets/") ||
@@ -360,7 +379,9 @@ if (isMainModule) {
             }
             res.end();
           } catch (error) {
-            logger.error("Error streaming response", { error: error instanceof Error ? error.message : String(error) });
+            const err = error instanceof Error ? error : new Error(String(error));
+            captureException(err, { context: 'response_streaming' });
+            logger.error("Error streaming response", { error: err.message });
             if (!res.headersSent) {
               res.statusCode = 500;
             }
@@ -372,7 +393,9 @@ if (isMainModule) {
         res.end();
       }
     } catch (error) {
-      logger.error("Server error", { error: error instanceof Error ? error.message : String(error) });
+      const err = error instanceof Error ? error : new Error(String(error));
+      captureException(err, { context: 'server_handler' });
+      logger.error("Server error", { error: err.message });
       if (!res.headersSent) {
         res.statusCode = 500;
       }
@@ -392,6 +415,9 @@ if (isMainModule) {
       logger.info("Stopping background worker...");
       await stopWorker();
     }
+
+    // Flush Sentry events before shutdown
+    await flushSentry(2000);
 
     server.close(() => {
       logger.info("HTTP server closed");

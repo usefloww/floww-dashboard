@@ -89,3 +89,17 @@ export const logger = {
    */
   child: (bindings: object) => getLogger().child(bindings),
 };
+
+/**
+ * Log an HTTP access event with request/response details.
+ */
+export function logAccess(data: {
+  method: string;
+  path: string;
+  status: number;
+  duration: number;
+  ip?: string;
+  userAgent?: string;
+}) {
+  getLogger().info(data, 'access');
+}

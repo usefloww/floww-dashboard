@@ -25,6 +25,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages ./packages
 COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=8192"
+
+# Client-side Sentry configuration (bundled at build time)
+ARG VITE_SENTRY_DSN
+ARG VITE_SENTRY_ENVIRONMENT=production
+ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+ENV VITE_SENTRY_ENVIRONMENT=${VITE_SENTRY_ENVIRONMENT}
+
 RUN pnpm run build
 
 # Production runtime - Web Server
