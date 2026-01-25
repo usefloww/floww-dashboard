@@ -177,7 +177,7 @@ jobs:
           DOCKER_HOST: ssh://${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          docker stack deploy -c stacks/staging.yml floww-dashboard-staging --with-registry-auth
+          docker stack deploy -c stacks/staging.yml floww-dashboard-staging --with-registry-auth --detach=false
 
   deploy-production:
     name: Deploy to Production
@@ -212,4 +212,4 @@ jobs:
           DOCKER_HOST: ssh://${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          docker stack deploy -c stacks/production.yml floww-dashboard --with-registry-auth
+          docker stack deploy -c stacks/production.yml floww-dashboard --with-registry-auth --detach=false
