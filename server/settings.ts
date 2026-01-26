@@ -279,25 +279,6 @@ function loadRegistryConfig(): z.infer<typeof RegistryConfigSchema> {
 }
 
 // ============================================================================
-// Logging Configuration
-// ============================================================================
-
-const LoggingConfigSchema = z.object({
-  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  IS_PRODUCTION: z.boolean().default(false),
-});
-
-function loadLoggingConfig(): z.infer<typeof LoggingConfigSchema> {
-  const nodeEnv = (getEnvWithSecret('NODE_ENV') || 'development') as 'development' | 'production' | 'test';
-  return {
-    LOG_LEVEL: (getEnvWithSecret('LOG_LEVEL') as 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal') || 'info',
-    NODE_ENV: nodeEnv,
-    IS_PRODUCTION: nodeEnv === 'production',
-  };
-}
-
-// ============================================================================
 // Version Configuration
 // ============================================================================
 
@@ -326,7 +307,6 @@ const SettingsSchema = z.object({
   runtime: RuntimeConfigSchema,
   oauth: OAuthConfigSchema,
   registry: RegistryConfigSchema,
-  logging: LoggingConfigSchema,
   version: VersionConfigSchema,
 });
 
@@ -348,7 +328,6 @@ function loadSettings(): Settings {
     runtime: loadRuntimeConfig(),
     oauth: loadOAuthConfig(),
     registry: loadRegistryConfig(),
-    logging: loadLoggingConfig(),
     version: loadVersionConfig(),
   };
 
@@ -390,5 +369,4 @@ export type WorkerConfig = z.infer<typeof WorkerConfigSchema>;
 export type RuntimeConfig = z.infer<typeof RuntimeConfigSchema>;
 export type OAuthConfig = z.infer<typeof OAuthConfigSchema>;
 export type RegistryConfig = z.infer<typeof RegistryConfigSchema>;
-export type LoggingConfig = z.infer<typeof LoggingConfigSchema>;
 export type VersionConfig = z.infer<typeof VersionConfigSchema>;
