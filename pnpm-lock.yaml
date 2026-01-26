@@ -25,6 +25,9 @@ importers:
 
   .:
     dependencies:
+      '@ai-sdk/openai':
+        specifier: ^2.0.89
+        version: 2.0.89(zod@3.25.76)
       '@auth0/auth0-react':
         specifier: ^2.3.0
         version: 2.3.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -127,6 +130,9 @@ importers:
       adminjs-drizzle:
         specifier: ^0.1.2
         version: 0.1.2(adminjs@7.8.17(@types/babel__core@7.20.5)(@types/react-dom@19.1.5(@types/react@19.1.4))(@types/react@19.1.4))(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(knex@2.5.1(mysql2@3.16.1)(pg@8.17.2))(kysely@0.28.10)(mysql2@3.16.1)(pg@8.17.2)(postgres@3.4.8))
+      ai:
+        specifier: 6.0.0-beta.88
+        version: 6.0.0-beta.88(zod@3.25.76)
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -9593,6 +9599,17 @@ snapshots:
       '@ai-sdk/provider-utils': 3.0.20(zod@4.3.6)
       zod: 4.3.6
 
+  '@ai-sdk/gateway@2.0.0-beta.47(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.0-beta.13
+      '@ai-sdk/provider-utils': 4.0.0-beta.28(zod@3.25.76)
+      '@vercel/oidc': 3.0.3
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@valibot/to-json-schema'
+      - arktype
+      - effect
+
   '@ai-sdk/gateway@2.0.0-beta.47(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.13
@@ -9610,11 +9627,24 @@ snapshots:
       '@ai-sdk/provider-utils': 3.0.20(zod@4.3.6)
       zod: 4.3.6
 
+  '@ai-sdk/openai@2.0.89(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.1
+      '@ai-sdk/provider-utils': 3.0.20(zod@3.25.76)
+      zod: 3.25.76
+
   '@ai-sdk/openai@2.0.89(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
       '@ai-sdk/provider-utils': 3.0.20(zod@4.3.6)
       zod: 4.3.6
+
+  '@ai-sdk/provider-utils@3.0.20(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.1
+      '@standard-schema/spec': 1.0.0
+      eventsource-parser: 3.0.6
+      zod: 3.25.76
 
   '@ai-sdk/provider-utils@3.0.20(zod@4.3.6)':
     dependencies:
@@ -9622,6 +9652,13 @@ snapshots:
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.6
       zod: 4.3.6
+
+  '@ai-sdk/provider-utils@4.0.0-beta.28(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.0-beta.13
+      '@standard-schema/spec': 1.0.0
+      eventsource-parser: 3.0.6
+      zod: 3.25.76
 
   '@ai-sdk/provider-utils@4.0.0-beta.28(zod@4.3.6)':
     dependencies:
@@ -15357,6 +15394,18 @@ snapshots:
       debug: 4.4.3(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
+
+  ai@6.0.0-beta.88(zod@3.25.76):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.0-beta.47(zod@3.25.76)
+      '@ai-sdk/provider': 3.0.0-beta.13
+      '@ai-sdk/provider-utils': 4.0.0-beta.28(zod@3.25.76)
+      '@opentelemetry/api': 1.9.0
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@valibot/to-json-schema'
+      - arktype
+      - effect
 
   ai@6.0.0-beta.88(zod@4.3.6):
     dependencies:

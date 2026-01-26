@@ -176,20 +176,14 @@ function loadGeneralConfig(): z.infer<typeof GeneralConfigSchema> {
 // ============================================================================
 
 const AIConfigSchema = z.object({
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_BASE_URL: z.preprocess((val) => (val === '' ? undefined : val), z.string().url().optional()),
-  ANTHROPIC_API_KEY: z.string().optional(),
-  AI_PROVIDER: z.string().optional(),
-  AI_MODEL: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  AI_MODEL_CODEGEN: z.string().default('openrouter/minimax/minimax-m2.1'),
 });
 
 function loadAIConfig(): z.infer<typeof AIConfigSchema> {
   return {
-    OPENAI_API_KEY: getEnvWithSecret('OPENAI_API_KEY'),
-    OPENAI_BASE_URL: getEnvWithSecret('OPENAI_BASE_URL'),
-    ANTHROPIC_API_KEY: getEnvWithSecret('ANTHROPIC_API_KEY'),
-    AI_PROVIDER: getEnvWithSecret('AI_PROVIDER'),
-    AI_MODEL: getEnvWithSecret('AI_MODEL'),
+    OPENROUTER_API_KEY: getEnvWithSecret('OPENROUTER_API_KEY'),
+    AI_MODEL_CODEGEN: getEnvWithSecret('AI_MODEL_CODEGEN') || 'openrouter/minimax/minimax-m2.1',
   };
 }
 

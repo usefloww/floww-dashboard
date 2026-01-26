@@ -1,7 +1,7 @@
 /**
  * AI Generator Package
  *
- * Provides AI-assisted workflow generation using various LLM providers.
+ * Provides AI-assisted workflow generation using OpenRouter.
  */
 
 import { settings } from '~/server/settings';
@@ -37,17 +37,6 @@ export interface StreamingChunk {
   type: 'code' | 'explanation' | 'metadata';
   content: string;
   done: boolean;
-}
-
-/**
- * AI Provider interface
- */
-export interface AIProvider {
-  name: string;
-  generate(request: GenerationRequest): Promise<GenerationResult>;
-  generateStream?(
-    request: GenerationRequest
-  ): AsyncGenerator<StreamingChunk, void, unknown>;
 }
 
 /**
@@ -93,265 +82,179 @@ export default defineWorkflow({
 
 Generate clean, production-ready code based on the user's request.`;
 
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
 /**
- * OpenAI-based AI provider
+ * Get the model name for OpenRouter API (strip openrouter/ prefix if present)
  */
-export class OpenAIProvider implements AIProvider {
-  name = 'openai';
-  private apiKey: string;
-  private baseUrl: string;
-  private defaultModel: string;
-
-  constructor() {
-    this.apiKey = settings.ai.OPENAI_API_KEY ?? '';
-    this.baseUrl = settings.ai.OPENAI_BASE_URL ?? 'https://api.openai.com/v1';
-    this.defaultModel = settings.ai.AI_MODEL ?? 'gpt-4-turbo-preview';
-  }
-
-  async generate(request: GenerationRequest): Promise<GenerationResult> {
-    const userPrompt = this.buildUserPrompt(request);
-
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: request.options?.model ?? this.defaultModel,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: request.options?.temperature ?? 0.2,
-        max_tokens: request.options?.maxTokens ?? 2000,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-
-    return this.parseResponse(content);
-  }
-
-  async *generateStream(
-    request: GenerationRequest
-  ): AsyncGenerator<StreamingChunk, void, unknown> {
-    const userPrompt = this.buildUserPrompt(request);
-
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: request.options?.model ?? this.defaultModel,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: request.options?.temperature ?? 0.2,
-        max_tokens: request.options?.maxTokens ?? 2000,
-        stream: true,
-      }),
-    });
-
-    if (!response.ok || !response.body) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) {
-        yield { type: 'code', content: '', done: true };
-        break;
-      }
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-          try {
-            const json = JSON.parse(line.slice(6));
-            const content = json.choices[0]?.delta?.content ?? '';
-            if (content) {
-              yield { type: 'code', content, done: false };
-            }
-          } catch {
-            // Skip malformed JSON
-          }
-        }
-      }
-    }
-  }
-
-  private buildUserPrompt(request: GenerationRequest): string {
-    let prompt = request.prompt;
-
-    if (request.existingCode) {
-      prompt += `\n\nExisting code to modify:\n\`\`\`typescript\n${request.existingCode}\n\`\`\``;
-    }
-
-    if (request.context) {
-      if (request.context.providers?.length) {
-        prompt += `\n\nAvailable providers: ${request.context.providers.join(', ')}`;
-      }
-      if (request.context.triggers?.length) {
-        prompt += `\nExisting triggers: ${request.context.triggers.join(', ')}`;
-      }
-      if (request.context.secrets?.length) {
-        prompt += `\nAvailable secrets: ${request.context.secrets.join(', ')}`;
-      }
-    }
-
-    return prompt;
-  }
-
-  private parseResponse(content: string): GenerationResult {
-    // Extract code blocks
-    const codeMatch = content.match(/```(?:typescript|ts)?\n([\s\S]*?)```/);
-    const code = codeMatch ? codeMatch[1].trim() : content.trim();
-
-    // Extract explanation (text before/after code block)
-    const explanation = content.replace(/```[\s\S]*?```/g, '').trim();
-
-    // Try to extract workflow name from code
-    const nameMatch = code.match(/name:\s*['"`]([^'"`]+)['"`]/);
-    const suggestedName = nameMatch ? nameMatch[1] : undefined;
-
-    // Extract provider references
-    const providers: string[] = [];
-    if (code.includes('slack')) providers.push('slack');
-    if (code.includes('google')) providers.push('google');
-    if (code.includes('github')) providers.push('github');
-    if (code.includes('stripe')) providers.push('stripe');
-
-    return {
-      code,
-      explanation: explanation || undefined,
-      suggestedName,
-      suggestedProviders: providers.length > 0 ? providers : undefined,
-      confidence: 0.85, // Default confidence
-    };
-  }
+function getModelName(model?: string): string {
+  const modelName = model || settings.ai.AI_MODEL_CODEGEN;
+  return modelName.replace(/^openrouter\//, '');
 }
 
 /**
- * Anthropic Claude provider
+ * Build the user prompt with context
  */
-export class AnthropicProvider implements AIProvider {
-  name = 'anthropic';
-  private apiKey: string;
-  private baseUrl: string;
-  private defaultModel: string;
+function buildUserPrompt(request: GenerationRequest): string {
+  let prompt = request.prompt;
 
-  constructor() {
-    this.apiKey = settings.ai.ANTHROPIC_API_KEY ?? '';
-    this.baseUrl = 'https://api.anthropic.com/v1';
-    this.defaultModel = settings.ai.AI_MODEL ?? 'claude-3-sonnet-20240229';
+  if (request.existingCode) {
+    prompt += `\n\nExisting code to modify:\n\`\`\`typescript\n${request.existingCode}\n\`\`\``;
   }
 
-  async generate(request: GenerationRequest): Promise<GenerationResult> {
-    const userPrompt = this.buildUserPrompt(request);
-
-    const response = await fetch(`${this.baseUrl}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: request.options?.model ?? this.defaultModel,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
-        max_tokens: request.options?.maxTokens ?? 2000,
-        temperature: request.options?.temperature ?? 0.2,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.status}`);
+  if (request.context) {
+    if (request.context.providers?.length) {
+      prompt += `\n\nAvailable providers: ${request.context.providers.join(', ')}`;
     }
-
-    const data = await response.json();
-    const content = data.content[0].text;
-
-    return this.parseResponse(content);
-  }
-
-  private buildUserPrompt(request: GenerationRequest): string {
-    let prompt = request.prompt;
-
-    if (request.existingCode) {
-      prompt += `\n\nExisting code to modify:\n\`\`\`typescript\n${request.existingCode}\n\`\`\``;
+    if (request.context.triggers?.length) {
+      prompt += `\nExisting triggers: ${request.context.triggers.join(', ')}`;
     }
-
-    return prompt;
+    if (request.context.secrets?.length) {
+      prompt += `\nAvailable secrets: ${request.context.secrets.join(', ')}`;
+    }
   }
 
-  private parseResponse(content: string): GenerationResult {
-    const codeMatch = content.match(/```(?:typescript|ts)?\n([\s\S]*?)```/);
-    const code = codeMatch ? codeMatch[1].trim() : content.trim();
-    const explanation = content.replace(/```[\s\S]*?```/g, '').trim();
-
-    return {
-      code,
-      explanation: explanation || undefined,
-      confidence: 0.85,
-    };
-  }
+  return prompt;
 }
 
 /**
- * Get the configured AI provider
+ * Parse the AI response to extract code and metadata
  */
-export function getAIProvider(): AIProvider {
-  const providerType = settings.ai.AI_PROVIDER ?? 'openai';
+function parseResponse(content: string): GenerationResult {
+  // Extract code blocks
+  const codeMatch = content.match(/```(?:typescript|ts)?\n([\s\S]*?)```/);
+  const code = codeMatch ? codeMatch[1].trim() : content.trim();
 
-  switch (providerType) {
-    case 'openai':
-      return new OpenAIProvider();
-    case 'anthropic':
-      return new AnthropicProvider();
-    default:
-      throw new Error(`Unknown AI provider: ${providerType}`);
-  }
+  // Extract explanation (text before/after code block)
+  const explanation = content.replace(/```[\s\S]*?```/g, '').trim();
+
+  // Try to extract workflow name from code
+  const nameMatch = code.match(/name:\s*['"`]([^'"`]+)['"`]/);
+  const suggestedName = nameMatch ? nameMatch[1] : undefined;
+
+  // Extract provider references
+  const providers: string[] = [];
+  if (code.includes('slack')) providers.push('slack');
+  if (code.includes('google')) providers.push('google');
+  if (code.includes('github')) providers.push('github');
+  if (code.includes('stripe')) providers.push('stripe');
+
+  return {
+    code,
+    explanation: explanation || undefined,
+    suggestedName,
+    suggestedProviders: providers.length > 0 ? providers : undefined,
+    confidence: 0.85,
+  };
 }
 
 /**
- * Generate workflow code using the configured AI provider
+ * Generate workflow code using OpenRouter
  */
-export async function generateWorkflow(
-  request: GenerationRequest
-): Promise<GenerationResult> {
-  const provider = getAIProvider();
-  return provider.generate(request);
+export async function generateWorkflow(request: GenerationRequest): Promise<GenerationResult> {
+  const apiKey = settings.ai.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY is not configured');
+  }
+
+  const userPrompt = buildUserPrompt(request);
+
+  const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://usefloww.dev',
+      'X-Title': 'Floww Workflow Builder',
+    },
+    body: JSON.stringify({
+      model: getModelName(request.options?.model),
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: request.options?.temperature ?? 0.1,
+      max_tokens: request.options?.maxTokens ?? 2000,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0].message.content;
+
+  return parseResponse(content);
 }
 
 /**
- * Generate workflow code with streaming using the configured AI provider
+ * Generate workflow code with streaming using OpenRouter
  */
 export async function* generateWorkflowStream(
   request: GenerationRequest
 ): AsyncGenerator<StreamingChunk, void, unknown> {
-  const provider = getAIProvider();
-  if (provider.generateStream) {
-    yield* provider.generateStream(request);
-  } else {
-    const result = await provider.generate(request);
-    yield { type: 'code', content: result.code, done: true };
+  const apiKey = settings.ai.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY is not configured');
+  }
+
+  const userPrompt = buildUserPrompt(request);
+
+  const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://usefloww.dev',
+      'X-Title': 'Floww Workflow Builder',
+    },
+    body: JSON.stringify({
+      model: getModelName(request.options?.model),
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: request.options?.temperature ?? 0.1,
+      max_tokens: request.options?.maxTokens ?? 2000,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok || !response.body) {
+    const errorText = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      yield { type: 'code', content: '', done: true };
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+        try {
+          const json = JSON.parse(line.slice(6));
+          const content = json.choices[0]?.delta?.content ?? '';
+          if (content) {
+            yield { type: 'code', content, done: false };
+          }
+        } catch {
+          // Skip malformed JSON
+        }
+      }
+    }
   }
 }
