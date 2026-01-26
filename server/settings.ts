@@ -262,7 +262,7 @@ function loadOAuthConfig(): z.infer<typeof OAuthConfigSchema> {
 
 const RegistryConfigSchema = z.object({
   REGISTRY_TYPE: z.enum(['dockerhub', 'ecr', 'gcr', 'generic']).default('dockerhub'),
-  REGISTRY_URL: z.string().url().default('https://registry-1.docker.io'),
+  REGISTRY_URL: z.string(),
   REGISTRY_USERNAME: z.string().optional(),
   REGISTRY_PASSWORD: z.string().optional(),
   REGISTRY_TOKEN: z.string().optional(),
