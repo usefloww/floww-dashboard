@@ -104,7 +104,7 @@ services:
       - RUNTIME_TYPE=lambda
       - AWS_REGION=us-east-1
       - REGISTRY_URL=501046919403.dkr.ecr.us-east-1.amazonaws.com
-      - ECR_REPOSITORY_NAME=trigger-lambda
+      - REGISTRY_REPOSITORY_NAME=trigger-lambda
       - LAMBDA_EXECUTION_ROLE_ARN=arn:aws:iam::501046919403:role/LambdaRole
 
       # Secret file paths (read by settings.ts via *_FILE env vars)

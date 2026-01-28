@@ -22,22 +22,12 @@ export type RuntimeType = 'docker' | 'lambda' | 'kubernetes';
 
 export interface RuntimeFactoryConfig {
   runtimeType?: RuntimeType;
-  // Docker-specific
   repositoryName?: string;
   registryUrl?: string;
-  // Lambda-specific
   lambdaClient?: LambdaClient;
   executionRoleArn?: string;
   backendUrl?: string;
   awsRegion?: string;
-}
-
-function getEnvOrThrow(key: string): string {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-  return value;
 }
 
 /**
@@ -49,23 +39,36 @@ export function createRuntime(config: RuntimeFactoryConfig = {}): Runtime {
   switch (runtimeType) {
     case 'docker': {
       const dockerConfig: DockerRuntimeConfig = {
-        repositoryName: config.repositoryName ?? settings.runtime.DOCKER_REPOSITORY_NAME,
-        registryUrl: config.registryUrl ?? settings.runtime.DOCKER_REGISTRY_URL,
+        repositoryName: config.repositoryName ?? settings.runtime.REGISTRY_REPOSITORY_NAME,
+        registryUrl: config.registryUrl ?? settings.runtime.REGISTRY_URL_RUNTIME ?? '',
       };
       return new DockerRuntime(dockerConfig);
     }
 
     case 'lambda': {
-      const lambdaClient = config.lambdaClient ?? new LambdaClient({
+      const lambdaClientConfig: {
+        region: string;
+        credentials?: { accessKeyId: string; secretAccessKey: string };
+      } = {
         region: config.awsRegion ?? settings.runtime.AWS_REGION,
-      });
+      };
+
+      if (settings.runtime.AWS_ACCESS_KEY_ID && settings.runtime.AWS_SECRET_ACCESS_KEY) {
+        lambdaClientConfig.credentials = {
+          accessKeyId: settings.runtime.AWS_ACCESS_KEY_ID,
+          secretAccessKey: settings.runtime.AWS_SECRET_ACCESS_KEY,
+        };
+      }
+
+      const lambdaClient = config.lambdaClient ?? new LambdaClient(lambdaClientConfig);
+      const backendUrl = config.backendUrl ?? settings.general.PUBLIC_API_URL ?? settings.general.BACKEND_URL;
 
       const lambdaConfig: LambdaRuntimeConfig = {
         lambdaClient,
-        executionRoleArn: config.executionRoleArn ?? (settings.runtime.LAMBDA_EXECUTION_ROLE_ARN ?? getEnvOrThrow('LAMBDA_EXECUTION_ROLE_ARN')),
-        registryUrl: config.registryUrl ?? (settings.runtime.ECR_REGISTRY_URL ?? getEnvOrThrow('ECR_REGISTRY_URL')),
-        repositoryName: config.repositoryName ?? settings.runtime.ECR_REPOSITORY_NAME,
-        backendUrl: config.backendUrl ?? settings.general.BACKEND_URL,
+        executionRoleArn: config.executionRoleArn ?? settings.runtime.LAMBDA_EXECUTION_ROLE_ARN!,
+        registryUrl: config.registryUrl ?? settings.runtime.REGISTRY_URL_RUNTIME!,
+        repositoryName: config.repositoryName ?? settings.runtime.REGISTRY_REPOSITORY_NAME,
+        backendUrl,
       };
       return new LambdaRuntime(lambdaConfig);
     }

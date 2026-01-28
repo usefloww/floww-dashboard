@@ -213,24 +213,29 @@ function loadWorkerConfig(): z.infer<typeof WorkerConfigSchema> {
 const RuntimeConfigSchema = z.object({
   RUNTIME_TYPE: z.enum(['docker', 'lambda', 'kubernetes']).default('docker'),
   DEFAULT_RUNTIME_IMAGE: z.string().optional(),
-  DOCKER_REPOSITORY_NAME: z.string().default('docker-runtime'),
-  DOCKER_REGISTRY_URL: z.string().default('localhost:5000'),
+  REGISTRY_URL: z.string().optional(),
+  REGISTRY_URL_RUNTIME: z.string().optional(),
+  REGISTRY_REPOSITORY_NAME: z.string().default('floww-runtime'),
   AWS_REGION: z.string().default('us-east-1'),
-  ECR_REPOSITORY_NAME: z.string().default('floww-runtime'),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
   LAMBDA_EXECUTION_ROLE_ARN: z.string().optional(),
-  ECR_REGISTRY_URL: z.string().optional(),
 });
 
 function loadRuntimeConfig(): z.infer<typeof RuntimeConfigSchema> {
+  const registryUrl = getEnvWithSecret('REGISTRY_URL');
+  const registryUrlRuntime = getEnvWithSecret('REGISTRY_URL_RUNTIME');
+
   return {
     RUNTIME_TYPE: (getEnvWithSecret('RUNTIME_TYPE') as 'docker' | 'lambda' | 'kubernetes') || 'docker',
     DEFAULT_RUNTIME_IMAGE: getEnvWithSecret('DEFAULT_RUNTIME_IMAGE'),
-    DOCKER_REPOSITORY_NAME: getEnvWithSecret('DOCKER_REPOSITORY_NAME') || 'docker-runtime',
-    DOCKER_REGISTRY_URL: getEnvWithSecret('DOCKER_REGISTRY_URL') || 'localhost:5000',
+    REGISTRY_URL: registryUrl,
+    REGISTRY_URL_RUNTIME: registryUrlRuntime || registryUrl,
+    REGISTRY_REPOSITORY_NAME: getEnvWithSecret('REGISTRY_REPOSITORY_NAME') || 'floww-runtime',
     AWS_REGION: getEnvWithSecret('AWS_REGION') || 'us-east-1',
-    ECR_REPOSITORY_NAME: getEnvWithSecret('ECR_REPOSITORY_NAME') || 'floww-runtime',
+    AWS_ACCESS_KEY_ID: getEnvWithSecret('AWS_ACCESS_KEY_ID'),
+    AWS_SECRET_ACCESS_KEY: getEnvWithSecret('AWS_SECRET_ACCESS_KEY'),
     LAMBDA_EXECUTION_ROLE_ARN: getEnvWithSecret('LAMBDA_EXECUTION_ROLE_ARN'),
-    ECR_REGISTRY_URL: getEnvWithSecret('ECR_REGISTRY_URL'),
   };
 }
 
@@ -340,6 +345,22 @@ function loadSettings(): Settings {
       "AUTH_TYPE='none' (anonymous authentication) requires SINGLE_ORG_MODE=true. " +
         'Anonymous authentication is only supported in single-organization mode.'
     );
+  }
+
+  // Validate Lambda runtime configuration
+  if (result.data.runtime.RUNTIME_TYPE === 'lambda') {
+    if (!result.data.runtime.LAMBDA_EXECUTION_ROLE_ARN) {
+      throw new Error(
+        "RUNTIME_TYPE='lambda' requires LAMBDA_EXECUTION_ROLE_ARN to be set. " +
+          'Please provide a valid Lambda execution role ARN.'
+      );
+    }
+    if (!result.data.runtime.REGISTRY_URL_RUNTIME) {
+      throw new Error(
+        "RUNTIME_TYPE='lambda' requires REGISTRY_URL_RUNTIME (or REGISTRY_URL) to be set. " +
+          'Please provide a valid ECR registry URL.'
+      );
+    }
   }
 
   return result.data;
