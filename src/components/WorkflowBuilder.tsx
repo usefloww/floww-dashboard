@@ -95,6 +95,72 @@ function getMessageText(message: Message): string {
   return [...texts, ...questions].join("\n\n");
 }
 
+function shouldIncludeInHistory(message: Message): boolean {
+  if (message.id === "welcome") return false;
+
+  const content = getMessageText(message);
+  if (!content || content.trim() === "") return false;
+
+  if (!message.role || (message.role !== "user" && message.role !== "assistant")) {
+    return false;
+  }
+
+  return true;
+}
+
+function processParts(parts: MessagePart[]): any[] {
+  return parts.map((part) => {
+    switch (part.type) {
+      case "text":
+        return { type: "text", text: part.text };
+      case "data-question":
+        return {
+          type: "data-question",
+          data: {
+            question: part.data?.question,
+            options: part.data?.options,
+            allow_multiple: part.data?.allowMultiple ?? part.data?.allow_multiple,
+          },
+        };
+      case "data-not-supported":
+        return {
+          type: "data-not-supported",
+          data: { message: part.data?.message },
+        };
+      case "data-provider-setup": {
+        const providerType = part.data?.provider_type || part.data?.provider;
+        return {
+          type: "data-provider-setup",
+          data: {
+            message: part.data?.message || `Configure ${providerType} to continue`,
+            provider_type: providerType,
+          },
+        };
+      }
+      case "data-secret-setup":
+        return {
+          type: "data-secret-setup",
+          data: {
+            message: part.data?.description || part.data?.message,
+            secret_name: part.data?.secretName || part.data?.secret_name,
+          },
+        };
+      case "data-code":
+        return { type: "data-code", data: { code: part.data?.code } };
+      case "data-plan-confirmation":
+        return {
+          type: "data-plan-confirmation",
+          data: {
+            plan: part.data?.plan,
+            awaiting_approval: part.data?.awaiting_approval,
+          },
+        };
+      default:
+        return part;
+    }
+  });
+}
+
 const EXAMPLE_PROMPTS = [
   "Send a slack message in #deployments whenever a merge request gets merged on usefloww/floww-sdk",
   "Every morning at 9am, send a message with the tickets that got done the day before",
@@ -126,7 +192,22 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   // Persist messages in sessionStorage to survive component remounts and page reloads
   const [messages, setMessagesState] = useState<Message[]>(() => {
     const stored = sessionStorage.getItem(`workflow-messages-${workflowId}`);
-    return stored ? JSON.parse(stored) : [WELCOME_MESSAGE];
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const validMessages = parsed.filter((m: Message) => {
+          if (m.id === "welcome") return true;
+          return shouldIncludeInHistory(m);
+        });
+        if (validMessages.length === 0 || validMessages[0]?.id !== "welcome") {
+          return [WELCOME_MESSAGE, ...validMessages.filter((m: Message) => m.id !== "welcome")];
+        }
+        return validMessages;
+      } catch {
+        return [WELCOME_MESSAGE];
+      }
+    }
+    return [WELCOME_MESSAGE];
   });
 
   const setMessages = (newMessages: Message[]) => {
@@ -158,6 +239,27 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
     sessionStorage.removeItem(`workflow-messages-${workflowId}`);
     sessionStorage.removeItem(`workflow-plan-${workflowId}`);
   };
+
+  // Expose clear function globally for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).clearWorkflowBuilder = () => {
+        console.log('[WorkflowBuilder] Clearing all data...');
+        // Clear all workflow-related sessionStorage
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.startsWith('workflow-')) {
+            sessionStorage.removeItem(key);
+            console.log(`[WorkflowBuilder] Removed: ${key}`);
+          }
+        });
+        // Reset state
+        setMessages([WELCOME_MESSAGE]);
+        setPlan(null);
+        console.log('[WorkflowBuilder] Done! Reload the page to start fresh.');
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflowId]);
 
   // Debug plan state changes
   useEffect(() => {
@@ -271,10 +373,12 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
     setStatus("submitted");
 
     try {
-      const simpleMessages = messages.map((m) => ({
-        role: m.role,
-        content: getMessageText(m),
-      }));
+      const simpleMessages = messages
+        .filter(shouldIncludeInHistory)
+        .map((m) => ({
+          role: m.role,
+          content: getMessageText(m),
+        }));
 
       const resp = (await builderChat({
         data: {
@@ -283,6 +387,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           userMessage: userContent,
           currentCode: code,
           namespaceId: currentNamespace?.id,
+          currentPlan: plan,
         },
       })) as BuilderChatResponse;
 
@@ -292,56 +397,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
         plan_summary: resp.plan?.summary,
       });
 
-      const processedParts: any[] = [];
-      
-      for (const part of resp.message.parts) {
-        if (part.type === "text" && part.text) {
-          processedParts.push({ type: "text", text: part.text });
-        } else if (part.type === "data-question" && part.data?.options) {
-          processedParts.push({
-            type: "data-question",
-            data: { 
-              question: part.data.question,
-              options: part.data.options,
-              allow_multiple: part.data.allow_multiple,
-            },
-          });
-        } else if (part.type === "data-not-supported" && part.data?.message) {
-          processedParts.push({
-            type: "data-not-supported",
-            data: { message: part.data.message },
-          });
-        } else if (part.type === "data-provider-setup" && part.data) {
-          processedParts.push({
-            type: "data-provider-setup",
-            data: {
-              message: part.data.message,
-              provider_type: part.data.provider_type,
-            },
-          });
-        } else if (part.type === "data-secret-setup" && part.data) {
-          processedParts.push({
-            type: "data-secret-setup",
-            data: {
-              message: part.data.message,
-              secret_name: part.data.secret_name,
-            },
-          });
-        } else if (part.type === "data-code" && part.data?.code) {
-          processedParts.push({
-            type: "data-code",
-            data: { code: part.data.code },
-          });
-        } else if (part.type === "data-plan-confirmation" && part.data) {
-          processedParts.push({
-            type: "data-plan-confirmation",
-            data: {
-              plan: part.data.plan,
-              awaiting_approval: part.data.awaiting_approval,
-            },
-          });
-        }
-      }
+      const processedParts = processParts(resp.message.parts);
 
       const assistantMsg: Message = {
         id: `msg-${Date.now()}`,
@@ -418,10 +474,12 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
 
     try {
       // Send conversation history WITHOUT current message (sent separately as user_message)
-      const simpleMessages = messages.map((m) => ({
-        role: m.role,
-        content: getMessageText(m),
-      }));
+      const simpleMessages = messages
+        .filter(shouldIncludeInHistory)
+        .map((m) => ({
+          role: m.role,
+          content: getMessageText(m),
+        }));
 
       const resp = (await builderChat({
         data: {
@@ -430,59 +488,11 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           userMessage: labelString,
           currentCode: code,
           namespaceId: currentNamespace?.id,
+          currentPlan: plan,
         },
       })) as BuilderChatResponse;
 
-      const processedParts: any[] = [];
-      
-      for (const part of resp.message.parts) {
-        if (part.type === "text" && part.text) {
-          processedParts.push({ type: "text", text: part.text });
-        } else if (part.type === "data-question" && part.data?.options) {
-          processedParts.push({
-            type: "data-question",
-            data: { 
-              question: part.data.question,
-              options: part.data.options,
-              allow_multiple: part.data.allow_multiple,
-            },
-          });
-        } else if (part.type === "data-not-supported" && part.data?.message) {
-          processedParts.push({
-            type: "data-not-supported",
-            data: { message: part.data.message },
-          });
-        } else if (part.type === "data-provider-setup" && part.data) {
-          processedParts.push({
-            type: "data-provider-setup",
-            data: {
-              message: part.data.message,
-              provider_type: part.data.provider_type,
-            },
-          });
-        } else if (part.type === "data-secret-setup" && part.data) {
-          processedParts.push({
-            type: "data-secret-setup",
-            data: {
-              message: part.data.message,
-              secret_name: part.data.secret_name,
-            },
-          });
-        } else if (part.type === "data-code" && part.data?.code) {
-          processedParts.push({
-            type: "data-code",
-            data: { code: part.data.code },
-          });
-        } else if (part.type === "data-plan-confirmation" && part.data) {
-          processedParts.push({
-            type: "data-plan-confirmation",
-            data: {
-              plan: part.data.plan,
-              awaiting_approval: part.data.awaiting_approval,
-            },
-          });
-        }
-      }
+      const processedParts = processParts(resp.message.parts);
 
       const assistantMsg: Message = {
         id: `msg-${Date.now()}`,
@@ -1144,21 +1154,21 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                                 )}
 
                                 {/* Required Providers/Secrets */}
-                                {(plan?.required_providers?.length > 0 || plan?.required_secrets?.length > 0) && (
+                                {(plan?.requiredProviders?.length > 0 || plan?.requiredSecrets?.length > 0) && (
                                     <div className="flex flex-wrap gap-4 pt-3 border-t border-emerald-200 dark:border-emerald-800/50">
-                                        {plan.required_providers?.length > 0 && (
+                                        {plan.requiredProviders?.length > 0 && (
                                             <div className="flex items-center gap-2">
                                                 <Settings className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                                                 <span className="text-xs text-emerald-700 dark:text-emerald-300">
-                                                    <span className="font-medium">Providers:</span> {plan.required_providers.join(', ')}
+                                                    <span className="font-medium">Providers:</span> {plan.requiredProviders.join(', ')}
                                                 </span>
                                             </div>
                                         )}
-                                        {plan.required_secrets?.length > 0 && (
+                                        {plan.requiredSecrets?.length > 0 && (
                                             <div className="flex items-center gap-2">
                                                 <Key className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                                                 <span className="text-xs text-emerald-700 dark:text-emerald-300">
-                                                    <span className="font-medium">Secrets:</span> {plan.required_secrets.join(', ')}
+                                                    <span className="font-medium">Secrets:</span> {plan.requiredSecrets.join(', ')}
                                                 </span>
                                             </div>
                                         )}

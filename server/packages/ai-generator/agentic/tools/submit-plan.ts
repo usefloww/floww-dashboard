@@ -47,7 +47,7 @@ export function createSubmitPlanTool() {
 
       const part: MessagePart = {
         type: 'data-plan-confirmation',
-        data: planData,
+        data: { plan: planData, awaiting_approval: true },
       };
 
       return {

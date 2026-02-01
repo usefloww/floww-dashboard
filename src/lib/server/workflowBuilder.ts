@@ -87,6 +87,11 @@ export const builderChat = createServerFn({ method: 'POST' })
     }
 
     try {
+      // Validate user message
+      if (!data.userMessage || data.userMessage.trim() === '') {
+        throw new Error('User message cannot be empty');
+      }
+
       // Get configured providers for this namespace
       const namespaceId = data.namespaceId || workflow.namespaceId;
       let configuredProviders: Array<{ name: string; type: string; configured: boolean }> = [];
@@ -103,11 +108,14 @@ export const builderChat = createServerFn({ method: 'POST' })
         configuredProviders = [];
       }
 
-      // Convert messages to conversation format
-      const conversationHistory = data.messages.map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      }));
+      // Convert messages to conversation format with validation
+      const conversationHistory = data.messages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .filter((m) => m.content && m.content.trim() !== '')
+        .map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }));
 
       // Build agent context
       const agentContext = {
@@ -144,15 +152,25 @@ export const builderChat = createServerFn({ method: 'POST' })
     } catch (error) {
       console.error('Builder chat error:', error);
 
-      // Return error as a message part
-      const errorMessage = error instanceof Error ? error.message : 'AI generation failed';
+      // Don't expose internal error details - provide user-friendly message
+      const isApiError = error instanceof Error && (
+        error.message.includes('API') ||
+        error.message.includes('OPENROUTER') ||
+        error.message.includes('network') ||
+        error.message.includes('fetch')
+      );
+
+      const userMessage = isApiError
+        ? 'Unable to connect to the AI service. Please check your configuration and try again.'
+        : 'An error occurred while processing your request. Please try again.';
+
       return {
         message: {
           role: 'assistant',
           parts: [
             {
-              type: 'data-not-supported',
-              data: { message: `Error: ${errorMessage}` },
+              type: 'text',
+              text: userMessage,
             },
           ],
         },

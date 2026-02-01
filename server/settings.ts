@@ -177,13 +177,13 @@ function loadGeneralConfig(): z.infer<typeof GeneralConfigSchema> {
 
 const AIConfigSchema = z.object({
   OPENROUTER_API_KEY: z.string().optional(),
-  AI_MODEL_CODEGEN: z.string().default('openrouter/minimax/minimax-m2.1'),
+  AI_MODEL_CODEGEN: z.string().default('anthropic/claude-sonnet-4.5'),
 });
 
 function loadAIConfig(): z.infer<typeof AIConfigSchema> {
   return {
     OPENROUTER_API_KEY: getEnvWithSecret('OPENROUTER_API_KEY'),
-    AI_MODEL_CODEGEN: getEnvWithSecret('AI_MODEL_CODEGEN') || 'openrouter/minimax/minimax-m2.1',
+    AI_MODEL_CODEGEN: getEnvWithSecret('AI_MODEL_CODEGEN') || 'anthropic/claude-sonnet-4.5',
   };
 }
 

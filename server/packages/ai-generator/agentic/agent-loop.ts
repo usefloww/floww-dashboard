@@ -5,7 +5,7 @@
  */
 
 import { generateText, stepCountIs, type CoreMessage } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenRouter, type OpenRouterProvider } from '@openrouter/ai-sdk-provider';
 import { settings } from '~/server/settings';
 import type { AgentContext, AgentResponse, ConversationMessage, MessagePart, Plan, ToolResult } from './context';
 import { buildSystemPrompt, buildCodeGenerationPrompt, isPlanApproval } from './system-prompt';
@@ -25,11 +25,10 @@ const MAX_ITERATIONS = 10;
 function createOpenRouterProvider() {
   const apiKey = settings.ai.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY is not configured');
+    throw new Error('OPENROUTER_API_KEY is not configured. Please set the OPENROUTER_API_KEY environment variable.');
   }
 
-  return createOpenAI({
-    baseURL: 'https://openrouter.ai/api/v1',
+  return createOpenRouter({
     apiKey,
     headers: {
       'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://usefloww.dev',
@@ -39,10 +38,15 @@ function createOpenRouterProvider() {
 }
 
 /**
- * Get the model name (strip openrouter/ prefix if present)
+ * Get the model name (remove any prefix)
  */
 function getModelName(): string {
-  return settings.ai.AI_MODEL_CODEGEN.replace(/^openrouter\//, '');
+  const modelName = settings.ai.AI_MODEL_CODEGEN;
+  if (!modelName) {
+    throw new Error('AI_MODEL_CODEGEN is not configured. Please set the AI_MODEL_CODEGEN environment variable.');
+  }
+  // Remove any openrouter/ or anthropic/ prefix
+  return modelName.replace(/^(openrouter|anthropic)\//, '');
 }
 
 /**
@@ -63,6 +67,21 @@ export async function processMessage(
   conversationHistory: ConversationMessage[],
   context: AgentContext
 ): Promise<AgentResponse> {
+  // Validate inputs
+  if (!userMessage || userMessage.trim() === '') {
+    throw new Error('User message cannot be empty');
+  }
+
+  // Validate conversation history
+  for (const msg of conversationHistory) {
+    if (!msg.content || msg.content.trim() === '') {
+      throw new Error('Conversation history contains empty messages');
+    }
+    if (msg.role !== 'user' && msg.role !== 'assistant') {
+      throw new Error(`Invalid message role: ${msg.role}`);
+    }
+  }
+
   const openrouter = createOpenRouterProvider();
   const modelName = getModelName();
 
@@ -83,33 +102,55 @@ export async function processMessage(
     update_workflow_code: createUpdateCodeTool(context),
   };
 
-  // Convert conversation history to AI SDK format
+  // Convert conversation history to AI SDK format with validation
+  const convertedMessages = convertToAIMessages(conversationHistory);
+
+  // Validate all messages before sending
+  for (let i = 0; i < convertedMessages.length; i++) {
+    const msg = convertedMessages[i];
+    if (!msg.content || typeof msg.content !== 'string') {
+      console.error(`Invalid message at index ${i}:`, msg);
+      throw new Error(`Conversation history contains invalid message at position ${i + 1}`);
+    }
+  }
+
   const messages: CoreMessage[] = [
-    ...convertToAIMessages(conversationHistory),
+    ...convertedMessages,
     { role: 'user', content: userMessage },
   ];
 
+  // Debug: log what we're sending to the AI
+  console.log('[Agent Loop] Sending to AI:', {
+    modelName,
+    messageCount: messages.length,
+    messages: messages.map((m, i) => ({
+      index: i,
+      role: m.role,
+      contentType: typeof m.content,
+      contentLength: typeof m.content === 'string' ? m.content.length : 'N/A',
+      contentPreview: typeof m.content === 'string' ? m.content.substring(0, 100) : m.content,
+    })),
+  });
+
   // Track terminal state and collected parts
   let isTerminal = false;
+  let shouldStop = false;
   let terminalReason: AgentResponse['terminalReason'];
   const collectedParts: MessagePart[] = [];
   let generatedCode: string | undefined;
   let generatedPlan: Plan | undefined;
 
   try {
-    // Run the agent loop with stopWhen
     const result = await generateText({
       model: openrouter(modelName),
       system: systemPrompt,
       messages,
       tools,
-      stopWhen: stepCountIs(MAX_ITERATIONS),
+      stopWhen: (result) => shouldStop || stepCountIs(MAX_ITERATIONS)(result),
       onStepFinish: ({ toolCalls, toolResults }) => {
-        // Process tool results to collect parts and detect terminal state
         if (toolResults && toolResults.length > 0) {
           for (let i = 0; i < toolResults.length; i++) {
             const toolResult = toolResults[i];
-            // The output is the ToolResult we return from execute
             const output = toolResult.output as ToolResult | undefined;
             if (output) {
               collectedParts.push(...output.parts);
@@ -123,9 +164,9 @@ export async function processMessage(
 
               if (output.isTerminal) {
                 isTerminal = true;
+                shouldStop = true;
 
-                // Determine terminal reason from tool name
-                if (toolCalls && toolCalls[i]) {
+                if (toolCalls && i < toolCalls.length) {
                   const toolName = toolCalls[i].toolName;
                   if (toolName === 'ask_clarifying_question') {
                     terminalReason = 'question';
@@ -164,11 +205,17 @@ export async function processMessage(
   } catch (error) {
     console.error('Agent loop error:', error);
 
+    // Don't expose internal error details to users
+    const userMessage =
+      error instanceof Error && error.message.includes('API')
+        ? 'I encountered an error connecting to the AI service. Please try again later.'
+        : 'I encountered an error while processing your request. Please try again.';
+
     return {
       parts: [
         {
           type: 'text',
-          text: `I encountered an error while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          text: userMessage,
         },
       ],
       isTerminal: true,
@@ -183,7 +230,7 @@ export async function processMessage(
 async function generateCodeFromPlan(
   plan: Plan,
   context: AgentContext,
-  openrouter: ReturnType<typeof createOpenAI>,
+  openrouter: OpenRouterProvider,
   modelName: string
 ): Promise<AgentResponse> {
   const systemPrompt = buildSystemPrompt(context);
@@ -196,6 +243,7 @@ async function generateCodeFromPlan(
 
   const collectedParts: MessagePart[] = [];
   let generatedCode: string | undefined;
+  let shouldStop = false;
 
   try {
     await generateText({
@@ -203,7 +251,7 @@ async function generateCodeFromPlan(
       system: systemPrompt,
       messages: [{ role: 'user', content: codeGenPrompt }],
       tools,
-      stopWhen: stepCountIs(3),
+      stopWhen: (result) => shouldStop || stepCountIs(3)(result),
       onStepFinish: ({ toolResults }) => {
         if (toolResults && toolResults.length > 0) {
           for (const toolResult of toolResults) {
@@ -213,11 +261,24 @@ async function generateCodeFromPlan(
               if (output.code) {
                 generatedCode = output.code;
               }
+              if (output.isTerminal) {
+                shouldStop = true;
+              }
             }
           }
         }
       },
     });
+
+    // Ensure we have meaningful output
+    if (collectedParts.length === 0) {
+      collectedParts.push({
+        type: 'text',
+        text: generatedCode
+          ? 'I generated the workflow code based on the approved plan.'
+          : 'Code generation did not produce any output. Please try again.',
+      });
+    }
 
     return {
       parts: collectedParts,
@@ -228,11 +289,17 @@ async function generateCodeFromPlan(
   } catch (error) {
     console.error('Code generation error:', error);
 
+    // Don't expose internal error details to users
+    const userMessage =
+      error instanceof Error && error.message.includes('API')
+        ? 'I encountered an error connecting to the AI service. Please try again later.'
+        : 'I encountered an error while generating code. Please try again.';
+
     return {
       parts: [
         {
           type: 'text',
-          text: `I encountered an error while generating code: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          text: userMessage,
         },
       ],
       isTerminal: true,
