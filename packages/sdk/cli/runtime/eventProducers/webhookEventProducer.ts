@@ -104,7 +104,7 @@ export class WebhookEventProducer implements EventProducer {
           path: request.url,
           __context: {
             backend_url:
-              process.env.FLOWW_BACKEND_URL || "https://app.usefloww.dev",
+              process.env.FLOWW_BACKEND_URL || "https://app.floww.dev",
           },
         };
 

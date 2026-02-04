@@ -127,7 +127,7 @@ export class EventRouter {
     // Set backend URL from environment variable or default if not already set from event
     if (!executionContext.getBackendUrl()) {
       const backendUrl =
-        process.env.FLOWW_BACKEND_URL || "https://app.usefloww.dev";
+        process.env.FLOWW_BACKEND_URL || "https://app.floww.dev";
       executionContext.setBackendUrl(backendUrl);
     }
 

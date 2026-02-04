@@ -28,7 +28,7 @@ export const CONFIG_SCHEMA = {
     cliKey: "workos-client-id",
   },
   backendUrl: {
-    default: "https://app.usefloww.dev",
+    default: "https://app.floww.dev",
     envVar: "FLOWW_BACKEND_URL",
     cliKey: "backend-url",
   },

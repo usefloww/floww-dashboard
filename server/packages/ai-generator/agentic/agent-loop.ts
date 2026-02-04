@@ -31,7 +31,7 @@ function createOpenRouterProvider() {
   return createOpenRouter({
     apiKey,
     headers: {
-      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://usefloww.dev',
+      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://floww.dev',
       'X-Title': 'Floww Workflow Builder',
     },
   });

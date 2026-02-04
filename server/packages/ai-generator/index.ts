@@ -164,7 +164,7 @@ export async function generateWorkflow(request: GenerationRequest): Promise<Gene
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://usefloww.dev',
+      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://floww.dev',
       'X-Title': 'Floww Workflow Builder',
     },
     body: JSON.stringify({
@@ -207,7 +207,7 @@ export async function* generateWorkflowStream(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://usefloww.dev',
+      'HTTP-Referer': settings.general.PUBLIC_API_URL || 'https://floww.dev',
       'X-Title': 'Floww Workflow Builder',
     },
     body: JSON.stringify({
