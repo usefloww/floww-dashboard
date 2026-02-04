@@ -196,7 +196,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: production
-      url: https://app.usefloww.dev
+      url: https://app.floww.dev
 
     steps:
       - uses: actions/checkout@v4

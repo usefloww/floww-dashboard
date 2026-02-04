@@ -17,7 +17,7 @@ services:
       - CENTRIFUGO_ADMIN_INSECURE=true
       - CENTRIFUGO_CONNECT_PROXY_ENDPOINT=http://floww-dashboard_app:3000/centrifugo/connect
       - CENTRIFUGO_SUBSCRIBE_PROXY_ENDPOINT=http://floww-dashboard_app:3000/centrifugo/subscribe
-      - CENTRIFUGO_ALLOWED_ORIGINS=["https://app.usefloww.dev"]
+      - CENTRIFUGO_ALLOWED_ORIGINS=["https://app.floww.dev"]
       - CENTRIFUGO_ALLOW_ANONYMOUS=true
 
     deploy:
@@ -43,7 +43,7 @@ services:
           memory: 256M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.floww-dashboard-centrifugo.rule=Host(`app.usefloww.dev`) && PathPrefix(`/ws`)"
+        - "traefik.http.routers.floww-dashboard-centrifugo.rule=Host(`app.floww.dev`) && PathPrefix(`/ws`)"
         - "traefik.http.routers.floww-dashboard-centrifugo.entrypoints=websecure"
         - "traefik.http.routers.floww-dashboard-centrifugo.tls.certresolver=myresolver"
         - "traefik.http.services.floww-dashboard-centrifugo-service.loadbalancer.server.port=8000"
@@ -92,9 +92,9 @@ services:
       - DATABASE_NAME=postgres
       - CENTRIFUGO_HOST=floww-dashboard_centrifugo
       - CENTRIFUGO_PORT=8000
-      - CENTRIFUGO_PUBLIC_URL=https://app.usefloww.dev
-      - BACKEND_URL=https://app.usefloww.dev
-      - PUBLIC_API_URL=https://app.usefloww.dev
+      - CENTRIFUGO_PUBLIC_URL=https://app.floww.dev
+      - BACKEND_URL=https://app.floww.dev
+      - PUBLIC_API_URL=https://app.floww.dev
       - IS_CLOUD=true
       - SENTRY_ENVIRONMENT=production
       - STRIPE_PUBLISHABLE_KEY=pk_live_51SToIG9QR0ekoyxExl6rbZdjKrPubJFpPMe2dCiG7BxsVrJuQ04GP5QsMWQwg1L1s1tz255LV0JQMw2izZfHyeKZ00stQnGCze
@@ -148,7 +148,7 @@ services:
           memory: 256M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.floww-dashboard.rule=Host(`app.usefloww.dev`) && !PathPrefix(`/ws`)"
+        - "traefik.http.routers.floww-dashboard.rule=Host(`app.floww.dev`) && !PathPrefix(`/ws`)"
         - "traefik.http.routers.floww-dashboard.entrypoints=websecure"
         - "traefik.http.routers.floww-dashboard.tls.certresolver=myresolver"
         - "traefik.http.services.floww-dashboard.loadbalancer.server.port=3000"
