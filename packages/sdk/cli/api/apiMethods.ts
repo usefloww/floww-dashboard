@@ -280,7 +280,7 @@ export async function listWorkflowDeployments(
   const queryParams = workflowId ? `?workflow_id=${workflowId}` : "";
   const data = await defaultApiClient().apiCall<{
     results: WorkflowDeploymentResponse[];
-  }>(`/workflow_deployments${queryParams}`);
+  }>(`/workflow-deployments${queryParams}`);
   return data.results;
 }
 
@@ -337,7 +337,7 @@ export async function fetchProviderType(
   providerType: string
 ): Promise<ProviderType> {
   return await defaultApiClient().apiCall<ProviderType>(
-    `/provider_types/${providerType}`
+    `/provider-types/${providerType}`
   );
 }
 

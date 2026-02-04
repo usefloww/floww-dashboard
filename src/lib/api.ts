@@ -215,7 +215,7 @@ export const handleApiError = (error: unknown): string => {
 
 // Provider API methods
 export async function getProviderType(providerType: string): Promise<ProviderType> {
-  return api.get<ProviderType>(`/provider_types/${providerType}`);
+  return api.get<ProviderType>(`/provider-types/${providerType}`);
 }
 
 export async function createProvider(data: { namespaceId: string; type: string; alias: string; config: Record<string, any> }) {

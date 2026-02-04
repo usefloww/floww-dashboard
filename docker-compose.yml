@@ -31,7 +31,6 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
       - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
@@ -56,6 +55,3 @@ services:
       CENTRIFUGO_CONNECT_PROXY_ENDPOINT: "http://host.docker.internal:5173/api/centrifugo/connect"
       CENTRIFUGO_SUBSCRIBE_PROXY_ENDPOINT: "http://host.docker.internal:5173/api/centrifugo/subscribe"
     restart: unless-stopped
-
-volumes:
-  postgres_data:

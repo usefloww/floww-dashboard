@@ -32,7 +32,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
     queryKey: ['deployments', workflowId],
     queryFn: async () => {
       const params = { workflowId: workflowId };
-      const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
+      const data = await api.get<WorkflowDeploymentsResponse>("/workflow-deployments", { params });
       const sorted = (data.deployments || []).sort(
         (a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()
       );
@@ -56,7 +56,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
     queryKey: ['deployment', selectedDeploymentId],
     queryFn: async () => {
       if (!selectedDeploymentId) return null;
-      return await api.get<WorkflowDeployment>(`/workflow_deployments/${selectedDeploymentId}`);
+      return await api.get<WorkflowDeployment>(`/workflow-deployments/${selectedDeploymentId}`);
     },
     enabled: !!selectedDeploymentId,
   });
@@ -113,7 +113,7 @@ export function DeploymentEditor({ workflowId, deploymentId, onSave, onCancel }:
         },
       };
 
-      await api.post("/workflow_deployments", deploymentData);
+      await api.post("/workflow-deployments", deploymentData);
 
       // Show success notification
       showSuccessNotification(

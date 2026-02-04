@@ -4,11 +4,11 @@
  * Standalone deployment endpoints matching the Python backend API.
  * These are separate from the nested /workflows/:id/deployments routes.
  *
- * GET /api/workflow_deployments - List deployments (with optional workflowId filter)
- * POST /api/workflow_deployments - Create deployment
- * GET /api/workflow_deployments/:deploymentId - Get deployment
- * PATCH /api/workflow_deployments/:deploymentId - Update deployment
- * DELETE /api/workflow_deployments/:deploymentId - Delete deployment
+ * GET /api/workflow-deployments - List deployments (with optional workflowId filter)
+ * POST /api/workflow-deployments - Create deployment
+ * GET /api/workflow-deployments/:deploymentId - Get deployment
+ * PATCH /api/workflow-deployments/:deploymentId - Update deployment
+ * DELETE /api/workflow-deployments/:deploymentId - Delete deployment
  */
 
 import { z } from 'zod';
@@ -104,7 +104,7 @@ async function getProviderConfigs(namespaceId: string): Promise<Record<string, R
 }
 
 // List deployments
-get('/workflow_deployments', async (ctx) => {
+get('/workflow-deployments', async (ctx) => {
   const { user, query } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 
@@ -138,7 +138,7 @@ get('/workflow_deployments', async (ctx) => {
 });
 
 // Create deployment
-post('/workflow_deployments', async (ctx) => {
+post('/workflow-deployments', async (ctx) => {
   const { user, request } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 
@@ -288,7 +288,7 @@ post('/workflow_deployments', async (ctx) => {
 });
 
 // Get deployment
-get('/workflow_deployments/:deploymentId', async (ctx) => {
+get('/workflow-deployments/:deploymentId', async (ctx) => {
   const { user, params } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 
@@ -316,7 +316,7 @@ get('/workflow_deployments/:deploymentId', async (ctx) => {
 });
 
 // Update deployment
-patch('/workflow_deployments/:deploymentId', async (ctx) => {
+patch('/workflow-deployments/:deploymentId', async (ctx) => {
   const { user, params, request } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 
@@ -361,7 +361,7 @@ patch('/workflow_deployments/:deploymentId', async (ctx) => {
 });
 
 // Delete deployment
-del('/workflow_deployments/:deploymentId', async (ctx) => {
+del('/workflow-deployments/:deploymentId', async (ctx) => {
   const { user, params } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 

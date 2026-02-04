@@ -1,7 +1,7 @@
 /**
  * Workflow Deployments API Route Tests
  *
- * Tests for the standalone /api/workflow_deployments endpoints.
+ * Tests for the standalone /api/workflow-deployments endpoints.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -86,7 +86,7 @@ describe('Workflow Deployments API Routes', () => {
     });
   });
 
-  describe('GET /api/workflow_deployments', () => {
+  describe('GET /api/workflow-deployments', () => {
     it('should list deployments when user has workflow access', async () => {
       const mockDeployments = [
         {
@@ -136,7 +136,7 @@ describe('Workflow Deployments API Routes', () => {
     });
   });
 
-  describe('POST /api/workflow_deployments', () => {
+  describe('POST /api/workflow-deployments', () => {
     it('should create deployment when user has access', async () => {
       const mockWorkflow = {
         id: 'wf-1',
@@ -202,7 +202,7 @@ describe('Workflow Deployments API Routes', () => {
     });
   });
 
-  describe('GET /api/workflow_deployments/:deploymentId', () => {
+  describe('GET /api/workflow-deployments/:deploymentId', () => {
     it('should return deployment details', async () => {
       const mockDeployment = {
         id: 'dep-1',
@@ -231,7 +231,7 @@ describe('Workflow Deployments API Routes', () => {
     });
   });
 
-  describe('PATCH /api/workflow_deployments/:deploymentId', () => {
+  describe('PATCH /api/workflow-deployments/:deploymentId', () => {
     it('should update deployment status', async () => {
       const mockDeployment = {
         id: 'dep-1',
@@ -263,7 +263,7 @@ describe('Workflow Deployments API Routes', () => {
     });
   });
 
-  describe('DELETE /api/workflow_deployments/:deploymentId', () => {
+  describe('DELETE /api/workflow-deployments/:deploymentId', () => {
     it('should delete deployment when user has access', async () => {
       const mockDeployment = {
         id: 'dep-1',

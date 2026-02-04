@@ -1,13 +1,15 @@
 import type { ProviderDefinition } from "../base";
 
 // Import all server providers
-// These will be added as we implement them
 import { BuiltinServerProvider } from "../builtin/server";
 import { GitHubServerProvider } from "../github/server";
 import { SlackServerProvider } from "../slack/server";
 import { DiscordServerProvider } from "../discord/server";
 import { GitLabServerProvider } from "../gitlab/server";
 import { JiraServerProvider } from "../jira/server";
+import { KVStoreServerProvider } from "../kvstore/server";
+import { TodoistServerProvider } from "../todoist/server";
+import { GoogleCalendarServerProvider } from "../google_calendar/server";
 
 /**
  * Registry of all server-side provider definitions
@@ -21,6 +23,9 @@ const providerRegistry: Record<string, ProviderDefinition<any>> = {
   discord: DiscordServerProvider,
   gitlab: GitLabServerProvider,
   jira: JiraServerProvider,
+  kvstore: KVStoreServerProvider,
+  todoist: TodoistServerProvider,
+  google_calendar: GoogleCalendarServerProvider,
 };
 
 /**

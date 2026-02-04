@@ -74,7 +74,7 @@ export function ProviderConfigModal({
 
   // Check if OAuth is already connected based on provider config
   useEffect(() => {
-    if (isEditMode && provider && providerTypeData) {
+    if (isEditMode && provider && providerTypeData && providerTypeData.setupSteps) {
       const connected: Record<string, boolean> = {};
       providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type === "oauth") {
@@ -94,7 +94,7 @@ export function ProviderConfigModal({
         setAlias(provider.alias);
         // Initialize config with existing values, but mask secrets
         const initialConfig: Record<string, string> = {};
-        if (providerTypeData) {
+        if (providerTypeData && providerTypeData.setupSteps) {
           providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
             if (step.type === "secret" && provider.config[step.alias]) {
               // Mask existing secrets
@@ -124,7 +124,7 @@ export function ProviderConfigModal({
 
   // Update config when provider type data loads in edit mode
   useEffect(() => {
-    if (isEditMode && provider && providerTypeData) {
+    if (isEditMode && provider && providerTypeData && providerTypeData.setupSteps) {
       const updatedConfig: Record<string, string> = {};
       providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type === "secret" && provider.config[step.alias]) {
@@ -139,7 +139,7 @@ export function ProviderConfigModal({
 
   // Initialize config with defaults when provider type data loads in create mode
   useEffect(() => {
-    if (!isEditMode && providerTypeData && open) {
+    if (!isEditMode && providerTypeData && providerTypeData.setupSteps && open) {
       setConfig((prev) => {
         const updatedConfig = { ...prev };
         let hasChanges = false;
@@ -209,7 +209,7 @@ export function ProviderConfigModal({
 
     // Validate required fields
     const newErrors: Record<string, string> = {};
-    if (providerTypeData) {
+    if (providerTypeData && providerTypeData.setupSteps) {
           providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type !== "info" && step.type !== "oauth" && step.type !== "webhook" && step.required) {
           const value = config[step.alias];
@@ -230,7 +230,7 @@ export function ProviderConfigModal({
 
     // Build config object, excluding masked secrets in edit mode
     const configToSend: Record<string, any> = {};
-    if (providerTypeData) {
+    if (providerTypeData && providerTypeData.setupSteps) {
       providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
         if (step.type !== "info" && step.type !== "oauth") {
           // For webhook steps, include the default value if it exists
@@ -590,13 +590,13 @@ export function ProviderConfigModal({
           </div>
 
           <Loader isLoading={isLoadingType} loadingMessage="Loading provider configuration...">
-            {providerTypeData && providerTypeData.setupSteps.length > 0 && (
+            {providerTypeData && providerTypeData.setupSteps && providerTypeData.setupSteps.length > 0 && (
               <div className="space-y-4 border-t pt-4">
                 <h3 className="font-medium text-sm">Configuration</h3>
                 {providerTypeData.setupSteps.map((step: ProviderSetupStep) => renderSetupStep(step))}
               </div>
             )}
-            {providerTypeData && providerTypeData.setupSteps.length === 0 && (
+            {providerTypeData && (!providerTypeData.setupSteps || providerTypeData.setupSteps.length === 0) && (
               <div className="text-sm text-muted-foreground border-t pt-4">
                 This provider type requires no additional configuration.
               </div>

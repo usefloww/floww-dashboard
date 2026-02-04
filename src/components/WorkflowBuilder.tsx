@@ -329,7 +329,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
     queryKey: ['deployments', workflowId],
     queryFn: async () => {
       const params = { workflowId: workflowId };
-      const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
+      const data = await api.get<WorkflowDeploymentsResponse>("/workflow-deployments", { params });
       return (data.deployments || []).sort(
         (a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()
       );
@@ -355,7 +355,7 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
         deploymentData.runtimeId = latestDeployment.runtimeId;
       }
       
-      return api.post("/workflow_deployments", deploymentData);
+      return api.post("/workflow-deployments", deploymentData);
     },
     onSuccess: () => {
       showSuccessNotification("Deployed!", "Your workflow has been deployed successfully.");
