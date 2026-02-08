@@ -62,9 +62,13 @@ interface MessagePart {
     question?: string;
     options?: QuestionOption[];
     provider_type?: string;
+    provider?: string;
     code?: string;
     allow_multiple?: boolean;
+    allowMultiple?: boolean;
     secret_name?: string;
+    secretName?: string;
+    description?: string;
     plan?: any;
     awaiting_approval?: boolean;
   };

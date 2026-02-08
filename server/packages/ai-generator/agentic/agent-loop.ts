@@ -4,7 +4,7 @@
  * Implements the agentic workflow builder using Vercel AI SDK.
  */
 
-import { generateText, stepCountIs, type CoreMessage } from 'ai';
+import { generateText, stepCountIs, type ModelMessage } from 'ai';
 import { createOpenRouter, type OpenRouterProvider } from '@openrouter/ai-sdk-provider';
 import { settings } from '~/server/settings';
 import type { AgentContext, AgentResponse, ConversationMessage, MessagePart, Plan, ToolResult } from './context';
@@ -52,7 +52,7 @@ function getModelName(): string {
 /**
  * Convert conversation messages to AI SDK format
  */
-function convertToAIMessages(messages: ConversationMessage[]): CoreMessage[] {
+function convertToAIMessages(messages: ConversationMessage[]): ModelMessage[] {
   return messages.map((msg) => ({
     role: msg.role,
     content: msg.content,
@@ -114,7 +114,7 @@ export async function processMessage(
     }
   }
 
-  const messages: CoreMessage[] = [
+  const messages: ModelMessage[] = [
     ...convertedMessages,
     { role: 'user', content: userMessage },
   ];
