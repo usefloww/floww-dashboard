@@ -18,6 +18,7 @@ export interface OAuthTokens {
 
 export interface OAuthProvider {
   name: string;
+  isConfigured(): boolean;
   getAuthorizationUrl(scopes: string[], state: string, redirectUri: string): string;
   exchangeCode(code: string, redirectUri: string): Promise<OAuthTokens>;
   refreshTokens(refreshToken: string): Promise<OAuthTokens>;
@@ -38,6 +39,10 @@ export class GoogleOAuthProvider implements OAuthProvider {
   constructor() {
     this.clientId = settings.oauth.GOOGLE_OAUTH_CLIENT_ID;
     this.clientSecret = settings.oauth.GOOGLE_OAUTH_CLIENT_SECRET;
+  }
+
+  isConfigured(): boolean {
+    return !!(this.clientId && this.clientSecret);
   }
 
   getAuthorizationUrl(scopes: string[], state: string, redirectUri: string): string {

@@ -227,6 +227,13 @@ const serverEntry: ServerEntry = {
           return handleWebhook(request, path);
         }
 
+        // Handle OAuth routes (not under /api/ - OAuth needs special handling)
+        if (url.pathname.startsWith("/oauth/")) {
+          const { handleOAuth } = await import("~/server/api/routes/oauth");
+          const path = url.pathname.slice("/oauth".length); // Get everything after /oauth
+          return handleOAuth(request, path);
+        }
+
         // Handle API routes
         if (url.pathname.startsWith("/api/")) {
           const apiResponse = await handleApiRequest(request);

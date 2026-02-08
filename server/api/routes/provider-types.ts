@@ -10,6 +10,7 @@ import {
   getAllProviderDefinitions,
   getProviderDefinition,
 } from 'floww/providers/server';
+import type { SetupStep } from 'floww/providers/server';
 
 // Backend metadata for display purposes (not in SDK)
 const PROVIDER_METADATA: Record<string, { name: string; description: string }> = {
@@ -70,6 +71,49 @@ get('/provider-types', async ({ user }) => {
   });
 });
 
+// Transform SDK setup steps to frontend format
+function transformSetupSteps(steps: SetupStep[] | undefined) {
+  if (!steps) return [];
+  
+  return steps.map((step: SetupStep) => {
+    if (step.type === 'oauth') {
+      // SDK uses 'provider', frontend expects 'providerName' and 'alias'
+      return {
+        type: 'oauth' as const,
+        title: `Connect ${step.provider.charAt(0).toUpperCase() + step.provider.slice(1)} Account`,
+        alias: step.provider, // Use provider name as alias
+        providerName: step.provider,
+        scopes: step.scopes,
+        description: step.description,
+        required: true,
+      };
+    }
+    
+    if (step.type === 'value' || step.type === 'secret') {
+      // SDK uses 'key' and 'label', frontend expects 'alias' and 'title'
+      return {
+        type: step.type,
+        title: step.label,
+        alias: step.key,
+        description: step.description,
+        required: step.required,
+        placeholder: step.placeholder,
+      };
+    }
+    
+    if (step.type === 'webhook') {
+      return {
+        type: 'webhook' as const,
+        title: step.label,
+        alias: step.key,
+        description: step.description,
+      };
+    }
+    
+    return step;
+  });
+}
+
 // Get single provider type metadata
 get('/provider-types/:providerType', async ({ user, params }) => {
   if (!user) return errorResponse('Unauthorized', 401);
@@ -87,7 +131,7 @@ get('/provider-types/:providerType', async ({ user, params }) => {
     providerType,
     name: meta.name,
     description: meta.description,
-    setupSteps: def.setupSteps,
+    setupSteps: transformSetupSteps(def.setupSteps),
     triggerTypes: Object.keys(def.triggerDefinitions),
   });
 });

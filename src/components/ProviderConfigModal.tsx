@@ -35,6 +35,8 @@ export function ProviderConfigModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [oauthConnected, setOauthConnected] = useState<Record<string, boolean>>({});
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  // Track provider created during OAuth flow (for create+connect in one step)
+  const [createdProviderId, setCreatedProviderId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Handle OAuth callback messages from popup
@@ -44,16 +46,23 @@ export function ProviderConfigModal({
         // Mark OAuth as connected for the current step
         if (oauthLoading) {
           setOauthConnected(prev => ({ ...prev, [oauthLoading]: true }));
-          showSuccessNotification("Connected", "OAuth connection successful.");
-          // Refresh provider data
           queryClient.invalidateQueries({ queryKey: ["providers", namespaceId] });
+          
+          // If we created the provider during this flow, close the modal
+          if (createdProviderId) {
+            showSuccessNotification("Connected", "Provider created and connected.");
+            onOpenChange(false);
+          } else {
+            showSuccessNotification("Connected", "OAuth connection successful.");
+          }
         }
       } else {
         showErrorNotification("OAuth Failed", event.data.error || "Failed to connect.");
       }
       setOauthLoading(null);
+      setCreatedProviderId(null);
     }
-  }, [oauthLoading, queryClient, namespaceId]);
+  }, [oauthLoading, createdProviderId, queryClient, namespaceId, onOpenChange]);
 
   // Set up OAuth message listener
   useEffect(() => {
@@ -119,6 +128,7 @@ export function ProviderConfigModal({
         }
       }
       setErrors({});
+      setCreatedProviderId(null);
     }
   }, [open, provider, isEditMode, initialProviderType, providerTypeData]);
 
@@ -166,8 +176,11 @@ export function ProviderConfigModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["providers", namespaceId] });
-      showSuccessNotification("Provider created", "The provider has been created successfully.");
-      onOpenChange(false);
+      // Don't close modal or show success if we're in OAuth flow - the OAuth callback will handle it
+      if (!oauthLoading) {
+        showSuccessNotification("Provider created", "The provider has been created successfully.");
+        onOpenChange(false);
+      }
     },
     onError: (error) => {
       const errorMessage = handleApiError(error);
@@ -190,6 +203,46 @@ export function ProviderConfigModal({
       showErrorNotification("Failed to update provider", errorMessage);
     },
   });
+
+  // Build config object for sending to API
+  const buildConfigToSend = useCallback((): Record<string, any> => {
+    const configToSend: Record<string, any> = {};
+    if (providerTypeData && providerTypeData.setupSteps) {
+      providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
+        if (step.type !== "info" && step.type !== "oauth") {
+          // For webhook steps, include the default value if it exists
+          if (step.type === "webhook") {
+            const webhookUrl = provider?.config[step.alias] || step.default;
+            if (webhookUrl) {
+              configToSend[step.alias] = webhookUrl;
+            }
+            return;
+          }
+
+          const value = config[step.alias];
+          // In edit mode, if it's a secret field and value is empty or masked, preserve existing
+          if (isEditMode && step.type === "secret" && (!value || value === "" || value === "••••••••")) {
+            // Don't include - existing value will be preserved
+            return;
+          }
+          
+          // For non-secret fields, use default if value is empty
+          if (step.type !== "secret") {
+            const finalValue = value && value.trim() !== "" ? value : (step.default || "");
+            if (finalValue !== "") {
+              configToSend[step.alias] = finalValue;
+            }
+          } else {
+            // For secret fields, only include non-empty values (no defaults)
+            if (value !== undefined && value !== "" && value !== "••••••••") {
+              configToSend[step.alias] = value;
+            }
+          }
+        }
+      });
+    }
+    return configToSend;
+  }, [providerTypeData, provider, config, isEditMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,42 +281,7 @@ export function ProviderConfigModal({
       return;
     }
 
-    // Build config object, excluding masked secrets in edit mode
-    const configToSend: Record<string, any> = {};
-    if (providerTypeData && providerTypeData.setupSteps) {
-      providerTypeData.setupSteps.forEach((step: ProviderSetupStep) => {
-        if (step.type !== "info" && step.type !== "oauth") {
-          // For webhook steps, include the default value if it exists
-          if (step.type === "webhook") {
-            const webhookUrl = provider?.config[step.alias] || step.default;
-            if (webhookUrl) {
-              configToSend[step.alias] = webhookUrl;
-            }
-            return;
-          }
-
-          const value = config[step.alias];
-          // In edit mode, if it's a secret field and value is empty or masked, preserve existing
-          if (isEditMode && step.type === "secret" && (!value || value === "" || value === "••••••••")) {
-            // Don't include - existing value will be preserved
-            return;
-          }
-          
-          // For non-secret fields, use default if value is empty
-          if (step.type !== "secret") {
-            const finalValue = value && value.trim() !== "" ? value : (step.default || "");
-            if (finalValue !== "") {
-              configToSend[step.alias] = finalValue;
-            }
-          } else {
-            // For secret fields, only include non-empty values (no defaults)
-            if (value !== undefined && value !== "" && value !== "••••••••") {
-              configToSend[step.alias] = value;
-            }
-          }
-        }
-      });
-    }
+    const configToSend = buildConfigToSend();
 
     if (isEditMode) {
       updateMutation.mutate({
@@ -284,6 +302,7 @@ export function ProviderConfigModal({
     setAlias("");
     setConfig({});
     setErrors({});
+    setCreatedProviderId(null);
     onOpenChange(false);
   };
 
@@ -363,15 +382,47 @@ export function ProviderConfigModal({
       const isLoading = oauthLoading === step.alias;
 
       const handleOAuthConnect = async () => {
-        if (!provider?.id) {
-          showErrorNotification("Error", "Please save the provider first before connecting OAuth.");
+        // Validate alias before proceeding
+        if (!alias.trim()) {
+          setErrors({ alias: "Alias is required" });
+          return;
+        }
+
+        // Validate provider type in create mode
+        if (!isEditMode && !selectedProviderType) {
+          setErrors({ providerType: "Provider type is required" });
           return;
         }
 
         setOauthLoading(step.alias);
+        let providerId = provider?.id;
+
+        // In create mode, create the provider first
+        if (!providerId) {
+          try {
+            const configToSend = buildConfigToSend();
+            const created = await createMutation.mutateAsync({
+              namespaceId,
+              type: selectedProviderType,
+              alias: alias.trim(),
+              config: configToSend,
+            });
+            if (!created?.id) {
+              showErrorNotification("Error", "Failed to get provider ID after creation.");
+              setOauthLoading(null);
+              return;
+            }
+            const newProviderId = created.id as string;
+            providerId = newProviderId;
+            setCreatedProviderId(newProviderId);
+          } catch {
+            setOauthLoading(null);
+            return; // Error already shown by mutation onError
+          }
+        }
 
         try {
-          const { auth_url } = await getOAuthAuthorizeUrl(step.providerName!, provider.id);
+          const { auth_url } = await getOAuthAuthorizeUrl(step.providerName!, providerId as string);
 
           // Open popup for OAuth flow
           const width = 600;
@@ -413,7 +464,7 @@ export function ProviderConfigModal({
                   variant="outline"
                   size="sm"
                   onClick={handleOAuthConnect}
-                  disabled={isLoading || !isEditMode}
+                  disabled={isLoading}
                 >
                   {isLoading ? (
                     "Connecting..."
@@ -427,11 +478,6 @@ export function ProviderConfigModal({
               )}
             </div>
           </div>
-          {!isEditMode && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Save the provider first, then return to connect your account.
-            </p>
-          )}
         </div>
       );
     }
