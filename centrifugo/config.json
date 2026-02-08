@@ -5,21 +5,32 @@
   "http_server": {
     "port": "8000"
   },
+  "http_api": {
+    "key": "${CENTRIFUGO_API_KEY}"
+  },
   "websocket": {
     "handler_prefix": "/ws/connection/websocket"
+  },
+  "admin": {
+    "enabled": ${CENTRIFUGO_ADMIN_ENABLED},
+    "insecure": ${CENTRIFUGO_ADMIN_INSECURE}
   },
   "client": {
     "proxy": {
       "connect": {
         "enabled": true,
+        "endpoint": "${CENTRIFUGO_CONNECT_PROXY_ENDPOINT}",
         "timeout": "5s",
         "http_headers": ["Authorization"]
       }
-    }
+    },
+    "allowed_origins": ${CENTRIFUGO_ALLOWED_ORIGINS},
+    "allow_anonymous_connect_without_token": ${CENTRIFUGO_ALLOW_ANONYMOUS}
   },
   "channel": {
     "proxy": {
       "subscribe": {
+        "endpoint": "${CENTRIFUGO_SUBSCRIBE_PROXY_ENDPOINT}",
         "timeout": "5s",
         "http_headers": ["Authorization"]
       }
