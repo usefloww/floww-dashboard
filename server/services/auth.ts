@@ -81,17 +81,28 @@ async function getUserFromApiKey(apiKey: string): Promise<AuthenticatedUser | nu
 }
 
 /**
- * Get user from JWT token
+ * Get user from JWT token.
+ * For WorkOS/OIDC, tokenUser.id is the provider's user id (workos_user_id).
+ * For password auth, tokenUser.id is the internal user id (users.id).
  */
 async function getUserFromToken(tokenUser: TokenUser): Promise<AuthenticatedUser | null> {
   const db = getDb();
 
-  // Look up user by workos_user_id
-  const [user] = await db
+  // Try by workos_user_id first (WorkOS/OIDC tokens)
+  let [user] = await db
     .select()
     .from(users)
     .where(eq(users.workosUserId, tokenUser.id))
     .limit(1);
+
+  // Fall back to users.id (password auth tokens use sub = internal user id)
+  if (!user) {
+    [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, tokenUser.id))
+      .limit(1);
+  }
 
   if (!user) {
     return null;

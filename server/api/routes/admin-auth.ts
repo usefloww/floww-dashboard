@@ -17,7 +17,7 @@ import { getDb } from '~/server/db';
 import { users } from '~/server/db/schema';
 import { generateUlidUuid } from '~/server/utils/uuid';
 import { createJwt } from '~/server/utils/jwt';
-import { createSessionCookie, clearSessionCookie } from '~/server/utils/session';
+import { buildSessionSetCookieHeader, clearSessionCookie } from '~/server/utils/session';
 import bcrypt from 'bcryptjs';
 import { logger } from '~/server/utils/logger';
 import { settings } from '~/server/settings';
@@ -83,19 +83,21 @@ post('/auth/login', async ({ request }) => {
 
   // Create JWT and session cookie
   const token = await createJwt({ sub: user.id });
-  const cookieHeader = createSessionCookie(token);
+  const setCookie = buildSessionSetCookieHeader(token, {
+    secure: !getBaseUrl(request).includes('localhost'),
+  });
 
   return new Response(JSON.stringify({ success: true, redirect: next }), {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': cookieHeader,
+      'Set-Cookie': setCookie,
     },
   });
 }, false);
 
 // OAuth callback (WorkOS)
-get('/auth/callback', async ({ query }) => {
+get('/auth/callback', async ({ query, request }) => {
   if (authType !== 'workos') {
     return errorResponse('OAuth callback is disabled', 400);
   }
@@ -173,13 +175,15 @@ get('/auth/callback', async ({ query }) => {
 
     // Create JWT and session cookie
     const token = await createJwt({ sub: userId });
-    const cookieHeader = createSessionCookie(token);
+    const setCookie = buildSessionSetCookieHeader(token, {
+      secure: !getBaseUrl(request).includes('localhost'),
+    });
 
     return new Response(null, {
       status: 302,
       headers: {
         Location: state,
-        'Set-Cookie': cookieHeader,
+        'Set-Cookie': setCookie,
       },
     });
   } catch (error) {
@@ -266,7 +270,9 @@ post('/auth/setup', async ({ request }) => {
 
   // Create JWT and session cookie
   const token = await createJwt({ sub: newUser[0].id });
-  const cookieHeader = createSessionCookie(token);
+  const setCookie = buildSessionSetCookieHeader(token, {
+    secure: !getBaseUrl(request).includes('localhost'),
+  });
 
   return new Response(
     JSON.stringify({
@@ -280,7 +286,7 @@ post('/auth/setup', async ({ request }) => {
       status: 201,
       headers: {
         'Content-Type': 'application/json',
-        'Set-Cookie': cookieHeader,
+        'Set-Cookie': setCookie,
       },
     }
   );

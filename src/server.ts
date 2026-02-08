@@ -42,9 +42,12 @@ async function handleAuthLogin(request: Request): Promise<Response> {
     return Response.redirect(new URL(nextUrl, request.url), 302);
   }
 
-  // For password auth, we'd show a login form - not yet implemented
+  // For password auth, redirect to login page
   if (authType === "password") {
-    return new Response("Password authentication not yet implemented", { status: 501 });
+    return Response.redirect(
+      new URL(`/login?next=${encodeURIComponent(nextUrl)}`, request.url),
+      302
+    );
   }
 
   // WorkOS OAuth flow

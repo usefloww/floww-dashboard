@@ -5,6 +5,7 @@ import {
   Scripts,
   createRootRoute,
   redirect,
+  useLocation,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -37,7 +38,7 @@ export const Route = createRootRoute({
   component: RootComponent,
     beforeLoad: async ({ location }) => {
     // Skip authentication for public endpoints
-    const publicPaths = ['/health', '/auth/login', '/auth/callback', '/auth/logout']
+    const publicPaths = ['/health', '/auth/login', '/auth/callback', '/auth/logout', '/login', '/setup']
     if (publicPaths.some(path => location.pathname.startsWith(path))) {
       return {}
     }
@@ -70,7 +71,12 @@ function RootComponent() {
   return <RootDocument />
 }
 
+const AUTH_PAGE_PATHS = ['/login', '/setup']
+
 function RootDocument() {
+  const location = useLocation()
+  const isAuthPage = AUTH_PAGE_PATHS.some((path) => location.pathname === path)
+
   return (
     <html suppressHydrationWarning>
       <head>
@@ -82,17 +88,26 @@ function RootDocument() {
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               <div className="h-screen">
-                <div className="flex h-full">
-                  <Sidebar />
-                  <main className="flex-1 overflow-auto">
-                    <div className="p-8">
-                      <Outlet />
+                {isAuthPage ? (
+                  <div className="h-screen flex flex-col items-center justify-center bg-background">
+                    <Outlet />
+                    <NotificationContainer />
+                    <TanStackRouterDevtools />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex h-full">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto">
+                        <div className="p-8">
+                          <Outlet />
+                        </div>
+                      </main>
                     </div>
-                  </main>
-                </div>
-
-                <NotificationContainer />
-                <TanStackRouterDevtools />
+                    <NotificationContainer />
+                    <TanStackRouterDevtools />
+                  </>
+                )}
               </div>
             </AuthProvider>
           </QueryClientProvider>

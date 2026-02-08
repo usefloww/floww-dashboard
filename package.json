@@ -19,10 +19,14 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx server/db/seed.ts",
+    "db:seed:reset": "tsx server/db/seed.ts --reset",
     "sdk:build": "pnpm --filter floww build",
     "sdk:test": "pnpm --filter floww test",
     "sdk:typecheck": "pnpm --filter floww typecheck",
-    "knip": "knip"
+    "knip": "knip",
+    "env:pull": "tsx scripts/env-sync.ts pull",
+    "env:push": "tsx scripts/env-sync.ts push"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.36",
@@ -31,6 +35,8 @@
     "@ai-sdk/react": "^3.0.71",
     "@auth0/auth0-react": "^2.3.0",
     "@aws-sdk/client-lambda": "^3.975.0",
+    "@aws-sdk/client-ssm": "^3.985.0",
+    "@aws-sdk/credential-providers": "^3.985.0",
     "@llamaindex/chat-ui": "^0.6.1",
     "@monaco-editor/react": "^4.7.0",
     "@openrouter/ai-sdk-provider": "^2.1.1",

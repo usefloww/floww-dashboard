@@ -120,6 +120,21 @@ export function createSessionCookie(
   return `${signedValue}.${signature}`;
 }
 
+const SESSION_MAX_AGE = 30 * 24 * 3600; // 30 days
+
+/**
+ * Build the full Set-Cookie header value for a session cookie.
+ * Use this when sending the session to the client.
+ */
+export function buildSessionSetCookieHeader(
+  jwtToken: string,
+  options?: { secure?: boolean }
+): string {
+  const value = createSessionCookie(jwtToken);
+  const secure = options?.secure ?? false;
+  return `session=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MAX_AGE}${secure ? '; Secure' : ''}`;
+}
+
 /**
  * Parse a session cookie created by Python's itsdangerous.URLSafeTimedSerializer
  *

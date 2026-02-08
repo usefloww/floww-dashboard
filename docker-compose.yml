@@ -9,7 +9,7 @@ services:
       # Only need server code and drizzle config for migrations
       - ./server:/app/server
       - ./drizzle.config.ts:/app/drizzle.config.ts
-    command: pnpm db:push
+    command: sh -c "pnpm db:push && pnpm db:seed"
     env_file:
       - .env
     environment:
