@@ -148,12 +148,26 @@ services:
           memory: 256M
       labels:
         - "traefik.enable=true"
+        # Main app.floww.dev route
         - "traefik.http.routers.floww-dashboard.rule=Host(`app.floww.dev`) && !PathPrefix(`/ws`)"
         - "traefik.http.routers.floww-dashboard.entrypoints=websecure"
         - "traefik.http.routers.floww-dashboard.tls.certresolver=myresolver"
         - "traefik.http.services.floww-dashboard.loadbalancer.server.port=3000"
         - "traefik.http.services.floww-dashboard.loadbalancer.healthcheck.path=/health"
         - "traefik.http.services.floww-dashboard.loadbalancer.healthcheck.interval=30s"
+        # Redirect from app.usefloww.dev to app.floww.dev (excluding /webhook)
+        - "traefik.http.middlewares.usefloww-redirect.redirectregex.regex=^https://app\\.usefloww\\.dev/(.*)"
+        - "traefik.http.middlewares.usefloww-redirect.redirectregex.replacement=https://app.floww.dev/$${1}"
+        - "traefik.http.middlewares.usefloww-redirect.redirectregex.permanent=true"
+        - "traefik.http.routers.usefloww-redirect.rule=Host(`app.usefloww.dev`) && !PathPrefix(`/webhook`)"
+        - "traefik.http.routers.usefloww-redirect.entrypoints=websecure"
+        - "traefik.http.routers.usefloww-redirect.tls.certresolver=myresolver"
+        - "traefik.http.routers.usefloww-redirect.middlewares=usefloww-redirect"
+        # Direct route for app.usefloww.dev/webhook
+        - "traefik.http.routers.usefloww-webhook.rule=Host(`app.usefloww.dev`) && PathPrefix(`/webhook`)"
+        - "traefik.http.routers.usefloww-webhook.entrypoints=websecure"
+        - "traefik.http.routers.usefloww-webhook.tls.certresolver=myresolver"
+        - "traefik.http.routers.usefloww-webhook.service=floww-dashboard"
 
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
