@@ -125,13 +125,17 @@ export interface ToolResult {
 // ============================================================================
 
 export const AVAILABLE_PROVIDERS = [
-  { name: 'slack', displayName: 'Slack', capabilities: ['triggers', 'actions'] },
+  { name: 'builtin', displayName: 'Builtin', capabilities: ['triggers (webhook, cron, manual)'] },
   { name: 'github', displayName: 'GitHub', capabilities: ['triggers', 'actions'] },
-  { name: 'google', displayName: 'Google', capabilities: ['actions'] },
-  { name: 'stripe', displayName: 'Stripe', capabilities: ['triggers', 'actions'] },
-  { name: 'discord', displayName: 'Discord', capabilities: ['actions'] },
-  { name: 'openai', displayName: 'OpenAI', capabilities: ['actions'] },
-  { name: 'http', displayName: 'HTTP/Webhook', capabilities: ['triggers', 'actions'] },
+  { name: 'slack', displayName: 'Slack', capabilities: ['triggers', 'actions'] },
+  { name: 'discord', displayName: 'Discord', capabilities: ['triggers', 'actions'] },
+  { name: 'jira', displayName: 'Jira', capabilities: ['triggers', 'actions'] },
+  { name: 'gitlab', displayName: 'GitLab', capabilities: ['triggers'] },
+  { name: 'todoist', displayName: 'Todoist', capabilities: ['actions'] },
+  { name: 'kvstore', displayName: 'KV Store', capabilities: ['key-value storage'] },
+  { name: 'openai', displayName: 'OpenAI', capabilities: ['AI models'] },
+  { name: 'anthropic', displayName: 'Anthropic', capabilities: ['AI models'] },
+  { name: 'googleai', displayName: 'Google AI', capabilities: ['AI models'] },
 ] as const;
 
 export type AvailableProviderName = (typeof AVAILABLE_PROVIDERS)[number]['name'];

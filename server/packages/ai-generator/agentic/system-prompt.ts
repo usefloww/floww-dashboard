@@ -63,61 +63,101 @@ You have access to the following tools to help users:
     parts.push(`\n## Configured Providers for This Namespace\n${configured || 'None configured yet'}`);
   }
 
-  // Add SDK documentation
   parts.push(`
 ## Floww SDK Patterns
 
+Workflows are built by instantiating provider classes and registering triggers on them.
+There is NO \`defineWorkflow\` function. Do NOT import \`trigger\` or \`action\` — they do not exist.
+
 ### Basic Workflow Structure
 \`\`\`typescript
-import { defineWorkflow, trigger } from 'floww';
-import { Secret } from 'floww/secrets';
+import { Builtin } from 'floww';
 
-export default defineWorkflow({
-  name: 'My Workflow',
-  triggers: [
-    trigger.webhook({ path: '/my-hook' }),
-    // OR trigger.cron({ schedule: '0 9 * * *' }),
-    // OR trigger.manual(),
-  ],
-  run: async (ctx) => {
-    // Access trigger data
-    const data = ctx.trigger.data;
-    
-    // Use secrets for API keys
-    const apiKey = Secret<'MY_API_KEY'>;
-    
-    // Return result
-    return { success: true };
+const builtin = new Builtin();
+
+builtin.triggers.onWebhook({
+  handler: async (ctx, event) => {
+    const body = event.body;
   },
 });
 \`\`\`
 
-### Trigger Types
-- \`trigger.webhook({ path: '/path' })\` - HTTP webhook trigger
-- \`trigger.cron({ schedule: '0 9 * * *' })\` - Scheduled trigger (cron syntax)
-- \`trigger.manual()\` - Manual/user-initiated trigger
+### Builtin Triggers
+- \`builtin.triggers.onWebhook({ handler })\` — HTTP webhook trigger
+- \`builtin.triggers.onCron({ expression: '0 9 * * *', handler })\` — scheduled trigger (cron syntax)
+- \`builtin.triggers.onManual({ name: 'run', handler })\` — manual trigger
 
-### Using Secrets
+### Provider Classes
+
+All providers are imported from \`'floww'\` and instantiated with \`new\`.
+Each provider has \`.triggers\` and \`.actions\` objects with methods.
+
+**GitHub** — \`new GitHub()\`
+- Triggers: \`onPush\`, \`onPullRequest\`, \`onIssue\`, \`onIssueComment\`, \`onRelease\`
+- Actions: \`getRepository\`, \`listRepositories\`, \`createIssue\`, \`updateIssue\`, \`closeIssue\`, \`createPullRequest\`, \`mergePullRequest\`, \`createComment\`, \`listIssueComments\`, \`searchIssues\`, \`getFileContent\`, \`createOrUpdateFile\`, \`listBranches\`, \`createBranch\`, \`triggerWorkflow\`, \`getCurrentUser\`, \`getUser\`, and more
+
+**Slack** — \`new Slack()\`
+- Triggers: \`onMessage\`, \`onReaction\`
+- Actions: \`sendMessage\`, \`updateMessage\`, \`deleteMessage\`, \`addReaction\`, \`removeReaction\`, \`uploadFile\`, \`listChannels\`, \`getChannel\`, \`createChannel\`, \`listUsers\`, \`getUser\`, \`conversationHistory\`
+
+**Discord** — \`new Discord()\`
+- Triggers: \`onMessage\`, \`onReaction\`, \`onMemberJoin\`, \`onMemberLeave\`, \`onMemberUpdate\`
+- Actions: \`sendMessage\`, \`sendDirectMessage\`, \`editMessage\`, \`deleteMessage\`, \`addReaction\`, \`createChannel\`, \`listChannels\`, \`addRole\`, \`removeRole\`, \`getMember\`, \`listMembers\`, \`kickMember\`, \`banMember\`, \`createEmbed\`
+
+**Jira** — \`new Jira()\`
+- Triggers: \`onIssueCreated\`, \`onIssueUpdated\`, \`onCommentAdded\`
+- Actions: \`getIssue\`, \`createIssue\`, \`updateIssue\`, \`deleteIssue\`, \`searchIssues\`, \`addComment\`, \`updateComment\`, \`deleteComment\`, \`getTransitions\`, \`transitionIssue\`, \`getProject\`, \`listProjects\`
+
+**Gitlab** — \`new Gitlab()\`
+- Triggers: \`onMergeRequest\`
+
+**Todoist** — \`new Todoist()\`
+- Actions: \`getTask\`, \`getTasks\`, \`createTask\`, \`updateTask\`, \`deleteTask\`, \`closeTask\`, \`reopenTask\`, \`moveTask\`, \`quickAddTask\`
+
+**KVStore** — \`new KVStore()\`
+- Methods: \`getTable(name)\` returns a typed table, \`get\`, \`set\`, \`delete\`, \`listTables\`, \`listKeys\`, \`listItems\`
+
+### Secrets
 \`\`\`typescript
-import { Secret } from 'floww/secrets';
+import { Secret } from 'floww';
+import { z } from 'zod';
 
-// Access a secret - will prompt user to configure it
-const slackToken = Secret<'SLACK_BOT_TOKEN'>;
+const mySecret = new Secret('my-secret', z.object({
+  api_key: z.string(),
+}));
+
+// Inside a handler:
+const { api_key } = mySecret.value();
 \`\`\`
 
 ### HTTP Requests
+\`fetch()\` is available globally — no import needed.
+
 \`\`\`typescript
-// Use fetch for HTTP requests
 const response = await fetch('https://api.example.com/data', {
   method: 'POST',
-  headers: {
-    'Authorization': \`Bearer \${Secret<'API_KEY'>}\`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ ... }),
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ key: 'value' }),
 });
 const data = await response.json();
-\`\`\``);
+\`\`\`
+
+### AI Usage
+\`\`\`typescript
+import { OpenAI } from 'floww';
+import { generateText } from 'floww/ai';
+
+const openai = new OpenAI();
+
+// Inside a handler:
+const result = await generateText({
+  model: openai.models.gpt4o,
+  prompt: 'Hello',
+});
+\`\`\`
+
+AI providers: \`OpenAI\` (models: \`gpt4o\`, \`gpt4oMini\`), \`Anthropic\` (models: \`claude35Sonnet\`, \`claude3Opus\`), \`GoogleAI\` (models: \`gemini15Pro\`, \`gemini2Flash\`).
+Functions from \`floww/ai\`: \`generateText\`, \`streamText\`, \`generateObject\`, \`streamObject\`.`);
 
   // Add current code context if modifying existing workflow
   if (context.currentCode) {
@@ -157,7 +197,7 @@ ${plan.actions.map((a, i) => `${i + 1}. ${a.provider}: ${a.description}`).join('
 ${plan.requiredProviders.join(', ')}
 
 ## Required Secrets
-${plan.requiredSecrets.map((s) => `Secret<'${s}'>`).join(', ')}
+${plan.requiredSecrets.map((s) => `new Secret('${s}', ...)`).join(', ')}
 
 ${context.currentCode ? `\n## Existing Code to Modify\n\`\`\`typescript\n${context.currentCode}\n\`\`\`` : ''}
 

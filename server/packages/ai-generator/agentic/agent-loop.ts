@@ -251,7 +251,7 @@ async function generateCodeFromPlan(
       system: systemPrompt,
       messages: [{ role: 'user', content: codeGenPrompt }],
       tools,
-      stopWhen: (result) => shouldStop || stepCountIs(3)(result),
+      stopWhen: (result) => shouldStop || stepCountIs(6)(result),
       onStepFinish: ({ toolResults }) => {
         if (toolResults && toolResults.length > 0) {
           for (const toolResult of toolResults) {
