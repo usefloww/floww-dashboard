@@ -53,6 +53,7 @@ export function buildSecretParts(secrets: string[]): MessagePart[] {
       secretName,
       secretType: inferSecretType(secretName),
       description: `API key or credential for ${secretName}`,
+      configured: false,
     };
     return {
       type: 'data-secret-setup' as const,
