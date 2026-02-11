@@ -57,6 +57,8 @@ export interface SecretSetupData {
   secretName: string;
   secretType: string;
   description?: string;
+  configured: boolean;
+  message?: string;
 }
 
 export interface CodeData {
@@ -80,10 +82,15 @@ export interface ConfiguredProvider {
   configured: boolean;
 }
 
+export interface ConfiguredSecret {
+  name: string;
+}
+
 export interface AgentContext {
   namespaceId: string;
   workflowId?: string;
   configuredProviders: ConfiguredProvider[];
+  configuredSecrets: ConfiguredSecret[];
   currentCode?: string;
   currentPlan?: Plan;
 }

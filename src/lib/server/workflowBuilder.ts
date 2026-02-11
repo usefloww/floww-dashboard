@@ -73,6 +73,9 @@ export const builderChat = createServerFn({ method: 'POST' })
     const { getWorkflow } = await import('~/server/services/workflow-service');
     const { processMessage } = await import('~/server/packages/ai-generator/agentic');
     const { listProviders } = await import('~/server/services/provider-service');
+    const { getDb } = await import('~/server/db');
+    const { secrets: secretsTable } = await import('~/server/db/schema');
+    const { eq } = await import('drizzle-orm');
 
     // Check access
     const hasAccess = await hasWorkflowAccess(user.id, data.workflowId);
@@ -104,8 +107,21 @@ export const builderChat = createServerFn({ method: 'POST' })
           configured: true,
         }));
       } catch {
-        // Provider service might not be available, continue with empty list
         configuredProviders = [];
+      }
+
+      // Get configured secrets for this namespace (names only)
+      let configuredSecrets: Array<{ name: string }> = [];
+
+      try {
+        const db = getDb();
+        const secretRows = await db
+          .select({ name: secretsTable.name })
+          .from(secretsTable)
+          .where(eq(secretsTable.namespaceId, namespaceId));
+        configuredSecrets = secretRows;
+      } catch {
+        configuredSecrets = [];
       }
 
       // Convert messages to conversation format with validation
@@ -122,6 +138,7 @@ export const builderChat = createServerFn({ method: 'POST' })
         namespaceId,
         workflowId: data.workflowId,
         configuredProviders,
+        configuredSecrets,
         currentCode: data.currentCode || undefined,
         currentPlan: data.currentPlan,
       };

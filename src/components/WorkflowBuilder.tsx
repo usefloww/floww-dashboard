@@ -38,6 +38,7 @@ import { useNamespaceStore } from "@/stores/namespaceStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Provider, WorkflowDeployment, WorkflowDeploymentsResponse } from "@/types/api";
 import { ProviderConfigModal } from "@/components/ProviderConfigModal";
+import { SecretConfigModal } from "@/components/SecretConfigModal";
 
 // ------------------------------------------------------------------
 // Types
@@ -45,6 +46,12 @@ import { ProviderConfigModal } from "@/components/ProviderConfigModal";
 
 interface WorkflowBuilderProps {
   workflowId: string;
+}
+
+interface SecretInfo {
+  id: string;
+  name: string;
+  provider?: string;
 }
 
 interface QuestionOption {
@@ -69,6 +76,7 @@ interface MessagePart {
     secret_name?: string;
     secretName?: string;
     description?: string;
+    configured?: boolean;
     plan?: any;
     awaiting_approval?: boolean;
   };
@@ -147,6 +155,7 @@ function processParts(parts: MessagePart[]): any[] {
           data: {
             message: part.data?.description || part.data?.message,
             secret_name: part.data?.secretName || part.data?.secret_name,
+            configured: part.data?.configured,
           },
         };
       case "data-code":
@@ -287,6 +296,11 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   const [selectedProviderType, setSelectedProviderType] = useState<string | undefined>(undefined);
   const [pendingProviderType, setPendingProviderType] = useState<string | undefined>(undefined);
 
+  const [secretModalOpen, setSecretModalOpen] = useState(false);
+  const [selectedSecretName, setSelectedSecretName] = useState<string | undefined>(undefined);
+  const [selectedSecretDescription, setSelectedSecretDescription] = useState<string | undefined>(undefined);
+  const [pendingSecretName, setPendingSecretName] = useState<string | undefined>(undefined);
+
   const queryClient = useQueryClient();
 
   // Fetch providers for the current namespace
@@ -302,6 +316,19 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
   });
 
   const providers: Provider[] = providersData || [];
+
+  // Fetch secrets for the current namespace
+  const { data: secretsData } = useQuery<SecretInfo[]>({
+    queryKey: ['secrets', currentNamespace?.id],
+    queryFn: async () => {
+      if (!currentNamespace?.id) return [];
+      const data = await api.get<{ results: SecretInfo[] }>("/secrets", { params: { namespaceId: currentNamespace.id } });
+      return Array.isArray(data?.results) ? data.results : [];
+    },
+    enabled: !!currentNamespace?.id,
+  });
+
+  const secretsList: SecretInfo[] = secretsData || [];
 
   // Auto-continue conversation after provider is configured
   useEffect(() => {
@@ -323,6 +350,27 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
       sendMessage(continuationMsg);
     }
   }, [providers, pendingProviderType, status]);
+
+  // Auto-continue conversation after secret is configured
+  useEffect(() => {
+    if (!pendingSecretName) return;
+
+    const secretConfigured = secretsList.some(
+      s => s.name === pendingSecretName
+    );
+
+    if (secretConfigured && status === "ready") {
+      setPendingSecretName(undefined);
+
+      const continuationMsg: Message = {
+        id: `secret-configured-${Date.now()}`,
+        role: "user",
+        parts: [{ type: "text", text: `I've configured the secret "${pendingSecretName}". Please continue.` }],
+      };
+
+      sendMessage(continuationMsg);
+    }
+  }, [secretsList, pendingSecretName, status]);
 
   // Fetch existing deployments to get a runtime_id
   const { data: deploymentsData } = useQuery<WorkflowDeployment[]>({
@@ -778,6 +826,13 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
                       setPendingProviderType(providerType);
                       setProviderModalOpen(true);
                     }}
+                    secrets={secretsList}
+                    onOpenSecretModal={(secretName, description) => {
+                      setSelectedSecretName(secretName);
+                      setSelectedSecretDescription(description);
+                      setPendingSecretName(secretName);
+                      setSecretModalOpen(true);
+                    }}
                     onExampleClick={handleExampleClick}
                 />
                 {/* Invisible element to auto-scroll to bottom if needed */}
@@ -860,11 +915,8 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
             setProviderModalOpen(open);
             if (!open) {
               setSelectedProviderType(undefined);
-              // Clear pendingProviderType after a delay if provider wasn't configured
-              // The useEffect will handle the success case faster than this timeout
               setTimeout(() => {
                 setPendingProviderType(prev => {
-                  // Only clear if provider still isn't configured
                   const configured = providers.some(
                     p => prev && p.type.toLowerCase() === prev.toLowerCase()
                   );
@@ -875,6 +927,31 @@ export function WorkflowBuilder({ workflowId }: WorkflowBuilderProps) {
           }}
           namespaceId={currentNamespace.id}
           providerType={selectedProviderType}
+        />
+      )}
+
+      {/* Secret Configuration Modal */}
+      {currentNamespace && selectedSecretName && (
+        <SecretConfigModal
+          open={secretModalOpen}
+          onOpenChange={(open) => {
+            setSecretModalOpen(open);
+            if (!open) {
+              setSelectedSecretName(undefined);
+              setSelectedSecretDescription(undefined);
+              setTimeout(() => {
+                setPendingSecretName(prev => {
+                  const configured = secretsList.some(
+                    s => prev && s.name === prev
+                  );
+                  return configured ? prev : undefined;
+                });
+              }, 1000);
+            }
+          }}
+          namespaceId={currentNamespace.id}
+          secretName={selectedSecretName}
+          secretDescription={selectedSecretDescription}
         />
       )}
     </div>
@@ -890,10 +967,12 @@ interface CustomChatMessagesProps {
   onConfirm: (options: QuestionOption[], answerText?: string) => void;
   providers: Provider[];
   onOpenProviderModal: (providerType: string) => void;
+  secrets: SecretInfo[];
+  onOpenSecretModal: (secretName: string, description?: string) => void;
   onExampleClick: (prompt: string) => void;
 }
 
-function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal, onExampleClick }: CustomChatMessagesProps) {
+function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal, secrets, onOpenSecretModal, onExampleClick }: CustomChatMessagesProps) {
   const { messages } = useChatUI();
   const isLoading = status === "submitted" || status === "streaming";
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -1255,18 +1334,31 @@ function CustomChatMessages({ status, onConfirm, providers, onOpenProviderModal,
                     {isAssistant && secretSetupParts.length > 0 && (
                         <div className="mt-2 w-full max-w-md">
                         {secretSetupParts.map((part: any, partIndex) => {
+                            const secretName = part.data?.secret_name;
+                            const existingSecret = secrets.find(s => s.name === secretName);
+
                             return (
                             <div
                                 key={partIndex}
-                                className="bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900 rounded-xl p-4 transition-all"
+                                className="bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900 rounded-xl p-4 transition-all hover:border-purple-300"
                             >
-                                <p className="text-sm text-purple-800 dark:text-purple-200 mb-2 font-medium">
+                                <p className="text-sm text-purple-800 dark:text-purple-200 mb-3 font-medium">
                                     {part.data?.message}
                                 </p>
-                                <p className="text-xs text-purple-700 dark:text-purple-300">
-                                    This secret will be stored securely and used in your workflow.
-                                    Check the generated code for the required fields.
-                                </p>
+                                {existingSecret ? (
+                                    <div className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-purple-800 dark:text-purple-200 bg-purple-100 dark:bg-purple-900/40 rounded-lg gap-2">
+                                        <Check className="h-4 w-4" />
+                                        Configured: {secretName}
+                                    </div>
+                                ) : (
+                                    <Button
+                                        onClick={() => onOpenSecretModal(secretName, part.data?.message)}
+                                        className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors gap-2"
+                                    >
+                                        <Key className="h-4 w-4" />
+                                        Configure {secretName}
+                                    </Button>
+                                )}
                             </div>
                             );
                         })}

@@ -6,7 +6,7 @@
 
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { MessagePart, Plan } from '../context';
+import type { MessagePart, Plan, SecretSetupData, AgentContext } from '../context';
 
 const PlanTriggerSchema = z.object({
   type: z.string().describe('Type of trigger (webhook, cron, manual)'),
@@ -27,7 +27,7 @@ const PlanSchema = z.object({
   requiredSecrets: z.array(z.string()).describe('Secrets/API keys needed for this workflow'),
 });
 
-export function createSubmitPlanTool() {
+export function createSubmitPlanTool(context?: AgentContext) {
   return tool({
     description:
       'Submit a detailed workflow plan for user approval before generating code. ' +
@@ -44,6 +44,39 @@ export function createSubmitPlanTool() {
         requiredProviders: plan.requiredProviders,
         requiredSecrets: plan.requiredSecrets,
       };
+
+      if (context && planData.requiredSecrets.length > 0) {
+        const configuredNames = new Set(context.configuredSecrets.map((s) => s.name));
+        const missing = planData.requiredSecrets.filter((name) => !configuredNames.has(name));
+
+        if (missing.length > 0) {
+          const parts: MessagePart[] = [
+            {
+              type: 'text',
+              text: `The following secrets need to be configured before we can proceed: ${missing.join(', ')}. Please set them up and then continue.`,
+            },
+          ];
+
+          for (const name of missing) {
+            const setupData: SecretSetupData = {
+              secretName: name,
+              secretType: 'custom',
+              configured: false,
+              message: `Secret "${name}" needs to be configured before we can proceed.`,
+            };
+            parts.push({
+              type: 'data-secret-setup',
+              data: setupData,
+            });
+          }
+
+          return {
+            isTerminal: true,
+            parts,
+            plan: planData,
+          };
+        }
+      }
 
       const part: MessagePart = {
         type: 'data-plan-confirmation',

@@ -23,28 +23,31 @@ You have access to the following tools to help users:
 
 1. **ask_clarifying_question**: Ask users for missing information with structured options
 2. **check_providers**: Verify that required integrations are configured
-3. **submit_plan**: Present a detailed plan for user approval before generating code
-4. **generate_workflow_code**: Generate the final TypeScript workflow code
-5. **update_workflow_code**: Update existing workflow code based on feedback
+3. **check_secrets**: Verify that required secrets are configured
+4. **submit_plan**: Present a detailed plan for user approval before generating code
+5. **generate_workflow_code**: Generate the final TypeScript workflow code
+6. **update_workflow_code**: Update existing workflow code based on feedback
 
 ## Critical Rules
 
 1. **ALWAYS use tools** - Never just respond with text. Use the appropriate tool for each action.
 2. **Ask questions first** - If the user's request is unclear or missing details, use ask_clarifying_question.
 3. **Check providers before planning** - Use check_providers to verify integrations are set up.
-4. **Always submit a plan** - Before generating code, use submit_plan to get user approval.
-5. **Wait for approval** - Only use generate_workflow_code AFTER the user approves the plan.
-6. **No placeholder values** - Never use placeholder values like "YOUR_API_KEY" or "TODO".
-7. **Use structured options** - When asking questions, provide clear, selectable options.
+4. **Check secrets after providers** - If the workflow will use \`new Secret(...)\` for API keys or credentials, you MUST call check_secrets with those secret names before submitting the plan. Do not skip this step.
+5. **Always submit a plan** - Before generating code, use submit_plan to get user approval.
+6. **Wait for approval** - Only use generate_workflow_code AFTER the user approves the plan.
+7. **No placeholder values** - Never use placeholder values like "YOUR_API_KEY" or "TODO".
+8. **Use structured options** - When asking questions, provide clear, selectable options.
 
 ## Workflow Building Process
 
 1. Understand the user's request
 2. Ask clarifying questions if needed (trigger type, providers, specific details)
 3. Check that required providers are configured
-4. Submit a detailed plan for approval
-5. Wait for user to approve the plan
-6. Generate the complete workflow code
+4. Check that required secrets are configured using check_secrets (whenever the workflow will use \`new Secret(...)\`)
+5. Submit a detailed plan for approval
+6. Wait for user to approve the plan
+7. Generate the complete workflow code
 
 ## Available Providers`);
 
@@ -61,6 +64,12 @@ You have access to the following tools to help users:
       .map((p) => p.name)
       .join(', ');
     parts.push(`\n## Configured Providers for This Namespace\n${configured || 'None configured yet'}`);
+  }
+
+  // Add configured secrets for this namespace
+  if (context.configuredSecrets.length > 0) {
+    const secretNames = context.configuredSecrets.map((s) => s.name).join(', ');
+    parts.push(`\n## Configured Secrets for This Namespace\n${secretNames}`);
   }
 
   parts.push(`

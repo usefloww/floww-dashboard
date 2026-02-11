@@ -7,11 +7,12 @@
 import { generateText, stepCountIs, type ModelMessage } from 'ai';
 import { createOpenRouter, type OpenRouterProvider } from '@openrouter/ai-sdk-provider';
 import { settings } from '~/server/settings';
-import type { AgentContext, AgentResponse, ConversationMessage, MessagePart, Plan, ToolResult } from './context';
+import type { AgentContext, AgentResponse, ConversationMessage, MessagePart, Plan, SecretSetupData, ToolResult } from './context';
 import { buildSystemPrompt, buildCodeGenerationPrompt, isPlanApproval } from './system-prompt';
 import {
   createAskQuestionTool,
   createCheckProvidersTool,
+  createCheckSecretsTool,
   createSubmitPlanTool,
   createGenerateCodeTool,
   createUpdateCodeTool,
@@ -60,6 +61,46 @@ function convertToAIMessages(messages: ConversationMessage[]): ModelMessage[] {
 }
 
 /**
+ * Check which secrets from a plan are not yet configured
+ */
+function getUnconfiguredSecrets(plan: Plan, context: AgentContext): string[] {
+  if (!plan.requiredSecrets || plan.requiredSecrets.length === 0) return [];
+  const configuredNames = new Set(context.configuredSecrets.map((s) => s.name));
+  return plan.requiredSecrets.filter((name) => !configuredNames.has(name));
+}
+
+/**
+ * Build a terminal response prompting the user to configure missing secrets
+ */
+function buildSecretSetupResponse(missingSecrets: string[]): AgentResponse {
+  const parts: MessagePart[] = [
+    {
+      type: 'text',
+      text: `Before generating code, the following secrets need to be configured: ${missingSecrets.join(', ')}. Please set them up and then continue.`,
+    },
+  ];
+
+  for (const name of missingSecrets) {
+    const setupData: SecretSetupData = {
+      secretName: name,
+      secretType: 'custom',
+      configured: false,
+      message: `Secret "${name}" needs to be configured before we can proceed.`,
+    };
+    parts.push({
+      type: 'data-secret-setup',
+      data: setupData,
+    });
+  }
+
+  return {
+    parts,
+    isTerminal: true,
+    terminalReason: 'text',
+  };
+}
+
+/**
  * Process a user message through the agent loop
  */
 export async function processMessage(
@@ -87,6 +128,12 @@ export async function processMessage(
 
   // Check for plan approval shortcut
   if (context.currentPlan && isPlanApproval(userMessage)) {
+    // Before generating code, check if required secrets are configured
+    const unconfiguredSecrets = getUnconfiguredSecrets(context.currentPlan, context);
+    if (unconfiguredSecrets.length > 0) {
+      return buildSecretSetupResponse(unconfiguredSecrets);
+    }
+
     return await generateCodeFromPlan(context.currentPlan, context, openrouter, modelName);
   }
 
@@ -97,7 +144,8 @@ export async function processMessage(
   const tools = {
     ask_clarifying_question: createAskQuestionTool(),
     check_providers: createCheckProvidersTool(context),
-    submit_plan: createSubmitPlanTool(),
+    check_secrets: createCheckSecretsTool(context),
+    submit_plan: createSubmitPlanTool(context),
     generate_workflow_code: createGenerateCodeTool(),
     update_workflow_code: createUpdateCodeTool(context),
   };
