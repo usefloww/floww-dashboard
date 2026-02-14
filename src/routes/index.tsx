@@ -68,7 +68,7 @@ function HomePage() {
       {currentNamespace && (
         <div className="mb-12">
           <ExecutionChart
-            data={summaryData as any || undefined}
+            data={summaryData}
             isLoading={isLoading}
             error={error as Error | null}
           />
