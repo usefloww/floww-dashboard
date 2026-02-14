@@ -87,6 +87,7 @@ export const syncTriggersSchema = z.object({
   workflowId: z.string().min(1, 'workflowId is required'),
   namespaceId: z.string().min(1, 'namespaceId is required'),
   triggers: z.array(z.unknown()).optional(),
+  providerMappings: z.record(z.record(z.string())).optional(),
 });
 
 export const executeTriggerSchema = z.object({

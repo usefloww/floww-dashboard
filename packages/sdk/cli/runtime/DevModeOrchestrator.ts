@@ -1,9 +1,10 @@
-import { loadProjectConfig, updateProjectConfig } from "../config/projectConfig";
+import { loadProjectConfig, updateProjectConfig, ProviderMappings } from "../config/projectConfig";
 import { DebugContext } from "../../codeExecution";
 import { EventRouter } from "./EventRouter";
 import {
   resolveWorkflow,
   fetchProviderConfigs,
+  fetchProviderConfigsByMapping,
   WorkflowConfig,
   ProviderConfig,
 } from "./workflow";
@@ -11,6 +12,7 @@ import { executeUserCode } from "./userCode";
 import { validateProviders } from "./providers";
 import { logger } from "../utils/logger";
 import { selectOrCreateWorkflow } from "../utils/promptUtils";
+import { autoPopulateProviderMappings, refreshProviderMappings } from "./providerMapping";
 
 export interface DevModeOptions {
   entrypoint: string;
@@ -124,10 +126,10 @@ export class DevModeOrchestrator {
       this.workflow.workflowId,
     );
 
-    // Step 2: Fetch provider configs
+    // Step 2: Fetch provider configs (using mapping if available)
     this.providerConfigs = await logger.debugTask(
       "Fetching provider configs",
-      async () => await fetchProviderConfigs(this.workflow!.namespaceId),
+      async () => await this.fetchConfigs(projectConfig.providers),
     );
 
     // Step 3: Execute userspace
@@ -145,10 +147,24 @@ export class DevModeOrchestrator {
       namespaceId: this.workflow.namespaceId,
     });
 
-    // Step 4.25: Re-fetch provider configs and re-execute in case any were just set up
+    // Step 4.1: Auto-populate provider mappings in floww.yaml
+    const updatedMappings = await logger.debugTask(
+      "Updating provider mappings",
+      async () => await refreshProviderMappings(
+        result.usedProviders,
+        this.options.projectDir,
+      ),
+    );
+
+    // Step 4.25: Re-fetch provider configs using updated mappings and re-execute
     this.providerConfigs = await logger.debugTask(
       "Re-fetching provider configs",
-      async () => await fetchProviderConfigs(this.workflow!.namespaceId),
+      async () => {
+        const mappings = Object.keys(updatedMappings).length > 0
+          ? updatedMappings
+          : undefined;
+        return await this.fetchConfigs(mappings);
+      },
     );
 
     // Re-execute user code with updated configs
@@ -213,6 +229,10 @@ export class DevModeOrchestrator {
 
     const {syncDevTriggers} = await import("../api/apiMethods");
 
+    // Load current provider mappings from floww.yaml
+    const currentConfig = loadProjectConfig(this.options.projectDir);
+    const currentMappings = currentConfig.providers;
+
     // Convert triggers to metadata format (similar to deploy)
     const triggersMetadata = triggers.map((trigger: any) => {
       const metadata: any = { type: trigger.type };
@@ -239,10 +259,13 @@ export class DevModeOrchestrator {
       return metadata;
     });
 
-    // Sync with backend
+    // Sync with backend (include provider mappings if available)
     const response = await syncDevTriggers({
       workflow_id: this.workflow.workflowId,
       triggers: triggersMetadata,
+      provider_mappings: currentMappings && Object.keys(currentMappings).length > 0
+        ? currentMappings
+        : undefined,
     });
 
     logger.debugInfo(`Synced ${response.webhooks.length} webhook(s) with backend`);
@@ -335,16 +358,30 @@ export class DevModeOrchestrator {
       );
     }
 
-    // Re-fetch provider configs
-    this.providerConfigs = await fetchProviderConfigs(
-      this.workflow.namespaceId,
+    // Refresh provider mappings (picks up newly created providers)
+    const projectConfig = loadProjectConfig(this.options.projectDir);
+    const updatedMappings = await refreshProviderMappings(
+      [], // Will be populated after execution
+      this.options.projectDir,
     );
+
+    // Re-fetch provider configs using mappings
+    const mappings = Object.keys(updatedMappings).length > 0
+      ? updatedMappings
+      : projectConfig.providers;
+    this.providerConfigs = await this.fetchConfigs(mappings);
 
     // Re-execute userspace
     const result = await executeUserCode(
       this.options.entrypoint,
       this.providerConfigs,
       this.debugContext,
+    );
+
+    // Auto-populate any new mappings from used providers
+    await refreshProviderMappings(
+      result.usedProviders,
+      this.options.projectDir,
     );
 
     // Re-validate providers
@@ -355,6 +392,22 @@ export class DevModeOrchestrator {
 
     // Update event routing
     await this.eventRouter.updateTriggers(result.triggers);
+  }
+
+  /**
+   * Fetch provider configs, using ID-based mapping if available,
+   * falling back to namespace-wide type:alias lookup.
+   */
+  private async fetchConfigs(
+    mappings?: ProviderMappings,
+  ): Promise<Map<string, ProviderConfig>> {
+    if (mappings && Object.keys(mappings).length > 0) {
+      return await fetchProviderConfigsByMapping(
+        mappings,
+        this.workflow!.namespaceId,
+      );
+    }
+    return await fetchProviderConfigs(this.workflow!.namespaceId);
   }
 
   /**

@@ -1,8 +1,3 @@
-// Import fetch dynamically to handle ES module issues in bundled CLI
-async function getFetch() {
-  const { default: fetch } = await import("node-fetch");
-  return fetch;
-}
 import open from "open";
 import jwt from "jsonwebtoken";
 import { DeviceAuthResponse, StoredAuth, TokenResponse } from "./authTypes";
@@ -89,7 +84,6 @@ export class CLIAuth {
       throw new Error("Device authorization endpoint not configured");
     }
 
-    const fetch = await getFetch();
     const extraParams: Record<string, string> = {};
     if (this.config.auth.audience) {
       extraParams.audience = this.config.auth.audience;
@@ -133,7 +127,6 @@ export class CLIAuth {
       await this.sleep(pollInterval * 1000);
 
       try {
-        const fetch = await getFetch();
         const response = await fetch(this.config.auth.token_endpoint, {
           method: "POST",
           headers: {
@@ -189,7 +182,7 @@ export class CLIAuth {
       throw new Error("Token endpoint not configured");
     }
 
-    const fetch = await getFetch();
+    // Use native fetch (Node 18+)
     const response = await fetch(this.config.auth.token_endpoint, {
       method: "POST",
       headers: {
@@ -223,11 +216,10 @@ export class CLIAuth {
   }
 
   private async fetchUserInfo(accessToken: string): Promise<any> {
-    const fetch = await getFetch();
-
     const backendUrl = getConfigValue("backendUrl");
     const whoamiUrl = `${backendUrl}/api/whoami`;
 
+    // Use native fetch (Node 18+)
     const response = await fetch(whoamiUrl, {
       method: "GET",
       headers: {

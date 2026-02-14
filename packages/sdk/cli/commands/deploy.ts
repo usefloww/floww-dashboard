@@ -27,10 +27,12 @@ import {
 } from "../utils/dockerUtils";
 import { logger } from "../utils/logger";
 import { selectOrCreateWorkflow } from "../utils/promptUtils";
-import { resolveWorkflow, fetchProviderConfigs } from "../runtime/workflow";
+import { resolveWorkflow, fetchProviderConfigs, fetchProviderConfigsByMapping } from "../runtime/workflow";
 import { executeUserCode } from "../runtime/userCode";
 import { validateProviders } from "../runtime/providers";
 import { getValidAuth } from "../auth/tokenUtils";
+import { autoPopulateProviderMappings } from "../runtime/providerMapping";
+import { ProviderMappings } from "../config/projectConfig";
 
 const defaultDockerfileContent = `
 FROM ghcr.io/usefloww/lambda-runtime:latest
@@ -322,10 +324,18 @@ export async function deployCommand() {
   const executionResult = await logger.debugTask(
     "Executing user code",
     async () => {
-      // Fetch provider configs
-      const providerConfigs = await fetchProviderConfigs(
-        workflowConfig.namespaceId
-      );
+      // Fetch provider configs (using mapping if available)
+      let providerConfigs;
+      if (projectConfig.providers && Object.keys(projectConfig.providers).length > 0) {
+        providerConfigs = await fetchProviderConfigsByMapping(
+          projectConfig.providers,
+          workflowConfig.namespaceId,
+        );
+      } else {
+        providerConfigs = await fetchProviderConfigs(
+          workflowConfig.namespaceId,
+        );
+      }
 
       // Execute user code to get triggers and provider usage
       return await executeUserCode(entrypoint, providerConfigs);
@@ -340,6 +350,20 @@ export async function deployCommand() {
         namespaceId: workflowConfig.namespaceId,
       });
     });
+  }
+
+  // Auto-populate provider mappings in floww.yaml
+  let providerMappings: ProviderMappings | undefined;
+  if (executionResult.usedProviders.length > 0) {
+    providerMappings = await logger.debugTask(
+      "Updating provider mappings",
+      async () => await autoPopulateProviderMappings(
+        executionResult.usedProviders,
+        projectDir,
+      ),
+    );
+    // Reload project config to pick up saved mappings
+    projectConfig = loadProjectConfig(projectDir);
   }
 
   // ============================================================================
@@ -457,6 +481,9 @@ export async function deployCommand() {
         runtime_id: runtimeResult.id,
         code: userCode,
         triggers: triggersMetadata,
+        provider_mappings: providerMappings && Object.keys(providerMappings).length > 0
+          ? providerMappings
+          : undefined,
       });
     });
 

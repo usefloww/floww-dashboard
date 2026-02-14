@@ -141,7 +141,7 @@ export async function createTestWorkflow(
   const [workflow] = await db
     .insert(workflows)
     .values({
-      name: data.name || `test-workflow-${Date.now()}`,
+      name: data.name || `test-workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       description: data.description || 'Test workflow',
       namespaceId,
       createdById,

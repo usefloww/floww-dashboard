@@ -46,22 +46,27 @@ get('/runtimes/:runtimeId', async (ctx) => {
   const { user, params } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 
-  const runtime = await runtimeService.getRuntime(params.runtimeId);
-  if (!runtime) {
+  try {
+    const runtime = await runtimeService.getRuntime(params.runtimeId);
+    if (!runtime) {
+      return errorResponse('Runtime not found', 404);
+    }
+
+    const defaultRuntimeId = await getDefaultRuntimeId();
+
+    return json({
+      id: runtime.id,
+      config: runtime.config,
+      configHash: runtime.configHash,
+      creationStatus: runtime.creationStatus,
+      creationLogs: runtime.creationLogs,
+      createdAt: runtime.createdAt.toISOString(),
+      isDefault: runtime.id === defaultRuntimeId,
+    });
+  } catch (error) {
+    // Database errors (e.g., invalid UUID format) should return 404
     return errorResponse('Runtime not found', 404);
   }
-
-  const defaultRuntimeId = await getDefaultRuntimeId();
-
-  return json({
-    id: runtime.id,
-    config: runtime.config,
-    configHash: runtime.configHash,
-    creationStatus: runtime.creationStatus,
-    creationLogs: runtime.creationLogs,
-    createdAt: runtime.createdAt.toISOString(),
-    isDefault: runtime.id === defaultRuntimeId,
-  });
 });
 
 // Create runtime

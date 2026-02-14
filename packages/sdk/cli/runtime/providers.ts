@@ -5,6 +5,7 @@ import {
 } from "../providers/availability";
 import { setupUnavailableProviders } from "../providers/setup";
 import { logger } from "../utils/logger";
+import { ProviderMappings } from "../config/projectConfig";
 
 // Re-export for convenience
 export type UsedProvider = BaseUsedProvider;
@@ -13,6 +14,7 @@ export type { ProviderAvailabilityResult };
 export interface ValidateProvidersOptions {
   interactive: boolean;
   namespaceId: string;
+  providerMappings?: ProviderMappings;
 }
 
 /**
@@ -40,8 +42,8 @@ export async function validateProviders(
     usedProviders.map((p) => ({ type: p.type, alias: p.alias || "default" })),
   );
 
-  // Check availability
-  const availability = await checkProviderAvailability(usedProviders);
+  // Check availability (uses ID-based mapping if provided)
+  const availability = await checkProviderAvailability(usedProviders, options.providerMappings);
 
   if (
     availability &&

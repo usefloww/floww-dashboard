@@ -75,6 +75,7 @@ export interface WorkflowDeploymentCreateRequest {
   runtime_id: string;
   code: WorkflowDeploymentUserCode;
   triggers?: TriggerMetadata[];
+  provider_mappings?: Record<string, Record<string, string>>;
 }
 
 export interface WorkflowDeploymentResponse {
@@ -333,6 +334,14 @@ export async function fetchProviders(): Promise<Provider[]> {
   return data.results;
 }
 
+export async function fetchProviderById(
+  providerId: string
+): Promise<Provider> {
+  return await defaultApiClient().apiCall<Provider>(
+    `/providers/${providerId}`
+  );
+}
+
 export async function fetchProviderType(
   providerType: string
 ): Promise<ProviderType> {
@@ -373,6 +382,7 @@ export async function deleteProvider(providerId: string): Promise<void> {
 export interface DevTriggerSyncRequest {
   workflow_id: string;
   triggers: any[]; // TriggerMetadata[]
+  provider_mappings?: Record<string, Record<string, string>>;
 }
 
 export interface DevTriggerSyncResponse {

@@ -12,6 +12,7 @@ import { hasWorkflowAccess } from '~/server/services/access-service';
 import { createExecution } from '~/server/services/execution-service';
 import { executeManualTrigger } from '~/server/services/trigger-execution-service';
 import { syncTriggersSchema, executeTriggerSchema } from '~/server/api/schemas';
+import * as workflowService from '~/server/services/workflow-service';
 
 // List triggers for a workflow
 get('/triggers', async (ctx) => {
@@ -21,6 +22,12 @@ get('/triggers', async (ctx) => {
   const workflowId = query.get('workflowId');
   if (!workflowId) {
     return errorResponse('workflowId is required', 400);
+  }
+
+  // Verify workflow exists
+  const workflow = await workflowService.getWorkflow(workflowId);
+  if (!workflow) {
+    return errorResponse('Workflow not found', 404);
   }
 
   // Check access
@@ -51,7 +58,7 @@ post('/triggers/sync', async (ctx) => {
   const parsed = await parseBody(request, syncTriggersSchema);
   if ('error' in parsed) return parsed.error;
 
-  const { workflowId, namespaceId, triggers: triggersMetadata } = parsed.data;
+  const { workflowId, namespaceId, triggers: triggersMetadata, providerMappings } = parsed.data;
 
   // Check access
   const hasAccess = await hasWorkflowAccess(user.id, workflowId);
@@ -65,7 +72,8 @@ post('/triggers/sync', async (ctx) => {
     const webhooks = await triggerService.syncTriggers(
       workflowId,
       namespaceId,
-      typedTriggersMetadata
+      typedTriggersMetadata,
+      providerMappings,
     );
 
     return json({ webhooks });

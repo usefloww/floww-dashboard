@@ -9,6 +9,18 @@ export interface BuildConfig {
   extra_options?: string[]; // Additional Docker CLI flags
 }
 
+/**
+ * Provider mappings: maps code-level aliases to provider UUIDs.
+ * Structure: { [providerType]: { [codeAlias]: providerUUID } }
+ *
+ * Example:
+ *   providers:
+ *     slack:
+ *       default: "550e8400-e29b-41d4-a716-446655440000"
+ *       marketing: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+ */
+export type ProviderMappings = Record<string, Record<string, string>>;
+
 export interface ProjectConfig {
   workflowId?: string;
   name: string;
@@ -16,6 +28,7 @@ export interface ProjectConfig {
   version?: string;
   entrypoint?: string;
   build?: BuildConfig; // Optional build configuration
+  providers?: ProviderMappings; // Maps code aliases to provider IDs
 }
 
 const CONFIG_FILENAME = "floww.yaml";

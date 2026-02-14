@@ -48,6 +48,7 @@ const createWorkflowDeploymentSchema = z.object({
       })
     )
     .optional(),
+  providerMappings: z.record(z.record(z.string())).optional(),
 });
 
 const updateWorkflowDeploymentSchema = z.object({
@@ -81,7 +82,7 @@ function validateDefinitions(runtimeDefinitions: {
 }
 
 /**
- * Fetch and decrypt all provider configs for a namespace
+ * Fetch and decrypt all provider configs for a namespace (legacy: keyed by type:alias)
  */
 async function getProviderConfigs(namespaceId: string): Promise<Record<string, Record<string, unknown>>> {
   const db = getDb();
@@ -97,6 +98,48 @@ async function getProviderConfigs(namespaceId: string): Promise<Record<string, R
       providerConfigs[key] = config;
     } catch {
       // Skip providers with invalid config
+    }
+  }
+
+  return providerConfigs;
+}
+
+/**
+ * Fetch and decrypt provider configs using ID-based mapping.
+ * Keys configs by `type:codeAlias` so runtime code can look them up by code alias.
+ *
+ * @param providerMappings - { [type]: { [codeAlias]: providerID } }
+ * @returns Provider configs keyed by "type:codeAlias"
+ */
+async function getProviderConfigsByMapping(
+  providerMappings: Record<string, Record<string, string>>
+): Promise<Record<string, Record<string, unknown>>> {
+  const db = getDb();
+  const providerConfigs: Record<string, Record<string, unknown>> = {};
+
+  for (const [providerType, aliasMap] of Object.entries(providerMappings)) {
+    for (const [codeAlias, providerId] of Object.entries(aliasMap)) {
+      try {
+        const [provider] = await db
+          .select()
+          .from(providers)
+          .where(eq(providers.id, providerId))
+          .limit(1);
+
+        if (provider) {
+          const configJson = decryptSecret(provider.encryptedConfig);
+          const config = JSON.parse(configJson);
+          const key = `${providerType}:${codeAlias}`;
+          providerConfigs[key] = config;
+        } else {
+          logger.warn('Provider not found for mapping', { providerType, codeAlias, providerId });
+        }
+      } catch (error) {
+        logger.warn('Failed to fetch provider config by ID', {
+          providerType, codeAlias, providerId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
@@ -119,7 +162,7 @@ get('/workflow-deployments', async (ctx) => {
 
     const deployments = await workflowService.listDeployments(workflowId);
     return json({
-      deployments: deployments.map((d) => ({
+      results: deployments.map((d) => ({
         id: d.id,
         workflowId: d.workflowId,
         runtimeId: d.runtimeId,
@@ -134,7 +177,7 @@ get('/workflow-deployments', async (ctx) => {
 
   // If no workflowId filter, we should only return deployments the user has access to
   // For now, return empty if no filter specified (matching Python behavior where workflow_id is required for list)
-  return json({ deployments: [] });
+  return json({ results: [] });
 });
 
 // Create deployment
@@ -145,7 +188,7 @@ post('/workflow-deployments', async (ctx) => {
   const parsed = await parseBody(request, createWorkflowDeploymentSchema);
   if ('error' in parsed) return parsed.error;
 
-  const { workflowId, runtimeId: requestedRuntimeId, code } = parsed.data;
+  const { workflowId, runtimeId: requestedRuntimeId, code, providerMappings } = parsed.data;
 
   // Verify user has access to the workflow
   const workflow = await workflowService.getWorkflow(workflowId);
@@ -174,8 +217,10 @@ post('/workflow-deployments', async (ctx) => {
     return errorResponse('Runtime not found', 400);
   }
 
-  // Get provider configs for the namespace
-  const providerConfigs = await getProviderConfigs(workflow.namespaceId);
+  // Get provider configs: use ID-based mapping if available, fall back to namespace-wide lookup
+  const providerConfigs = providerMappings && Object.keys(providerMappings).length > 0
+    ? await getProviderConfigsByMapping(providerMappings)
+    : await getProviderConfigs(workflow.namespaceId);
 
   // Get definitions from runtime
   const runtimeImpl = getRuntime();
@@ -213,7 +258,7 @@ post('/workflow-deployments', async (ctx) => {
     return errorResponse(`Deployment validation failed: ${validation.errorMessage}`, 400);
   }
 
-  // Create the deployment
+  // Create the deployment (with provider mappings if available)
   const deployment = await workflowService.createDeployment({
     workflowId,
     runtimeId,
@@ -224,6 +269,7 @@ post('/workflow-deployments', async (ctx) => {
     },
     providerDefinitions: runtimeDefinitions.providers ?? [],
     triggerDefinitions: runtimeDefinitions.triggers ?? [],
+    providerMappings: providerMappings ?? undefined,
   });
 
   logger.info('Deployment definitions validated successfully', {
@@ -241,11 +287,11 @@ post('/workflow-deployments', async (ctx) => {
     input: triggerDef.input ?? {},
   }));
 
-  // Sync triggers using TriggerService
+  // Sync triggers using TriggerService (pass provider mappings for ID-based resolution)
   let webhooksInfo: WebhookInfo[] = [];
   if (triggersMetadata.length > 0) {
     try {
-      webhooksInfo = await syncTriggers(workflowId, workflow.namespaceId, triggersMetadata);
+      webhooksInfo = await syncTriggers(workflowId, workflow.namespaceId, triggersMetadata, providerMappings);
     } catch (error) {
       logger.error('Failed to sync triggers', {
         error: error instanceof Error ? error.message : String(error),
@@ -292,27 +338,32 @@ get('/workflow-deployments/:deploymentId', async (ctx) => {
   const { user, params } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 
-  const deployment = await workflowService.getDeployment(params.deploymentId);
-  if (!deployment) {
+  try {
+    const deployment = await workflowService.getDeployment(params.deploymentId);
+    if (!deployment) {
+      return errorResponse('Deployment not found', 404);
+    }
+
+    // Check access to the workflow
+    const hasAccess = await hasWorkflowAccess(user.id, deployment.workflowId);
+    if (!hasAccess && !user.isAdmin) {
+      return errorResponse('Access denied', 403);
+    }
+
+    return json({
+      id: deployment.id,
+      workflowId: deployment.workflowId,
+      runtimeId: deployment.runtimeId,
+      deployedById: deployment.deployedById,
+      userCode: deployment.userCode,
+      status: deployment.status,
+      deployedAt: deployment.deployedAt instanceof Date ? deployment.deployedAt.toISOString() : deployment.deployedAt,
+      note: deployment.note,
+    });
+  } catch (error) {
+    // Database errors (e.g., invalid UUID format) should return 404
     return errorResponse('Deployment not found', 404);
   }
-
-  // Check access to the workflow
-  const hasAccess = await hasWorkflowAccess(user.id, deployment.workflowId);
-  if (!hasAccess && !user.isAdmin) {
-    return errorResponse('Access denied', 403);
-  }
-
-  return json({
-    id: deployment.id,
-    workflowId: deployment.workflowId,
-    runtimeId: deployment.runtimeId,
-    deployedById: deployment.deployedById,
-    userCode: deployment.userCode,
-    status: deployment.status,
-    deployedAt: deployment.deployedAt instanceof Date ? deployment.deployedAt.toISOString() : deployment.deployedAt,
-    note: deployment.note,
-  });
 });
 
 // Update deployment

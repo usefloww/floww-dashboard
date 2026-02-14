@@ -36,6 +36,7 @@ export interface WorkflowDeploymentInfo {
   userCode: unknown;
   providerDefinitions: unknown;
   triggerDefinitions: unknown;
+  providerMappings: unknown;
   deployedAt: Date;
   status: 'ACTIVE' | 'INACTIVE' | 'FAILED';
   note: string | null;
@@ -301,6 +302,7 @@ export async function getActiveDeployment(
     userCode: deployment.userCode,
     providerDefinitions: deployment.providerDefinitions,
     triggerDefinitions: deployment.triggerDefinitions,
+    providerMappings: deployment.providerMappings,
     deployedAt: deployment.deployedAt,
     status: deployment.status,
     note: deployment.note,
@@ -331,6 +333,7 @@ export async function getDeployment(deploymentId: string): Promise<WorkflowDeplo
     userCode: deployment.userCode,
     providerDefinitions: deployment.providerDefinitions,
     triggerDefinitions: deployment.triggerDefinitions,
+    providerMappings: deployment.providerMappings,
     deployedAt: deployment.deployedAt,
     status: deployment.status,
     note: deployment.note,
@@ -363,6 +366,7 @@ export async function listDeployments(
     userCode: d.userCode,
     providerDefinitions: d.providerDefinitions,
     triggerDefinitions: d.triggerDefinitions,
+    providerMappings: d.providerMappings,
     deployedAt: d.deployedAt,
     status: d.status,
     note: d.note,
@@ -379,6 +383,7 @@ export async function createDeployment(params: {
   userCode: unknown;
   providerDefinitions?: unknown;
   triggerDefinitions?: unknown;
+  providerMappings?: unknown;
   note?: string;
 }): Promise<WorkflowDeploymentInfo> {
   const db = getDb();
@@ -405,6 +410,7 @@ export async function createDeployment(params: {
       userCode: params.userCode,
       providerDefinitions: params.providerDefinitions ?? null,
       triggerDefinitions: params.triggerDefinitions ?? null,
+      providerMappings: params.providerMappings ?? null,
       status: 'ACTIVE',
       note: params.note ?? null,
     })
@@ -424,6 +430,7 @@ export async function createDeployment(params: {
     userCode: deployment.userCode,
     providerDefinitions: deployment.providerDefinitions,
     triggerDefinitions: deployment.triggerDefinitions,
+    providerMappings: deployment.providerMappings,
     deployedAt: deployment.deployedAt,
     status: deployment.status,
     note: deployment.note,
@@ -457,6 +464,7 @@ export async function updateDeploymentStatus(
     userCode: deployment.userCode,
     providerDefinitions: deployment.providerDefinitions,
     triggerDefinitions: deployment.triggerDefinitions,
+    providerMappings: deployment.providerMappings,
     deployedAt: deployment.deployedAt,
     status: deployment.status,
     note: deployment.note,

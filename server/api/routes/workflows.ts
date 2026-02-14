@@ -102,38 +102,43 @@ get('/workflows/:workflowId', async (ctx) => {
   const { user, params } = ctx;
   if (!user) return errorResponse('Unauthorized', 401);
 
-  const workflow = await workflowService.getWorkflow(params.workflowId);
-  if (!workflow) {
+  try {
+    const workflow = await workflowService.getWorkflow(params.workflowId);
+    if (!workflow) {
+      return errorResponse('Workflow not found', 404);
+    }
+
+    // Check access
+    const hasAccess = await hasWorkflowAccess(user.id, workflow.id);
+    if (!hasAccess && !user.isAdmin) {
+      return errorResponse('Access denied', 403);
+    }
+
+    // Get active deployment
+    const deployment = await workflowService.getActiveDeployment(workflow.id);
+
+    return json({
+      id: workflow.id,
+      name: workflow.name,
+      description: workflow.description,
+      namespaceId: workflow.namespaceId,
+      active: workflow.active,
+      parentFolderId: workflow.parentFolderId,
+      triggersMetadata: workflow.triggersMetadata,
+      createdAt: workflow.createdAt.toISOString(),
+      updatedAt: workflow.updatedAt.toISOString(),
+      activeDeployment: deployment
+        ? {
+            id: deployment.id,
+            deployedAt: deployment.deployedAt.toISOString(),
+            status: deployment.status,
+          }
+        : null,
+    });
+  } catch (error) {
+    // Database errors (e.g., invalid UUID format) should return 404
     return errorResponse('Workflow not found', 404);
   }
-
-  // Check access
-  const hasAccess = await hasWorkflowAccess(user.id, workflow.id);
-  if (!hasAccess && !user.isAdmin) {
-    return errorResponse('Access denied', 403);
-  }
-
-  // Get active deployment
-  const deployment = await workflowService.getActiveDeployment(workflow.id);
-
-  return json({
-    id: workflow.id,
-    name: workflow.name,
-    description: workflow.description,
-    namespaceId: workflow.namespaceId,
-    active: workflow.active,
-    parentFolderId: workflow.parentFolderId,
-    triggersMetadata: workflow.triggersMetadata,
-    createdAt: workflow.createdAt.toISOString(),
-    updatedAt: workflow.updatedAt.toISOString(),
-    activeDeployment: deployment
-      ? {
-          id: deployment.id,
-          deployedAt: deployment.deployedAt.toISOString(),
-          status: deployment.status,
-        }
-      : null,
-  });
 });
 
 // Update workflow

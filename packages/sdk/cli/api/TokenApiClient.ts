@@ -1,9 +1,3 @@
-// Import fetch dynamically to handle ES module issues in bundled CLI
-async function getFetch() {
-  const { default: fetch } = await import("node-fetch");
-  return fetch;
-}
-
 import { ApiClient, ApiCallOptions } from "./types";
 import {
   UnauthenticatedError,
@@ -47,7 +41,7 @@ export class TokenApiClient implements ApiClient {
     };
 
     try {
-      const fetch = await getFetch();
+      // Use native fetch (Node 18+) - can be mocked in tests via vi.stubGlobal('fetch')
       const response = await fetch(url, {
         method,
         headers: requestHeaders,

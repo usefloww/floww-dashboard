@@ -445,14 +445,20 @@ async function getDeployedTriggerIdentities(workflowId: string): Promise<Set<str
 /**
  * Sync triggers for a workflow.
  * Returns list of webhook info for created/existing webhooks.
+ *
+ * @param providerMappings - Optional ID-based provider mappings from floww.yaml.
+ *   When provided, providers are resolved by ID instead of type:alias lookup.
+ *   Structure: { [providerType]: { [codeAlias]: providerUUID } }
  */
 export async function syncTriggers(
   workflowId: string,
   namespaceId: string,
-  newTriggersMetadata: TriggerMetadata[]
+  newTriggersMetadata: TriggerMetadata[],
+  providerMappings?: Record<string, Record<string, string>>,
 ): Promise<WebhookInfo[]> {
   const db = getDb();
   const publicApiUrl = settings.general.PUBLIC_API_URL ?? 'http://localhost:3000';
+  const hasMapping = providerMappings && Object.keys(providerMappings).length > 0;
 
   // Ensure builtin provider exists
   await ensureProviderExists(namespaceId, 'builtin', 'default');
@@ -462,11 +468,13 @@ export async function syncTriggers(
     (t) => t.providerType && t.providerAlias
   );
 
-  // Auto-create providers with no setup steps
-  const uniqueProviders = new Set(newTriggers.map((t) => `${t.providerType}:${t.providerAlias}`));
-  for (const providerKey of uniqueProviders) {
-    const [providerType, providerAlias] = providerKey.split(':');
-    await ensureProviderExists(namespaceId, providerType, providerAlias);
+  // Auto-create providers with no setup steps (only when no mapping provided)
+  if (!hasMapping) {
+    const uniqueProviders = new Set(newTriggers.map((t) => `${t.providerType}:${t.providerAlias}`));
+    for (const providerKey of uniqueProviders) {
+      const [providerType, providerAlias] = providerKey.split(':');
+      await ensureProviderExists(namespaceId, providerType, providerAlias);
+    }
   }
 
   // Load existing triggers
@@ -550,15 +558,39 @@ export async function syncTriggers(
   for (const identity of toAdd) {
     const meta = newMap.get(identity)!;
     try {
-      const provider = await getProviderByTypeAlias(namespaceId, meta.providerType, meta.providerAlias);
-      if (!provider) {
-        throw new Error(`Provider ${meta.providerType}:${meta.providerAlias} not found`);
+      // Resolve provider: use ID-based mapping if available, fall back to type:alias lookup
+      let providerId: string;
+      if (hasMapping) {
+        const mappedId = providerMappings![meta.providerType]?.[meta.providerAlias];
+        if (!mappedId) {
+          throw new Error(
+            `No provider mapping found for ${meta.providerType}:${meta.providerAlias} in floww.yaml`
+          );
+        }
+        // Verify the provider exists
+        const [providerRecord] = await db
+          .select()
+          .from(providers)
+          .where(eq(providers.id, mappedId))
+          .limit(1);
+        if (!providerRecord) {
+          throw new Error(
+            `Provider ID ${mappedId} (mapped from ${meta.providerType}:${meta.providerAlias}) not found`
+          );
+        }
+        providerId = mappedId;
+      } else {
+        const provider = await getProviderByTypeAlias(namespaceId, meta.providerType, meta.providerAlias);
+        if (!provider) {
+          throw new Error(`Provider ${meta.providerType}:${meta.providerAlias} not found`);
+        }
+        providerId = provider.id;
       }
 
-      // Create trigger record first to get the ID
+      // Create trigger record
       const trigger = await createTrigger({
         workflowId,
-        providerId: provider.id,
+        providerId,
         triggerType: meta.triggerType,
         input: meta.input,
       });
@@ -604,7 +636,7 @@ export async function syncTriggers(
       // Execute SDK lifecycle.create to set up external resources (webhooks, etc.)
       try {
         const state = await executeTriggerLifecycleCreate({
-          providerId: provider.id,
+          providerId,
           providerType: meta.providerType,
           triggerType: meta.triggerType,
           triggerId: trigger.id,

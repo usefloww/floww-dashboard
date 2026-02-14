@@ -21,7 +21,7 @@ import { GitHub, Slack } from "floww";
 
 const github = new GitHub();
 const slack = new Slack();
-
+gs
 github.triggers.onPush({
   owner: "my-org",
   repository: "my-repo",

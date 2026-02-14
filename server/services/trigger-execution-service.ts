@@ -154,7 +154,7 @@ async function getActiveDeployment(workflowId: string) {
 }
 
 /**
- * Get all provider configs for a namespace
+ * Get all provider configs for a namespace (legacy: keyed by type:alias)
  */
 async function getProviderConfigs(
   namespaceId: string
@@ -175,6 +175,60 @@ async function getProviderConfigs(
   }
 
   return configs;
+}
+
+/**
+ * Get provider configs using ID-based mapping from the deployment.
+ * Keys configs by `type:codeAlias` so runtime code can look them up by code alias.
+ */
+async function getProviderConfigsByMapping(
+  providerMappings: Record<string, Record<string, string>>
+): Promise<Record<string, Record<string, unknown>>> {
+  const db = getDb();
+  const configs: Record<string, Record<string, unknown>> = {};
+
+  for (const [providerType, aliasMap] of Object.entries(providerMappings)) {
+    for (const [codeAlias, providerId] of Object.entries(aliasMap)) {
+      try {
+        const [provider] = await db
+          .select()
+          .from(providers)
+          .where(eq(providers.id, providerId))
+          .limit(1);
+
+        if (provider) {
+          const config = JSON.parse(decryptSecret(provider.encryptedConfig));
+          const key = `${providerType}:${codeAlias}`;
+          configs[key] = config;
+        }
+      } catch {
+        // Skip providers with invalid config
+      }
+    }
+  }
+
+  return configs;
+}
+
+/**
+ * Reverse-lookup the code alias for a provider from the deployment's provider mappings.
+ * Given mappings like { slack: { marketing: "uuid-123" } } and providerId "uuid-123",
+ * returns "marketing".
+ */
+function resolveCodeAlias(
+  providerMappings: Record<string, Record<string, string>>,
+  providerType: string,
+  providerId: string,
+): string | null {
+  const aliasMap = providerMappings[providerType];
+  if (!aliasMap) return null;
+
+  for (const [codeAlias, mappedId] of Object.entries(aliasMap)) {
+    if (mappedId === providerId) {
+      return codeAlias;
+    }
+  }
+  return null;
 }
 
 /**
@@ -277,13 +331,23 @@ export async function executeTrigger(
   // Generate auth token
   const authToken = generateInvocationToken(workflow.id, workflow.namespaceId);
 
-  // Get provider configs
-  const providerConfigs = await getProviderConfigs(workflow.namespaceId);
+  // Get provider configs: use ID-based mapping if deployment has one, fall back to namespace lookup
+  const deploymentMappings = deployment.providerMappings as Record<string, Record<string, string>> | null;
+  const hasMapping = deploymentMappings && Object.keys(deploymentMappings).length > 0;
+  const providerConfigs = hasMapping
+    ? await getProviderConfigsByMapping(deploymentMappings)
+    : await getProviderConfigs(workflow.namespaceId);
+
+  // Derive the code alias from the deployment's provider mapping (reverse lookup by provider ID),
+  // falling back to the provider's current alias for deployments without mappings.
+  const effectiveAlias = hasMapping
+    ? resolveCodeAlias(deploymentMappings, provider.type, provider.id) ?? provider.alias
+    : provider.alias;
 
   // Build runtime payload
   const triggerPayload = buildTriggerPayload({
     providerType: provider.type,
-    providerAlias: provider.alias,
+    providerAlias: effectiveAlias,
     triggerType: trigger.triggerType,
     triggerInput: trigger.input as Record<string, unknown>,
     eventData,

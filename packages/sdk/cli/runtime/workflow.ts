@@ -1,5 +1,5 @@
-import { ProjectConfig } from "../config/projectConfig";
-import { fetchWorkflow, fetchProviders } from "../api/apiMethods";
+import { ProjectConfig, ProviderMappings } from "../config/projectConfig";
+import { fetchWorkflow, fetchProviders, fetchProviderById } from "../api/apiMethods";
 import { logger } from "../utils/logger";
 import { SecretManager } from "../secrets/secretManager";
 import { defaultApiClient } from "../api/client";
@@ -98,6 +98,65 @@ export async function fetchProviderConfigs(
     );
     logger.plain("   Continuing without backend provider configurations");
 
+    return new Map();
+  }
+}
+
+/**
+ * Fetch provider configs using the provider ID mapping from floww.yaml.
+ *
+ * Instead of fetching all providers in a namespace and keying by type:alias,
+ * this function resolves each mapping entry by provider ID and keys configs
+ * by `type:codeAlias` so user code can look them up by the local alias.
+ *
+ * @param mappings - Provider mappings from floww.yaml: { [type]: { [codeAlias]: providerID } }
+ * @param namespaceId - The namespace ID (for secret fetching)
+ * @returns Map of provider configs keyed by "type:codeAlias"
+ */
+export async function fetchProviderConfigsByMapping(
+  mappings: ProviderMappings,
+  namespaceId: string
+): Promise<Map<string, ProviderConfig>> {
+  try {
+    const secretManager = new SecretManager(defaultApiClient(), namespaceId);
+    const configs = new Map<string, ProviderConfig>();
+
+    for (const [providerType, aliasMap] of Object.entries(mappings)) {
+      for (const [codeAlias, providerId] of Object.entries(aliasMap)) {
+        try {
+          const provider = await fetchProviderById(providerId);
+          const key = `${providerType}:${codeAlias}`;
+
+          // Fetch secrets for this provider and merge with config
+          const secrets = await secretManager.getProviderSecrets(
+            provider.type,
+            provider.alias
+          );
+
+          // Merge config and secrets (secrets take precedence)
+          const mergedConfig = { ...provider.config, ...secrets };
+          configs.set(key, mergedConfig);
+
+          logger.debugInfo(`Loaded provider config (by ID mapping): ${key} -> ${providerId}`);
+        } catch (error) {
+          logger.warn(
+            `Could not fetch provider ${providerType}:${codeAlias} (ID: ${providerId}): ${
+              error instanceof Error ? error.message : error
+            }`
+          );
+        }
+      }
+    }
+
+    logger.debugInfo(`Total provider configs loaded via mapping: ${configs.size}`);
+    return configs;
+  } catch (error) {
+    logger.warn(
+      `Could not fetch provider configs by mapping: ${
+        error instanceof Error ? error.message : error
+      }`
+    );
+    logger.plain("   Continuing without backend provider configurations");
     return new Map();
   }
 }

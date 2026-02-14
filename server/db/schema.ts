@@ -347,6 +347,7 @@ export const workflowDeployments = pgTable(
     deployedAt: timestamp('deployed_at').defaultNow().notNull(),
     status: workflowDeploymentStatusEnum('status').notNull(),
     note: text('note'),
+    providerMappings: jsonb('provider_mappings'),
   },
   (table) => [
     index('idx_workflow_deployments_workflow').on(table.workflowId),
