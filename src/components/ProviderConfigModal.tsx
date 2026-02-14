@@ -422,7 +422,7 @@ export function ProviderConfigModal({
         }
 
         try {
-          const { auth_url } = await getOAuthAuthorizeUrl(step.providerName!, providerId as string);
+          const { authUrl } = await getOAuthAuthorizeUrl(step.providerName!, providerId as string);
 
           // Open popup for OAuth flow
           const width = 600;
@@ -431,7 +431,7 @@ export function ProviderConfigModal({
           const top = window.screenY + (window.outerHeight - height) / 2;
 
           window.open(
-            auth_url,
+            authUrl,
             'oauth_popup',
             `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
           );

@@ -69,7 +69,7 @@ export async function handleOAuth(request: Request, path: string): Promise<Respo
  */
 async function handleAuthorize(request: Request, providerName: string): Promise<Response> {
   const url = new URL(request.url);
-  const providerId = url.searchParams.get('provider_id');
+  const providerId = url.searchParams.get('providerId');
 
   // Check authentication - extract cookies and auth header from request
   const cookies = request.headers.get('cookie') ?? null;
@@ -119,7 +119,7 @@ async function handleAuthorize(request: Request, providerName: string): Promise<
   const authUrl = oauthProvider.getAuthorizationUrl(scopes, state, callbackUri);
 
   // Return the auth URL as JSON so frontend can open popup
-  return jsonResponse({ auth_url: authUrl });
+  return jsonResponse({ authUrl });
 }
 
 /**

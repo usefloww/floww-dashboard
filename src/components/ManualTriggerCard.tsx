@@ -24,9 +24,9 @@ export function ManualTriggerCard({ trigger, onInvoke }: ManualTriggerCardProps)
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>
-              {trigger.execution_count} execution{trigger.execution_count !== 1 ? 's' : ''}
+              {trigger.executionCount} execution{trigger.executionCount !== 1 ? 's' : ''}
             </span>
-            {trigger.input_schema && (
+            {trigger.inputSchema && (
               <span className="text-xs bg-secondary px-2 py-1 rounded">
                 Has input parameters
               </span>

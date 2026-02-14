@@ -18,7 +18,7 @@ export function DeploymentHistory({ workflowId, onEdit }: DeploymentHistoryProps
     queryKey: ['deployments', workflowId],
     queryFn: async () => {
       const params = { workflowId: workflowId };
-      const data = await api.get<WorkflowDeploymentsResponse>("/workflow_deployments", { params });
+      const data = await api.get<WorkflowDeploymentsResponse>("/workflow-deployments", { params });
       const sorted = (data.deployments || []).sort(
         (a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()
       );

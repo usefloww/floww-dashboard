@@ -24,12 +24,12 @@ function formatStructuredError(error: any): string {
   }
   
   if (error && typeof error === 'object') {
-    // Handle trigger errors with failed_triggers
-    if (error.failed_triggers && Array.isArray(error.failed_triggers)) {
-      const triggerErrors = error.failed_triggers.map((trigger: any) => {
+    // Handle trigger errors with failedTriggers
+    if (error.failedTriggers && Array.isArray(error.failedTriggers)) {
+      const triggerErrors = error.failedTriggers.map((trigger: any) => {
         const parts = [];
-        if (trigger.provider_type) parts.push(`Provider: ${trigger.provider_type}`);
-        if (trigger.trigger_type) parts.push(`Trigger: ${trigger.trigger_type}`);
+        if (trigger.providerType) parts.push(`Provider: ${trigger.providerType}`);
+        if (trigger.triggerType) parts.push(`Trigger: ${trigger.triggerType}`);
         if (trigger.error) parts.push(`Error: ${trigger.error}`);
         return parts.join(', ');
       });
@@ -244,8 +244,8 @@ export interface ManualTriggerInfo {
   id: string;
   name: string;
   description: string | null;
-  input_schema: Record<string, any> | null;
-  execution_count: number;
+  inputSchema: Record<string, any> | null;
+  executionCount: number;
 }
 
 export interface ManualTriggersListResponse {
@@ -253,11 +253,11 @@ export interface ManualTriggersListResponse {
 }
 
 export interface ManualTriggerInvokeRequest {
-  input_data: Record<string, any>;
+  inputData: Record<string, any>;
 }
 
 export interface ManualTriggerInvokeResponse {
-  execution_id: string;
+  executionId: string;
   status: string;
 }
 
@@ -270,18 +270,18 @@ export async function invokeManualTrigger(
   inputData: Record<string, any> = {}
 ): Promise<ManualTriggerInvokeResponse> {
   return api.post<ManualTriggerInvokeResponse>(`/triggers/${triggerId}/invoke`, {
-    input_data: inputData,
+    inputData: inputData,
   });
 }
 
 // OAuth API methods
 // Note: OAuth routes are at root level, not under /api
 export interface OAuthAuthorizeResponse {
-  auth_url: string;
+  authUrl: string;
 }
 
 export async function getOAuthAuthorizeUrl(providerName: string, providerId: string): Promise<OAuthAuthorizeResponse> {
   return rootApi.get<OAuthAuthorizeResponse>(`/oauth/${providerName}/authorize`, {
-    params: { provider_id: providerId },
+    params: { providerId },
   });
 }

@@ -50,7 +50,7 @@ get('/executions', async (ctx) => {
   });
 
   return json({
-    results: result.executions.map(executionService.serializeExecution),
+    executions: result.executions.map(executionService.serializeExecution),
     total: result.total,
   });
 });
@@ -169,7 +169,7 @@ get('/executions/workflows/:workflowId', async (ctx) => {
   });
 
   return json({
-    results: result.executions.map(executionService.serializeExecution),
+    executions: result.executions.map(executionService.serializeExecution),
     total: result.total,
   });
 });
@@ -181,6 +181,9 @@ get('/executions/workflows/:workflowId/logs', async (ctx) => {
 
   const { workflowId } = params;
   const limit = parseInt(query.get('limit') ?? '100', 10);
+  const offset = parseInt(query.get('offset') ?? '0', 10);
+  const searchQuery = query.get('q') ?? undefined;
+  const level = query.get('level') as executionService.LogLevel | undefined;
 
   // Check access
   const hasAccess = await hasWorkflowAccess(user.id, workflowId);
@@ -188,31 +191,20 @@ get('/executions/workflows/:workflowId/logs', async (ctx) => {
     return errorResponse('Access denied', 403);
   }
 
-  // Get recent executions for this workflow
-  const result = await executionService.listExecutions(workflowId, { limit: 10 });
+  const logs = await executionService.searchExecutionLogs(workflowId, {
+    searchQuery,
+    level: level || undefined,
+    limit,
+    offset,
+  });
 
-  // Collect logs from all executions
-  const allLogs: Array<{
-    executionId: string;
-    id: string;
-    timestamp: string;
-    level: string;
-    message: string;
-  }> = [];
-
-  for (const execution of result.executions) {
-    const logs = await executionService.getExecutionLogs(execution.id);
-    for (const log of logs.slice(0, limit - allLogs.length)) {
-      allLogs.push({
-        executionId: execution.id,
-        id: log.id,
-        timestamp: log.timestamp.toISOString(),
-        level: log.logLevel,
-        message: log.message,
-      });
-    }
-    if (allLogs.length >= limit) break;
-  }
-
-  return json({ results: allLogs });
+  return json({
+    results: logs.map((log) => ({
+      id: log.id,
+      executionId: log.executionHistoryId,
+      timestamp: log.timestamp.toISOString(),
+      level: log.logLevel,
+      message: log.message,
+    })),
+  });
 });

@@ -42,12 +42,12 @@ export const getExecution = createServerFn({ method: 'GET' })
     const serialized = serializeExecution(execution);
     return {
       id: serialized.id as string,
-      workflowId: serialized.workflow_id as string,
-      triggerId: (serialized.trigger_id as string | null) ?? null,
+      workflowId: serialized.workflowId as string,
+      triggerId: (serialized.triggerId as string | null) ?? null,
       status: serialized.status as string,
-      startedAt: (serialized.started_at as string | null) ?? serialized.received_at as string,
-      completedAt: (serialized.completed_at as string | null) ?? null,
-      error: (serialized.error_message as string | null) ?? null,
+      startedAt: (serialized.startedAt as string | null) ?? serialized.receivedAt as string,
+      completedAt: (serialized.completedAt as string | null) ?? null,
+      error: (serialized.errorMessage as string | null) ?? null,
       triggerPayload: {},
     };
   });
@@ -83,12 +83,12 @@ export const getExecutions = createServerFn({ method: 'GET' })
         const serialized = serializeExecution(execution);
         return {
           id: serialized.id as string,
-          workflowId: serialized.workflow_id as string,
-          triggerId: (serialized.trigger_id as string | null) ?? null,
+          workflowId: serialized.workflowId as string,
+          triggerId: (serialized.triggerId as string | null) ?? null,
           status: serialized.status as string,
-          startedAt: (serialized.started_at as string | null) ?? serialized.received_at as string,
-          completedAt: (serialized.completed_at as string | null) ?? null,
-          error: (serialized.error_message as string | null) ?? null,
+          startedAt: (serialized.startedAt as string | null) ?? serialized.receivedAt as string,
+          completedAt: (serialized.completedAt as string | null) ?? null,
+          error: (serialized.errorMessage as string | null) ?? null,
           triggerPayload: {},
         };
       }),

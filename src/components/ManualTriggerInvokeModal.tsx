@@ -38,7 +38,7 @@ export function ManualTriggerInvokeModal({
 
   if (!trigger) return null;
 
-  const schema = trigger.input_schema;
+  const schema = trigger.inputSchema;
   const properties = schema?.properties || {};
   const required = schema?.required || [];
 
@@ -112,12 +112,12 @@ export function ManualTriggerInvokeModal({
       setFormData({});
 
       if (onSuccess) {
-        onSuccess(result.execution_id);
+        onSuccess(result.executionId);
       } else {
         // Navigate to execution details
         navigate({
           to: "/workflows/$workflowId/executions/$executionId",
-          params: { workflowId, executionId: result.execution_id },
+          params: { workflowId, executionId: result.executionId },
         });
       }
     } catch (error: any) {

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { api, handleApiError } from "@/lib/api";
-import { ExecutionHistory as ExecutionHistoryType, ExecutionHistoryResponse, ExecutionStatus } from "@/types/api";
+import { ExecutionHistory as ExecutionHistoryType, ExecutionHistoryResponse } from "@/types/api";
 import { Loader } from "@/components/Loader";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,8 +52,8 @@ export function ExecutionHistory({ workflowId }: ExecutionHistoryProps) {
     return `${(durationMs / 1000).toFixed(2)}s`;
   };
 
-  const getStatusBadge = (status: ExecutionStatus) => {
-    const statusConfig: Record<ExecutionStatus, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
       completed: { variant: "default", label: "Completed" },
       failed: { variant: "destructive", label: "Failed" },
       started: { variant: "secondary", label: "Started" },
@@ -62,7 +62,9 @@ export function ExecutionHistory({ workflowId }: ExecutionHistoryProps) {
       no_deployment: { variant: "outline", label: "No Deployment" },
     };
 
-    const config = statusConfig[status];
+    const normalized = status.toLowerCase();
+    const config = statusConfig[normalized];
+    if (!config) return <Badge variant="outline">{status}</Badge>;
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 

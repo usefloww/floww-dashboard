@@ -110,11 +110,11 @@ function EditDeploymentPage() {
       if (err instanceof ApiError && err.data?.detail) {
         const errorDetail = err.data.detail;
         // Format structured errors nicely
-        if (errorDetail.failed_triggers && Array.isArray(errorDetail.failed_triggers)) {
-          const formattedErrors = errorDetail.failed_triggers.map((trigger: any) => {
+        if (errorDetail.failedTriggers && Array.isArray(errorDetail.failedTriggers)) {
+          const formattedErrors = errorDetail.failedTriggers.map((trigger: any) => {
             const parts = [];
-            if (trigger.provider_type) parts.push(`Provider: ${trigger.provider_type}`);
-            if (trigger.trigger_type) parts.push(`Trigger: ${trigger.trigger_type}`);
+            if (trigger.providerType) parts.push(`Provider: ${trigger.providerType}`);
+            if (trigger.triggerType) parts.push(`Trigger: ${trigger.triggerType}`);
             if (trigger.error) parts.push(`Error: ${trigger.error}`);
             return parts.join(', ');
           });

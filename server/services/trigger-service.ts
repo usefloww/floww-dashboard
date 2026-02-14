@@ -675,7 +675,7 @@ export async function syncTriggers(
     throw new Error(
       JSON.stringify({
         message: 'Failed to create one or more triggers',
-        failed_triggers: errors,
+        failedTriggers: errors,
       })
     );
   }
