@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNamespaceStore } from "@/stores/namespaceStore";
 import { handleApiError } from "@/lib/api";
+import { getConfig } from "@/lib/server/config";
 import { Workflow, Folder } from "@/types/api";
 import {
   getWorkflows,
@@ -170,6 +171,14 @@ function WorkflowsPage() {
     enabled: !!currentNamespace?.id,
   });
 
+  // Fetch config to check if AI Builder is enabled
+  const { data: config } = useQuery({
+    queryKey: ['config'],
+    queryFn: () => getConfig(),
+  });
+
+  const isAiBuilderEnabled = config?.features.aiBuilder ?? false;
+
   const folders = foldersData || [];
   const workflows = workflowsData || [];
   const isLoading = foldersLoading || workflowsLoading;
@@ -216,7 +225,7 @@ function WorkflowsPage() {
         data: {
           name: "New Workflow",
           namespaceId: currentNamespace.id,
-          description: "Created with AI Builder",
+          description: isAiBuilderEnabled ? "Created with AI Builder" : undefined,
           parentFolderId: currentFolderId || undefined,
         },
       });
@@ -226,7 +235,7 @@ function WorkflowsPage() {
       navigate({
         to: "/workflows/$workflowId/deployments",
         params: { workflowId: workflow.id },
-        search: { tab: "builder" },
+        search: { tab: isAiBuilderEnabled ? "builder" : "edit" },
       } as any);
     },
     onError: (error) => {
@@ -420,10 +429,12 @@ function WorkflowsPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleUseBuilder}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Use builder
-            </DropdownMenuItem>
+            {isAiBuilderEnabled && (
+              <DropdownMenuItem onClick={handleUseBuilder}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Use builder
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleImportClick}>
               <Upload className="h-4 w-4 mr-2" />
               Import from n8n

@@ -10,6 +10,7 @@ export interface AppConfig {
   features: {
     billing: boolean;
     singleOrg: boolean;
+    aiBuilder: boolean;
   };
   limits: {
     maxWorkflows: number;
@@ -31,6 +32,7 @@ export const getConfig = createServerFn({ method: 'GET' }).handler(async (): Pro
     features: {
       billing: settings.general.IS_CLOUD,
       singleOrg: settings.general.SINGLE_ORG_MODE,
+      aiBuilder: settings.general.ENABLE_AI_BUILDER,
     },
     limits: {
       maxWorkflows: parseInt(getEnvWithSecret('MAX_WORKFLOWS') ?? '100', 10),

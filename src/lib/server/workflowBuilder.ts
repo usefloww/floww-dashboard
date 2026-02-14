@@ -68,6 +68,21 @@ export interface BuilderChatResponse {
 export const builderChat = createServerFn({ method: 'POST' })
   .inputValidator((input: BuilderChatRequest) => input)
   .handler(async ({ data }): Promise<BuilderChatResponse> => {
+    const { settings } = await import('~/server/settings');
+    if (!settings.general.ENABLE_AI_BUILDER) {
+      return {
+        message: {
+          role: 'assistant',
+          parts: [
+            {
+              type: 'text',
+              text: 'AI Builder is disabled.',
+            },
+          ],
+        },
+      };
+    }
+
     const user = await requireUser();
     const { hasWorkflowAccess } = await import('~/server/services/access-service');
     const { getWorkflow } = await import('~/server/services/workflow-service');

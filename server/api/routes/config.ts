@@ -17,6 +17,7 @@ get('/config', async () => {
     features: {
       billing: settings.general.IS_CLOUD,
       singleOrg: settings.general.SINGLE_ORG_MODE,
+      aiBuilder: settings.general.ENABLE_AI_BUILDER,
     },
     limits: {
       maxWorkflows: parseInt(getEnvWithSecret('MAX_WORKFLOWS') ?? '100', 10),
