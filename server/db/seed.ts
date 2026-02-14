@@ -17,6 +17,7 @@ import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import bcrypt from 'bcryptjs';
 import * as schema from './schema';
 import { count } from 'drizzle-orm';
+import { encryptSecret } from '../utils/encryption';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://admin:secret@localhost:5432/postgres';
@@ -59,6 +60,16 @@ const IDS = {
     weeklyReport: '00000061-0000-4000-8000-000000000061',
     processWebhooks: '00000062-0000-4000-8000-000000000062',
     cleanup: '00000063-0000-4000-8000-000000000063',
+  },
+  providers: {
+    slack: '00000070-0000-4000-8000-000000000070',
+    github: '00000071-0000-4000-8000-000000000071',
+    discord: '00000072-0000-4000-8000-000000000072',
+    jira: '00000073-0000-4000-8000-000000000073',
+    openai: '00000074-0000-4000-8000-000000000074',
+  },
+  incomingWebhooks: {
+    slack: '00000080-0000-4000-8000-000000000080',
   },
 };
 
@@ -409,7 +420,90 @@ async function seed(db: PostgresJsDatabase<typeof schema>) {
   await db.insert(schema.executionLogs).values(logs);
 
   // --------------------------------------------------------------------------
-  // 11. Secrets
+  // 11. Providers
+  // --------------------------------------------------------------------------
+  console.log('  providers...');
+
+  const PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'http://localhost:3000';
+  const slackWebhookPath = '/webhook/seed-slack-acme';
+
+  await db.insert(schema.providers).values([
+    {
+      id: IDS.providers.slack,
+      namespaceId: IDS.namespace,
+      type: 'slack',
+      alias: 'acme-slack',
+      encryptedConfig: encryptSecret(
+        JSON.stringify({
+          webhook_url: `${PUBLIC_API_URL}${slackWebhookPath}`,
+          bot_token: 'xoxb-placeholder-not-a-real-token',
+          signing_secret: 'placeholder-not-a-real-secret',
+        })
+      ),
+    },
+    {
+      id: IDS.providers.github,
+      namespaceId: IDS.namespace,
+      type: 'github',
+      alias: 'acme-github',
+      encryptedConfig: encryptSecret(
+        JSON.stringify({
+          token: 'ghp_placeholder-not-a-real-token',
+          owner: 'acme-corp',
+          repo: 'floww-dashboard',
+        })
+      ),
+    },
+    {
+      id: IDS.providers.discord,
+      namespaceId: IDS.namespace,
+      type: 'discord',
+      alias: 'acme-discord',
+      encryptedConfig: encryptSecret(
+        JSON.stringify({
+          bot_token: 'discord_placeholder-not-a-real-token',
+          guild_id: '123456789012345678',
+        })
+      ),
+    },
+    {
+      id: IDS.providers.jira,
+      namespaceId: IDS.namespace,
+      type: 'jira',
+      alias: 'acme-jira',
+      encryptedConfig: encryptSecret(
+        JSON.stringify({
+          base_url: 'https://acme.atlassian.net',
+          email: 'alice@example.com',
+          api_token: 'jira_placeholder-not-a-real-token',
+        })
+      ),
+    },
+    {
+      id: IDS.providers.openai,
+      namespaceId: IDS.namespace,
+      type: 'openai',
+      alias: 'acme-openai',
+      encryptedConfig: encryptSecret(
+        JSON.stringify({
+          api_key: 'sk-placeholder-not-a-real-key',
+          model: 'gpt-4o-mini',
+        })
+      ),
+    },
+  ]);
+
+  // Provider-owned webhook for Slack (mirrors createProvider behavior)
+  await db.insert(schema.incomingWebhooks).values({
+    id: IDS.incomingWebhooks.slack,
+    providerId: IDS.providers.slack,
+    triggerId: null,
+    path: slackWebhookPath,
+    method: 'POST',
+  });
+
+  // --------------------------------------------------------------------------
+  // 12. Secrets
   // --------------------------------------------------------------------------
   console.log('  secrets...');
   await db.insert(schema.secrets).values([
@@ -434,7 +528,7 @@ async function seed(db: PostgresJsDatabase<typeof schema>) {
   ]);
 
   console.log(
-    `Seeded: 3 users, 1 org, 2 folders, 4 workflows, ${executions.length} executions, ${logs.length} logs, 3 secrets`
+    `Seeded: 3 users, 1 org, 2 folders, 4 workflows, 5 providers, ${executions.length} executions, ${logs.length} logs, 3 secrets`
   );
 }
 
