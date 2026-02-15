@@ -11,6 +11,7 @@ import {
   getProviderDefinition,
 } from 'floww/providers/server';
 import type { SetupStep } from 'floww/providers/server';
+import { INTERNAL_PROVIDERS } from 'floww/providers/constants';
 
 // Backend metadata for display purposes (not in SDK)
 const PROVIDER_METADATA: Record<string, { name: string; description: string }> = {
@@ -59,15 +60,17 @@ get('/provider-types', async ({ user }) => {
   const allDefs = getAllProviderDefinitions();
 
   return json({
-    results: Object.entries(allDefs).map(([type, def]) => {
-      const meta = PROVIDER_METADATA[type] ?? { name: type, description: '' };
-      return {
-        type,
-        name: meta.name,
-        description: meta.description,
-        triggerTypes: Object.keys(def.triggerDefinitions),
-      };
-    }),
+    results: Object.entries(allDefs)
+      .filter(([type]) => !INTERNAL_PROVIDERS.includes(type as any))
+      .map(([type, def]) => {
+        const meta = PROVIDER_METADATA[type] ?? { name: type, description: '' };
+        return {
+          type,
+          name: meta.name,
+          description: meta.description,
+          triggerTypes: Object.keys(def.triggerDefinitions),
+        };
+      }),
   });
 });
 
@@ -119,6 +122,12 @@ get('/provider-types/:providerType', async ({ user, params }) => {
   if (!user) return errorResponse('Unauthorized', 401);
 
   const { providerType } = params;
+
+  // Internal providers are not accessible via this API
+  if (INTERNAL_PROVIDERS.includes(providerType as any)) {
+    return errorResponse(`Provider type not found: ${providerType}`, 404);
+  }
+
   const def = getProviderDefinition(providerType);
 
   if (!def) {

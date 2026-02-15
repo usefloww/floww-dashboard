@@ -40,6 +40,7 @@ This is a monorepo containing:
 
 - **Dashboard** (`/src`, `/server`) - The web UI and backend API for managing workflows, providers, and deployments
 - **Floww SDK** (`/packages/sdk`) - The TypeScript SDK and CLI that developers use to build workflows
+- **Claude Plugin** (`/.claude-plugin`, `/skills`) - Official Claude Code plugin for building Floww automations
 - **Database** (`/server/db`) - PostgreSQL schema and migrations using Drizzle ORM
 - **Worker** (`/server/jobs`) - Background job processing with Graphile Worker
 
@@ -91,6 +92,28 @@ pnpm dev
 pnpm worker
 ```
 
+## Claude Code Plugin
+
+This repository includes the official Claude Code plugin for Floww, which helps Claude understand the Floww SDK and build workflow automations correctly.
+
+### Using the Plugin
+
+The plugin is located in the `.claude-plugin/` and `skills/` directories at the repository root. When you open this repository in Claude Code, the plugin is automatically available.
+
+The plugin activates when you:
+- Mention "automations", "workflows", or "triggers"
+- Ask Claude to help build Floww integrations
+- Use Floww SDK commands
+
+### Plugin Features
+
+- Comprehensive provider documentation and examples
+- Correct patterns for triggers, actions, and AI integrations
+- Step-by-step guidance for scaffolding, testing, and deploying workflows
+- Support for all Floww providers (GitHub, Slack, Discord, Jira, GitLab, and more)
+
+For more information about the plugin, see `skills/floww/SKILL.md`.
+
 ## Documentation
 
 For detailed documentation about using Floww, visit [floww.dev](https://floww.dev)
@@ -110,6 +133,11 @@ Join our Discord community to get help, share workflows, and connect with other 
 
 ```
 floww-dashboard/
+├── .claude-plugin/         # Claude Code plugin metadata
+│   ├── plugin.json         # Plugin manifest
+│   └── marketplace.json    # Marketplace configuration
+├── skills/                 # Claude Code skill definitions
+│   └── floww/              # Floww SDK skill
 ├── src/                    # Frontend React application
 │   ├── components/         # React components
 │   ├── routes/            # Tanstack Router routes

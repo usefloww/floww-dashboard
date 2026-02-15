@@ -597,8 +597,6 @@ export function ProviderConfigModal({
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="google">Google AI</SelectItem>
-                  <SelectItem value="kvstore">KV Store</SelectItem>
-                  <SelectItem value="builtin">Built-in</SelectItem>
                 </SelectContent>
               </Select>
               {errors.providerType && (

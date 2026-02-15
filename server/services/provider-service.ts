@@ -5,7 +5,7 @@
  * Providers represent third-party integrations (Slack, Google, etc.)
  */
 
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, notInArray } from 'drizzle-orm';
 import { getDb } from '~/server/db';
 import {
   providers,
@@ -22,6 +22,7 @@ import {
   getProviderTypes,
   type SetupStep,
 } from 'floww/providers/server';
+import { INTERNAL_PROVIDERS } from 'floww/providers/constants';
 import { settings } from '~/server/settings';
 
 export interface ProviderInfo {
@@ -77,10 +78,11 @@ export async function listProviders(
   userId: string,
   options: {
     namespaceId?: string;
+    includeInternal?: boolean;
   } = {}
 ): Promise<ProviderInfo[]> {
   const db = getDb();
-  const { namespaceId } = options;
+  const { namespaceId, includeInternal = false } = options;
 
   const conditions = [
     inArray(
@@ -98,6 +100,11 @@ export async function listProviders(
 
   if (namespaceId) {
     conditions.push(eq(providers.namespaceId, namespaceId));
+  }
+
+  // Filter out internal providers unless explicitly requested
+  if (!includeInternal) {
+    conditions.push(notInArray(providers.type, INTERNAL_PROVIDERS as unknown as string[]));
   }
 
   const result = await db
@@ -306,15 +313,17 @@ export function getProviderSetupSteps(providerType: string): SetupStep[] {
 /**
  * Get information about all available provider types
  */
-export function getAvailableProviderTypes(): ProviderTypeInfo[] {
+export function getAvailableProviderTypes(includeInternal = false): ProviderTypeInfo[] {
   const allDefs = getAllProviderDefinitions();
-  
-  return Object.entries(allDefs).map(([type, def]) => ({
-    type,
-    setupSteps: def.setupSteps,
-    hasTriggers: Object.keys(def.triggerDefinitions).length > 0,
-    triggerTypes: Object.keys(def.triggerDefinitions),
-  }));
+
+  return Object.entries(allDefs)
+    .filter(([type]) => includeInternal || !INTERNAL_PROVIDERS.includes(type as any))
+    .map(([type, def]) => ({
+      type,
+      setupSteps: def.setupSteps,
+      hasTriggers: Object.keys(def.triggerDefinitions).length > 0,
+      triggerTypes: Object.keys(def.triggerDefinitions),
+    }));
 }
 
 /**
