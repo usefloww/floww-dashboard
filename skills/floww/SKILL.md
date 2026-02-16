@@ -106,22 +106,32 @@ Must include `"floww"` as a dependency. The `"type": "module"` field is required
 
 ## Available Providers
 
-| Provider | Import | Triggers | Actions |
-|----------|--------|----------|---------|
-| Builtin | `Builtin` | `onCron`, `onWebhook`, `onManual` | -- |
-| GitHub | `GitHub` | `onPush`, `onPullRequest`, `onIssue`, `onIssueComment`, `onRelease` | 60+ (issues, PRs, files, branches, releases, workflows, etc.) |
-| Slack | `Slack` | `onMessage`, `onReaction` | Messages, channels, users, reactions, files |
-| Discord | `Discord` | `onMessage`, `onReaction`, `onMemberJoin`, `onMemberLeave`, `onMemberUpdate` | Messages, channels, roles, members |
-| GitLab | `Gitlab` | `onMergeRequest` | -- |
-| Jira | `Jira` | `onIssueCreated`, `onIssueUpdated`, `onCommentAdded` | Issues, comments, transitions, projects |
-| Todoist | `Todoist` | -- | Tasks (CRUD, close, reopen, move) |
-| KVStore | `KVStore` | -- | Key-value storage (get, set, delete, list) |
-| OpenAI | `OpenAI` | -- | Models via `openai.models.*` |
-| Anthropic | `Anthropic` | -- | Models via `anthropic.models.*` |
-| GoogleAI | `GoogleAI` | -- | Models via `google.models.*` |
-| Secret | `Secret` | -- | Typed secret access via Zod schema |
+The following providers are available in the Floww SDK (all imported from `"floww"`):
 
-All providers are imported from `"floww"`. AI utilities (`generateText`, `streamText`, `generateObject`, `streamObject`) are imported from `"floww/ai"`.
+**Event Sources & Triggers:**
+- `Builtin` - Cron schedules, webhooks, manual triggers
+- `GitHub` - Repository events (push, pull requests, issues, releases, etc.)
+- `Slack` - Message and reaction events
+- `Discord` - Message, reaction, and member events
+- `Gitlab` - Merge request events
+- `Jira` - Issue and comment events
+- `GoogleCalendar` - Calendar events
+
+**Actions & Integrations:**
+- `GitHub` - Issue, PR, file, branch, release, workflow operations
+- `Slack` - Messages, channels, users, reactions, files
+- `Discord` - Messages, channels, roles, members
+- `Jira` - Issue management, comments, transitions
+- `Todoist` - Task operations (create, update, complete, move)
+- `KVStore` - Persistent key-value storage
+- `Secret` - Typed secret access via Zod schema
+
+**AI Models:**
+- `OpenAI` - Access via `openai.models.*` (gpt4o, gpt4oMini, o1, etc.)
+- `Anthropic` - Access via `anthropic.models.*` (claude35Sonnet, claude3Opus, etc.)
+- `GoogleAI` - Access via `google.models.*` (gemini2Flash, gemini15Pro, etc.)
+
+AI utilities (`generateText`, `streamText`, `generateObject`, `streamObject`) are imported from `"floww/ai"`.
 
 ### Multiple credentials
 
@@ -242,7 +252,52 @@ const { apiKey } = mySecret.value();
 | `floww list providers` | List configured providers |
 | `floww manage providers` | Interactively manage provider configs |
 
+## Dynamic Provider Documentation
+
+When users ask for detailed information about specific providers (triggers, actions, method signatures, types), use the WebFetch tool to fetch the latest provider implementation from GitHub:
+
+**URL Pattern:**
+```
+https://raw.githubusercontent.com/usefloww/floww-dashboard/main/packages/sdk/providers/<provider-name>/index.ts
+```
+
+**Available Providers:**
+- `builtin` - Cron, webhook, manual triggers
+- `github` - GitHub integration
+- `slack` - Slack integration
+- `discord` - Discord integration
+- `gitlab` - GitLab integration
+- `jira` - Jira integration
+- `todoist` - Todoist integration
+- `kvstore` - Key-value storage
+- `secret` - Secret management
+- `ai/openai` - OpenAI models
+- `ai/anthropic` - Anthropic models
+- `ai/google` - Google AI models
+- `google_calendar` - Google Calendar integration
+
+**What to Extract from TypeScript Files:**
+
+1. **Triggers** - Found in the `triggers = { ... }` object:
+   - Method names (e.g., `onPush`, `onMessage`)
+   - Parameter types and required fields
+   - Handler signature: `(ctx, event) => { ... }`
+   - Event body structure
+
+2. **Actions** - Found in the `<Provider>Actions` class:
+   - All public methods (e.g., `sendMessage`, `createIssue`)
+   - Method parameters and types
+   - Return types
+   - JSDoc comments if present
+
+3. **Types** - Found in exports:
+   - Exported interfaces and types
+   - Event payloads
+   - Configuration options
+
+**Example Usage:**
+When user asks: "How do I use GitHub triggers?" → Fetch from `https://raw.githubusercontent.com/usefloww/floww-dashboard/main/packages/sdk/providers/github/index.ts` and extract the triggers object.
+
 ## Additional Resources
 
-- For detailed provider triggers, actions, and signatures: see [providers-reference.md](providers-reference.md)
 - For complete working examples: see [examples.md](examples.md)
